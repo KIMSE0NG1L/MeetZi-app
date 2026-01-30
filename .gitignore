@@ -1,0 +1,25 @@
+
+# Flutter/Dart/Pub related
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.metadata
+
+# IDEs and editors
+.idea/
+*.iml
+.vscode/
+
+# Build outputs
+build/
+
+# Platform-specific folders
+android/.gradle/
+ios/Flutter/Flutter.framework/
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/ephemeral/
+ios/Pods/
+
+# Logs
+*.log

@@ -1,0 +1,26 @@
+class ApiEndpoints {
+  static const String authKakao = '/auth/kakao';
+  static const String authKakaoCallback = '/auth/kakao/callback';
+  static const String authProfile = '/auth/profile';
+  static const String matchingRequest = '/matching/request';
+  static const String matchingCancel = '/matching/cancel';
+  static String matchingConsent(String matchId) => '/matching/$matchId/consent';
+  static String matchingConsentStatus(String matchId) =>
+      '/matching/$matchId/consent-status';
+  static const String photos = '/photos';
+  static const String photosUpload = '/photos/upload';
+  static String photoById(String photoId) => '/photos/$photoId';
+  static String photoVisibility(String photoId) =>
+      '/photos/$photoId/visibility';
+  static String photoPrimary(String photoId) => '/photos/$photoId/primary';
+  static const String subscription = '/subscription';
+  static const String subscriptionCancel = '/subscription/cancel';
+  static const String subscriptionPause = '/subscription/pause';
+  static const String subscriptionResume = '/subscription/resume';
+  static const String subscriptionIsActive = '/subscription/is-active';
+  static String emailVerificationRequest(String environmentId) =>
+      '/environments/$environmentId/email-verifications/request';
+  static String emailVerificationConfirm(String environmentId) =>
+      '/environments/$environmentId/email-verifications/confirm';
+  static const String health = '/health';
+}
