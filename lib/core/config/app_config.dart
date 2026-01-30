@@ -1,3 +1,1 @@
-class AppConfig {
-  static const String baseUrl = 'http://localhost:3000';
-}
+export 'package:nearo_app/shared/utils/app_config.dart';
