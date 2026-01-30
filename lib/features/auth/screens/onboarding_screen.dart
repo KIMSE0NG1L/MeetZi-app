@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:nearo_app/theme/nearo_theme.dart';
-import 'package:nearo_app/ui/screens/auth/login_screen.dart';
-import 'package:nearo_app/ui/widgets/primary_button.dart';
+import 'package:nearo_app/app/app_routes.dart';
+import 'package:nearo_app/shared/theme/nearo_theme.dart';
+import 'package:nearo_app/shared/widgets/primary_button.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -39,9 +39,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _goToLogin() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-    );
+    Navigator.of(context).pushNamed(AppRoutes.login);
   }
 
   @override
