@@ -1,9 +1,1 @@
-class ApiError implements Exception {
-  final String message;
-  final int? statusCode;
-
-  ApiError(this.message, {this.statusCode});
-
-  @override
-  String toString() => 'ApiError(statusCode: $statusCode, message: $message)';
-}
+export 'package:nearo_app/shared/api/api_error.dart';
