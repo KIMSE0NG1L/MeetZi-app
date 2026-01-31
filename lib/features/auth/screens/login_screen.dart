@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
-import 'package:nearo_app/shared/utils/app_config.dart';
 import 'package:nearo_app/shared/widgets/primary_button.dart';
-import 'package:url_launcher/url_launcher.dart';
-
+ 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
 
@@ -69,26 +67,14 @@ class LoginScreen extends StatelessWidget {
               const Spacer(),
               PrimaryButton(
                 label: '카카오로 계속하기',
-                onPressed: () async {
-                  final uri = Uri.parse('${AppConfig.baseUrl}/auth/kakao');
-                  final launched = await launchUrl(
-                    uri,
-                    mode: LaunchMode.externalApplication,
+                onPressed: () {
+                  Navigator.of(context).pushNamedAndRemoveUntil(
+                    AppRoutes.profileSetup,
+                    (route) => false,
                   );
-                  if (!launched && context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('카카오 로그인 연결 실패')),
-                    );
-                  }
                 },
               ),
               const SizedBox(height: 12),
-              OutlinedButton(
-                onPressed: () {
-                  Navigator.of(context).pushNamed(AppRoutes.environment);
-                },
-                child: const Text('둘러보기'),
-              ),
             ],
           ),
         ),

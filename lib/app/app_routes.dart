@@ -13,4 +13,5 @@ class AppRoutes {
   static const String health = '/health';
   static const String authProfile = '/auth/profile';
   static const String users = '/users';
+  static const String profileSetup = '/profile/setup';
 }

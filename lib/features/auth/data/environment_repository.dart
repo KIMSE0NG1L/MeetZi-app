@@ -6,6 +6,11 @@ class EnvironmentRepository {
 
   EnvironmentRepository({ApiClient? client}) : _client = client ?? ApiClient();
 
+  Future<List<dynamic>> getEnvironments() async {
+    final response = await _client.dio.get('/environments');
+    return response.data as List<dynamic>;
+  }
+
   Future<Map<String, dynamic>> requestEmailVerification({
     required String environmentId,
     required String email,

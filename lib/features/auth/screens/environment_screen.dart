@@ -12,10 +12,12 @@ class EnvironmentScreen extends StatefulWidget {
 }
 
 class _EnvironmentScreenState extends State<EnvironmentScreen> {
-  final _environmentIdController = TextEditingController(text: 'campus-001');
+  final _environmentIdController = TextEditingController();
   final _emailController = TextEditingController();
   final _codeController = TextEditingController();
   final _repository = EnvironmentRepository();
+  late final Future<List<dynamic>> _environmentsFuture;
+  String? _selectedEnvironmentId;
 
   bool _isRequesting = false;
   bool _isConfirming = false;
@@ -28,17 +30,30 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
     super.dispose();
   }
 
+  @override
+  void initState() {
+    super.initState();
+    _environmentsFuture = _repository.getEnvironments();
+  }
+
+  String? _resolvedEnvironmentId() {
+    final manual = _environmentIdController.text.trim();
+    return (_selectedEnvironmentId ?? manual).isEmpty
+        ? null
+        : (_selectedEnvironmentId ?? manual);
+  }
+
   Future<void> _requestCode() async {
-    if (_environmentIdController.text.trim().isEmpty ||
-        _emailController.text.trim().isEmpty) {
-      _showMessage('환경 ID와 이메일을 입력해 주세요.');
+    final environmentId = _resolvedEnvironmentId();
+    if (environmentId == null || _emailController.text.trim().isEmpty) {
+      _showMessage('환경을 선택하고 이메일을 입력해 주세요.');
       return;
     }
 
     setState(() => _isRequesting = true);
     try {
       await _repository.requestEmailVerification(
-        environmentId: _environmentIdController.text.trim(),
+        environmentId: environmentId,
         email: _emailController.text.trim(),
       );
       _showMessage('인증 코드가 전송되었습니다.');
@@ -50,16 +65,16 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
   }
 
   Future<void> _confirmCode() async {
-    if (_environmentIdController.text.trim().isEmpty ||
-        _codeController.text.trim().isEmpty) {
-      _showMessage('환경 ID와 인증 코드를 입력해 주세요.');
+    final environmentId = _resolvedEnvironmentId();
+    if (environmentId == null || _codeController.text.trim().isEmpty) {
+      _showMessage('환경을 선택하고 인증 코드를 입력해 주세요.');
       return;
     }
 
     setState(() => _isConfirming = true);
     try {
       await _repository.confirmEmailVerification(
-        environmentId: _environmentIdController.text.trim(),
+        environmentId: environmentId,
         code: _codeController.text.trim(),
       );
       _showMessage('인증이 완료되었습니다.');
@@ -106,10 +121,45 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
                 ],
               ),
               const SizedBox(height: 24),
+              FutureBuilder<List<dynamic>>(
+                future: _environmentsFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const LinearProgressIndicator();
+                  }
+                  final items = snapshot.data ?? [];
+                  if (items.isEmpty) {
+                    return const Text('환경 목록을 불러오지 못했습니다.');
+                  }
+                  return DropdownButtonFormField<String>(
+                    value: _selectedEnvironmentId,
+                    decoration: const InputDecoration(
+                      labelText: '환경 선택',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: items
+                        .map(
+                          (item) => DropdownMenuItem<String>(
+                            value: item['id'] as String?,
+                            child: Text('${item['name']} (${item['type']})'),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedEnvironmentId = value;
+                        _environmentIdController.text = value ?? '';
+                      });
+                    },
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
               TextField(
                 controller: _environmentIdController,
+                enabled: _selectedEnvironmentId == null,
                 decoration: const InputDecoration(
-                  labelText: '환경 ID',
+                  labelText: '환경 ID (직접 입력)',
                   border: OutlineInputBorder(),
                 ),
               ),
