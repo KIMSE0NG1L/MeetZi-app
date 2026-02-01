@@ -1,7 +1,9 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:nearo_app/app/app_routes.dart';
+import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/auth/data/environment_repository.dart';
+import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/widgets/primary_button.dart';
 
 class EnvironmentScreen extends StatefulWidget {
@@ -14,10 +16,14 @@ class EnvironmentScreen extends StatefulWidget {
 class _EnvironmentScreenState extends State<EnvironmentScreen> {
   final _environmentIdController = TextEditingController();
   final _emailController = TextEditingController();
+  final _studentIdController = TextEditingController();
   final _codeController = TextEditingController();
   final _repository = EnvironmentRepository();
+  final _authRepository = AuthRepository();
   late final Future<List<dynamic>> _environmentsFuture;
   String? _selectedEnvironmentId;
+  String? _selectedEnvironmentName;
+  String? _selectedEnvironmentEmailDomain;
 
   bool _isRequesting = false;
   bool _isConfirming = false;
@@ -26,6 +32,7 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
   void dispose() {
     _environmentIdController.dispose();
     _emailController.dispose();
+    _studentIdController.dispose();
     _codeController.dispose();
     super.dispose();
   }
@@ -34,18 +41,90 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
   void initState() {
     super.initState();
     _environmentsFuture = _repository.getEnvironments();
+    _loadProfileEnvironment();
   }
 
+  Future<void> _loadProfileEnvironment() async {
+    try {
+      final profile = await _authRepository.getProfile();
+      final user = (profile['user'] as Map?) ?? profile;
+      final affiliation = user['affiliationText']?.toString();
+      if (affiliation != null && affiliation.isNotEmpty) {
+        _selectedEnvironmentName = affiliation;
+      }
+    } catch (_) {
+      // ignore profile errors; environment list fallback will handle.
+    }
+
+    final items = await _environmentsFuture;
+    if (!mounted) return;
+    final universities = items
+        .where((item) => item is Map && item['type']?.toString() == 'university')
+        .map((item) => Map<String, dynamic>.from(item as Map))
+        .toList();
+
+    Map<String, dynamic>? matched;
+    if (_selectedEnvironmentName != null) {
+      matched = universities.firstWhere(
+        (item) => item['name']?.toString() == _selectedEnvironmentName,
+        orElse: () => <String, dynamic>{},
+      );
+      if (matched.isEmpty) {
+        matched = null;
+      }
+    }
+
+    matched ??= universities.isNotEmpty ? universities.first : null;
+
+    if (matched != null) {
+      setState(() {
+        _selectedEnvironmentId = matched!['id'] as String?;
+        _environmentIdController.text = _selectedEnvironmentId ?? '';
+        _selectedEnvironmentName = matched!['name']?.toString();
+        _selectedEnvironmentEmailDomain = matched!['emailDomain']?.toString();
+      });
+      _applyThemeForAffiliationName();
+    }
+  }
+
+  bool get _isUniversitySelected =>
+      _selectedEnvironmentEmailDomain != null &&
+      _selectedEnvironmentEmailDomain!.isNotEmpty;
+
   String? _resolvedEnvironmentId() {
-    final manual = _environmentIdController.text.trim();
-    return (_selectedEnvironmentId ?? manual).isEmpty
-        ? null
-        : (_selectedEnvironmentId ?? manual);
+    final id = _selectedEnvironmentId ?? _environmentIdController.text.trim();
+    return id.isEmpty ? null : id;
+  }
+
+  String? _resolvedEmail() {
+    if (_isUniversitySelected) {
+      final studentId = _studentIdController.text.trim();
+      final domain = _selectedEnvironmentEmailDomain?.trim();
+      if (studentId.isEmpty || domain == null || domain.isEmpty) return null;
+      return '$studentId@$domain';
+    }
+    final email = _emailController.text.trim();
+    return email.isEmpty ? null : email;
+  }
+
+  void _applyThemeForAffiliationName() {
+    switch (_selectedEnvironmentName) {
+      case '세종대학교':
+        ThemeController.setSeedColor(const Color(0xFFB93234));
+        break;
+      case '건국대학교':
+        ThemeController.setSeedColor(const Color(0xFF036B3F));
+        break;
+      case '한양대학교':
+        ThemeController.setSeedColor(const Color(0xFF1D2475));
+        break;
+    }
   }
 
   Future<void> _requestCode() async {
     final environmentId = _resolvedEnvironmentId();
-    if (environmentId == null || _emailController.text.trim().isEmpty) {
+    final email = _resolvedEmail();
+    if (environmentId == null || email == null) {
       _showMessage('환경을 선택하고 이메일을 입력해 주세요.');
       return;
     }
@@ -54,7 +133,7 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
     try {
       await _repository.requestEmailVerification(
         environmentId: environmentId,
-        email: _emailController.text.trim(),
+        email: email,
       );
       _showMessage('인증 코드가 전송되었습니다.');
     } on DioException catch (error) {
@@ -79,7 +158,10 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
       );
       _showMessage('인증이 완료되었습니다.');
       if (!mounted) return;
-      Navigator.of(context).pushNamed(AppRoutes.matchingWait);
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        AppRoutes.home,
+        (route) => false,
+      );
     } on DioException catch (error) {
       _showMessage(error.response?.data.toString() ?? '인증에 실패했습니다.');
     } finally {
@@ -105,73 +187,28 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '어떤 환경에 속해 있나요?',
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: const [
-                  _EnvironmentChip(label: '대학교'),
-                  _EnvironmentChip(label: '회사'),
-                  _EnvironmentChip(label: '아파트'),
-                  _EnvironmentChip(label: '기타'),
-                ],
-              ),
-              const SizedBox(height: 24),
-              FutureBuilder<List<dynamic>>(
-                future: _environmentsFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const LinearProgressIndicator();
-                  }
-                  final items = snapshot.data ?? [];
-                  if (items.isEmpty) {
-                    return const Text('환경 목록을 불러오지 못했습니다.');
-                  }
-                  return DropdownButtonFormField<String>(
-                    value: _selectedEnvironmentId,
-                    decoration: const InputDecoration(
-                      labelText: '환경 선택',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: items
-                        .map(
-                          (item) => DropdownMenuItem<String>(
-                            value: item['id'] as String?,
-                            child: Text('${item['name']} (${item['type']})'),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedEnvironmentId = value;
-                        _environmentIdController.text = value ?? '';
-                      });
-                    },
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _environmentIdController,
-                enabled: _selectedEnvironmentId == null,
-                decoration: const InputDecoration(
-                  labelText: '환경 ID (직접 입력)',
-                  border: OutlineInputBorder(),
+              const SizedBox(height: 8),
+              if (_isUniversitySelected)
+                TextField(
+                  controller: _studentIdController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: '학번',
+                    suffixText: _selectedEnvironmentEmailDomain == null
+                        ? null
+                        : '@${_selectedEnvironmentEmailDomain!}',
+                    border: const OutlineInputBorder(),
+                  ),
+                )
+              else
+                TextField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(
+                    labelText: '학교 이메일',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
-                  labelText: '학교/회사 이메일',
-                  border: OutlineInputBorder(),
-                ),
-              ),
               const SizedBox(height: 12),
               PrimaryButton(
                 label: '인증 코드 요청',

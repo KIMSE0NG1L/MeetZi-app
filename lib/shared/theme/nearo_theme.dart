@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 
 class NearoTheme {
-  static const Color primary = Color(0xFF6C5CE7);
+  static Color primary = const Color(0xFF6C5CE7);
   static const Color secondary = Color(0xFF00B894);
   static const Color background = Color(0xFFF7F7FB);
   static const Color textPrimary = Color(0xFF1B1B1F);
   static const Color textSecondary = Color(0xFF5F5F6E);
 
-  static ThemeData light() {
+  static ThemeData light({Color? seedColor}) {
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: primary,
+      seedColor: seedColor ?? primary,
       brightness: Brightness.light,
       background: background,
     );

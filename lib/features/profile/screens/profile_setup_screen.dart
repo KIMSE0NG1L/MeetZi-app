@@ -2,7 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:nearo_app/app/app_routes.dart';
-import 'package:nearo_app/features/users/data/users_repository.dart';
+import 'package:nearo_app/features/auth/data/auth_repository.dart';
+import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/widgets/primary_button.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
@@ -13,12 +14,19 @@ class ProfileSetupScreen extends StatefulWidget {
 }
 
 class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
-  final _repository = UsersRepository();
+  final _repository = AuthRepository();
   final _nicknameController = TextEditingController();
   final _birthDateController = TextEditingController();
+  String _affiliation = '세종대학교';
+  final _heightController = TextEditingController();
+  final _mbtiController = TextEditingController();
+  final _instagramController = TextEditingController();
+  final _bioController = TextEditingController();
   DateTime? _birthDate;
   String _gender = 'male';
-  static const String _baseType = 'base';
+  String _preferredGender = 'opposite';
+  String? _smoking;
+  String? _drinking;
   bool _isLoading = false;
   String _result = '';
 
@@ -26,6 +34,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   void dispose() {
     _nicknameController.dispose();
     _birthDateController.dispose();
+    _heightController.dispose();
+    _mbtiController.dispose();
+    _instagramController.dispose();
+    _bioController.dispose();
     super.dispose();
   }
 
@@ -94,14 +106,34 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       return;
     }
 
+    final heightCm = int.tryParse(_heightController.text.trim());
+
+    final preferredGenders = switch (_preferredGender) {
+      'male' => ['male'],
+      'female' => ['female'],
+      'all' => ['male', 'female'],
+      _ => _gender == 'male' ? ['female'] : ['male'],
+    };
+
     setState(() => _isLoading = true);
     try {
-      final response = await _repository.createProfile(
-        nickname: _nicknameController.text.trim(),
-        gender: _gender,
-        birthYear: _birthDate!.year,
-        baseType: _baseType,
-      );
+      final response = await _repository.updateProfile({
+        'nickname': _nicknameController.text.trim(),
+        'gender': _gender,
+        'birthYear': _birthDate!.year,
+        'affiliationText': _affiliation,
+        if (heightCm != null) 'heightCm': heightCm,
+        if (_smoking != null) 'smoking': _smoking,
+        if (_drinking != null) 'drinking': _drinking,
+        if (_mbtiController.text.trim().isNotEmpty)
+          'mbti': _mbtiController.text.trim(),
+        if (_instagramController.text.trim().isNotEmpty)
+          'instagramHandle': _instagramController.text.trim(),
+        if (_bioController.text.trim().isNotEmpty)
+          'bio': _bioController.text.trim(),
+        'preferredGenders': preferredGenders,
+      });
+      _applyThemeForAffiliation();
       setState(() => _result = response.toString());
       if (!mounted) return;
       Navigator.of(context).pushNamed(AppRoutes.environment);
@@ -109,6 +141,20 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       setState(() => _result = error.response?.data.toString() ?? '요청 실패');
     } finally {
       setState(() => _isLoading = false);
+    }
+  }
+
+  void _applyThemeForAffiliation() {
+    switch (_affiliation) {
+      case '세종대학교':
+        ThemeController.setSeedColor(const Color(0xFFB93234));
+        break;
+      case '건국대학교':
+        ThemeController.setSeedColor(const Color(0xFF036B3F));
+        break;
+      case '한양대학교':
+        ThemeController.setSeedColor(const Color(0xFF1D2475));
+        break;
     }
   }
 
@@ -162,7 +208,108 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   setState(() => _gender = value);
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: _preferredGender,
+                decoration: const InputDecoration(
+                  labelText: '선호 성별',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'opposite', child: Text('이성 선호')),
+                  DropdownMenuItem(value: 'male', child: Text('남성')),
+                  DropdownMenuItem(value: 'female', child: Text('여성')),
+                  DropdownMenuItem(value: 'all', child: Text('무관')),
+                ],
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() => _preferredGender = value);
+                },
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: _affiliation,
+                decoration: const InputDecoration(
+                  labelText: '소속 대학교',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: '세종대학교', child: Text('세종대학교')),
+                  DropdownMenuItem(value: '건국대학교', child: Text('건국대학교')),
+                  DropdownMenuItem(value: '한양대학교', child: Text('한양대학교')),
+                ],
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() => _affiliation = value);
+                },
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _heightController,
+                keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: '키 (cm)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: _smoking,
+                decoration: const InputDecoration(
+                  labelText: '흡연 여부',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'none', child: Text('비흡연')),
+                  DropdownMenuItem(value: 'sometimes', child: Text('가끔')),
+                  DropdownMenuItem(value: 'often', child: Text('자주')),
+                ],
+                onChanged: (value) => setState(() => _smoking = value),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: _drinking,
+                decoration: const InputDecoration(
+                  labelText: '음주 여부',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'none', child: Text('안 함')),
+                  DropdownMenuItem(value: 'sometimes', child: Text('가끔')),
+                  DropdownMenuItem(value: 'often', child: Text('자주')),
+                ],
+                onChanged: (value) => setState(() => _drinking = value),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _mbtiController,
+                textInputAction: TextInputAction.next,
+                textCapitalization: TextCapitalization.characters,
+                decoration: const InputDecoration(
+                  labelText: 'MBTI',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _instagramController,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: '인스타그램 아이디',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _bioController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: '자기소개',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
               PrimaryButton(
                 label: '프로필 저장',
                 isLoading: _isLoading,

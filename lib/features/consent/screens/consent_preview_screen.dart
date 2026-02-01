@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/features/consent/data/consent_repository.dart';
+import 'package:nearo_app/features/messages/data/chat_history_store.dart';
 import 'package:nearo_app/shared/widgets/primary_button.dart';
 
 class ConsentPreviewScreen extends StatefulWidget {
@@ -12,6 +13,19 @@ class ConsentPreviewScreen extends StatefulWidget {
 }
 
 class _ConsentPreviewScreenState extends State<ConsentPreviewScreen> {
+  final _chatStore = ChatHistoryStore.instance;
+  static const Map<String, dynamic> _fallbackProfile = {
+    'nickname': '두쫀쿠공주',
+    'birthYear': 2005,
+    'gender': '여성',
+    'preferredGender': '남성 선호',
+    'affiliation': '세종대학교',
+    'heightCm': 160,
+    'smoking': '비흡연',
+    'mbti': 'INFP',
+    'instagram': '@dck',
+    'bio': '세종대 컴공과에요!',
+  };
   final _matchIdController = TextEditingController();
   final _chatController = TextEditingController();
   final List<_ChatMessage> _messages = [];
@@ -35,11 +49,16 @@ class _ConsentPreviewScreenState extends State<ConsentPreviewScreen> {
   Future<void> _sendMessage() async {
     final text = _chatController.text.trim();
     if (text.isEmpty) return;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    final partnerProfile =
+        args is Map<String, dynamic> ? args : _fallbackProfile;
+    final partnerName = partnerProfile['nickname']?.toString() ?? '상대';
 
     setState(() {
       _messages.add(_ChatMessage(text: text, isMine: true));
       _chatController.clear();
     });
+    _chatStore.addMessage(partner: partnerName, text: text, isMine: true);
 
     await Future.delayed(const Duration(milliseconds: 400));
 
@@ -47,6 +66,7 @@ class _ConsentPreviewScreenState extends State<ConsentPreviewScreen> {
     setState(() {
       _messages.add(_ChatMessage(text: text, isMine: false));
     });
+    _chatStore.addMessage(partner: partnerName, text: text, isMine: false);
   }
 
   Future<void> _checkConsentStatus() async {
@@ -75,9 +95,26 @@ class _ConsentPreviewScreenState extends State<ConsentPreviewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    final partnerProfile =
+        args is Map<String, dynamic> ? args : _fallbackProfile;
     return Scaffold(
       appBar: AppBar(
         title: const Text('익명 대화 프리뷰'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: InkResponse(
+              onTap: _requestPhotoShare,
+              radius: 22,
+              child: CircleAvatar(
+                radius: 20,
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                child: const Icon(Icons.camera_alt, color: Colors.white),
+              ),
+            ),
+          ),
+        ],
       ),
       body: SafeArea(
         child: Padding(
@@ -85,16 +122,6 @@ class _ConsentPreviewScreenState extends State<ConsentPreviewScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '상대와 대화가 잘 이어지고 있나요?',
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                '양쪽이 모두 동의하면\n서로의 얼굴이 공개되고 카카오톡으로 넘어갑니다.',
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-              const SizedBox(height: 20),
               Expanded(
                 child: Container(
                   padding: const EdgeInsets.all(16),
@@ -111,31 +138,72 @@ class _ConsentPreviewScreenState extends State<ConsentPreviewScreen> {
                           separatorBuilder: (_, __) => const SizedBox(height: 8),
                           itemBuilder: (context, index) {
                             final message = _messages[index];
-                            final alignment = message.isMine
-                                ? Alignment.centerRight
-                                : Alignment.centerLeft;
                             final color = message.isMine
                                 ? Theme.of(context).colorScheme.primary
                                 : Colors.grey.shade200;
                             final textColor = message.isMine
                                 ? Colors.white
                                 : Colors.black87;
-                            return Align(
-                              alignment: alignment,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 10,
+                            if (message.isMine) {
+                              return Align(
+                                alignment: Alignment.centerRight,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: color,
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Text(
+                                    message.text,
+                                    style: TextStyle(color: textColor),
+                                  ),
                                 ),
-                                decoration: BoxDecoration(
-                                  color: color,
-                                  borderRadius: BorderRadius.circular(16),
+                              );
+                            }
+
+                            return Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                InkWell(
+                                  onTap: () {
+                                    Navigator.of(context).pushNamed(
+                                      AppRoutes.partnerProfile,
+                                      arguments: partnerProfile,
+                                    );
+                                  },
+                                  child: CircleAvatar(
+                                    radius: 14,
+                                    backgroundColor:
+                                        Theme.of(context).colorScheme.primary,
+                                    child: Text(
+                                      partnerProfile['nickname']
+                                              ?.toString()
+                                              .substring(0, 1) ??
+                                          '',
+                                      style:
+                                          const TextStyle(color: Colors.white),
+                                    ),
+                                  ),
                                 ),
-                                child: Text(
-                                  message.text,
-                                  style: TextStyle(color: textColor),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: color,
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Text(
+                                    message.text,
+                                    style: TextStyle(color: textColor),
+                                  ),
                                 ),
-                              ),
+                              ],
                             );
                           },
                         ),
@@ -160,11 +228,6 @@ class _ConsentPreviewScreenState extends State<ConsentPreviewScreen> {
                     icon: const Icon(Icons.send),
                   ),
                 ],
-              ),
-              PrimaryButton(
-                label: '사진 공유 요청',
-                isLoading: _isLoading,
-                onPressed: _requestPhotoShare,
               ),
               if (_consentMessage != null) ...[
                 const SizedBox(height: 12),

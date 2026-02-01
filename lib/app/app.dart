@@ -4,6 +4,7 @@ import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
+import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/token_storage.dart';
 import 'package:nearo_app/features/auth/screens/environment_screen.dart';
 import 'package:nearo_app/features/auth/screens/login_screen.dart';
@@ -14,12 +15,17 @@ import 'package:nearo_app/features/consent/screens/consent_success_screen.dart';
 import 'package:nearo_app/features/health/screens/health_screen.dart';
 import 'package:nearo_app/features/matching/screens/matching_result_screen.dart';
 import 'package:nearo_app/features/matching/screens/matching_wait_screen.dart';
+import 'package:nearo_app/features/matching/screens/matching_home_screen.dart';
 import 'package:nearo_app/features/photo/screens/photo_screen.dart';
 import 'package:nearo_app/features/subscription/screens/subscription_screen.dart';
 import 'package:nearo_app/features/dev/screens/api_dashboard_screen.dart';
 import 'package:nearo_app/features/auth/screens/profile_screen.dart';
 import 'package:nearo_app/features/profile/screens/profile_setup_screen.dart';
+import 'package:nearo_app/features/profile/screens/partner_profile_screen.dart';
 import 'package:nearo_app/features/users/screens/users_screen.dart';
+import 'package:nearo_app/features/auth/data/auth_repository.dart';
+import 'package:nearo_app/features/auth/data/environment_status_repository.dart';
+import 'package:nearo_app/features/home/screens/home_shell_screen.dart';
 
 class NearoApp extends StatefulWidget {
   const NearoApp({super.key});
@@ -32,6 +38,8 @@ class _NearoAppState extends State<NearoApp> {
   final _navigatorKey = GlobalKey<NavigatorState>();
   final _appLinks = AppLinks();
   final _tokenStorage = TokenStorage();
+  final _authRepository = AuthRepository();
+  final _environmentStatusRepository = EnvironmentStatusRepository();
   StreamSubscription<Uri>? _linkSub;
 
   @override
@@ -52,10 +60,37 @@ class _NearoAppState extends State<NearoApp> {
   Future<void> _restoreSession() async {
     final token = await _tokenStorage.readAccessToken();
     if (token != null && token.isNotEmpty) {
-      _navigatorKey.currentState?.pushNamedAndRemoveUntil(
-        AppRoutes.profileSetup,
-        (route) => false,
-      );
+      try {
+        final profile = await _authRepository.getProfile();
+        final user = (profile['user'] as Map?) ?? profile;
+        final hasProfile = user['nickname'] != null && user['birthYear'] != null;
+        final hasAffiliation = (user['affiliationText'] as String?)
+                ?.trim()
+                .isNotEmpty ??
+            false;
+        if (hasProfile && hasAffiliation) {
+          final status =
+              await _environmentStatusRepository.getMyEnvironmentStatus();
+          if (status['verified'] == true) {
+            _navigatorKey.currentState?.pushNamedAndRemoveUntil(
+              AppRoutes.home,
+              (route) => false,
+            );
+          } else {
+            _navigatorKey.currentState?.pushNamedAndRemoveUntil(
+              AppRoutes.environment,
+              (route) => false,
+            );
+          }
+        } else {
+          _navigatorKey.currentState?.pushNamedAndRemoveUntil(
+            AppRoutes.profileSetup,
+            (route) => false,
+          );
+        }
+      } catch (_) {
+        await _tokenStorage.clear();
+      }
     }
   }
 
@@ -80,27 +115,35 @@ class _NearoAppState extends State<NearoApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'NEARO',
-      theme: NearoTheme.light(),
-      navigatorKey: _navigatorKey,
-      initialRoute: AppRoutes.onboarding,
-      routes: {
-        AppRoutes.onboarding: (_) => const OnboardingScreen(),
-        AppRoutes.login: (_) => const LoginScreen(),
-        AppRoutes.environment: (_) => const EnvironmentScreen(),
-        AppRoutes.matchingWait: (_) => const MatchingWaitScreen(),
-        AppRoutes.matchingResult: (_) => const MatchingResultScreen(),
-        AppRoutes.chatPreview: (_) => const ConsentPreviewScreen(),
-        AppRoutes.consentDecision: (_) => const ConsentDecisionScreen(),
-        AppRoutes.consentSuccess: (_) => const ConsentSuccessScreen(),
-        AppRoutes.apiDashboard: (_) => const ApiDashboardScreen(),
-        AppRoutes.photo: (_) => const PhotoScreen(),
-        AppRoutes.subscription: (_) => const SubscriptionScreen(),
-        AppRoutes.health: (_) => const HealthScreen(),
-        AppRoutes.authProfile: (_) => const ProfileScreen(),
-        AppRoutes.users: (_) => const UsersScreen(),
-        AppRoutes.profileSetup: (_) => const ProfileSetupScreen(),
+    return ValueListenableBuilder<Color>(
+      valueListenable: ThemeController.seedColor,
+      builder: (context, color, _) {
+        return MaterialApp(
+          title: 'NEARO',
+          theme: NearoTheme.light(seedColor: color),
+          navigatorKey: _navigatorKey,
+          initialRoute: AppRoutes.onboarding,
+          routes: {
+            AppRoutes.onboarding: (_) => const OnboardingScreen(),
+            AppRoutes.login: (_) => const LoginScreen(),
+            AppRoutes.environment: (_) => const EnvironmentScreen(),
+            AppRoutes.matchingWait: (_) => const MatchingWaitScreen(),
+            AppRoutes.matchingResult: (_) => const MatchingResultScreen(),
+            AppRoutes.matchingHome: (_) => const MatchingHomeScreen(),
+            AppRoutes.chatPreview: (_) => const ConsentPreviewScreen(),
+            AppRoutes.consentDecision: (_) => const ConsentDecisionScreen(),
+            AppRoutes.consentSuccess: (_) => const ConsentSuccessScreen(),
+            AppRoutes.apiDashboard: (_) => const ApiDashboardScreen(),
+            AppRoutes.photo: (_) => const PhotoScreen(),
+            AppRoutes.subscription: (_) => const SubscriptionScreen(),
+            AppRoutes.health: (_) => const HealthScreen(),
+            AppRoutes.authProfile: (_) => const ProfileScreen(),
+            AppRoutes.users: (_) => const UsersScreen(),
+            AppRoutes.profileSetup: (_) => const ProfileSetupScreen(),
+            AppRoutes.partnerProfile: (_) => const PartnerProfileScreen(),
+            AppRoutes.home: (_) => const HomeShellScreen(),
+          },
+        );
       },
     );
   }

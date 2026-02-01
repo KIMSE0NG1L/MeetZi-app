@@ -11,16 +11,35 @@ class UsersRepository {
     required String gender,
     required int birthYear,
     required String baseType,
+    String? affiliationText,
+    int? heightCm,
+    String? smoking,
+    String? drinking,
+    String? mbti,
+    String? instagramHandle,
+    String? bio,
+    List<String>? preferredGenders,
+    int? minBirthYear,
+    int? maxBirthYear,
   }) async {
-    final response = await _client.dio.post(
-      '/users/profile',
-      data: {
-        'nickname': nickname,
-        'gender': gender,
-        'birthYear': birthYear,
-        'baseType': baseType,
-      },
-    );
+    final payload = <String, dynamic>{
+      'nickname': nickname,
+      'gender': gender,
+      'birthYear': birthYear,
+      'baseType': baseType,
+      if (affiliationText != null) 'affiliationText': affiliationText,
+      if (heightCm != null) 'heightCm': heightCm,
+      if (smoking != null) 'smoking': smoking,
+      if (drinking != null) 'drinking': drinking,
+      if (mbti != null) 'mbti': mbti,
+      if (instagramHandle != null) 'instagramHandle': instagramHandle,
+      if (bio != null) 'bio': bio,
+      if (preferredGenders != null) 'preferredGenders': preferredGenders,
+      if (minBirthYear != null) 'minBirthYear': minBirthYear,
+      if (maxBirthYear != null) 'maxBirthYear': maxBirthYear,
+    };
+
+    final response = await _client.dio.post('/users/profile', data: payload);
     return response.data as Map<String, dynamic>;
   }
 
