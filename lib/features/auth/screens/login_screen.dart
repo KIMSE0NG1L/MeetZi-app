@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/utils/app_config.dart';
+import 'package:nearo_app/shared/utils/token_storage.dart';
 import 'package:nearo_app/shared/widgets/primary_button.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'web_auth_screen.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -70,16 +72,11 @@ class LoginScreen extends StatelessWidget {
               PrimaryButton(
                 label: '카카오로 계속하기',
                 onPressed: () async {
-                  final uri = Uri.parse('${AppConfig.baseUrl}/auth/kakao');
-                  final launched = await launchUrl(
-                    uri,
-                    mode: LaunchMode.externalApplication,
-                  );
-                  if (!launched && context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('카카오 로그인 연결 실패')),
-                    );
-                  }
+                  // 기존 토큰 제거하고 새로운 로그인 시작
+                  await TokenStorage().clear();
+                  Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => WebAuthScreen(initialUrl: '${AppConfig.baseUrl}/auth/kakao'),
+                  ));
                 },
               ),
               const SizedBox(height: 12),

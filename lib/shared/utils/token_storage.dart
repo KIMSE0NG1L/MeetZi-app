@@ -9,6 +9,9 @@ class TokenStorage {
       : _storage = storage ?? const FlutterSecureStorage();
 
   Future<void> saveAccessToken(String token) {
+    // DEBUG: print token when saved (remove in production)
+    // ignore: avoid_print
+    print('DEBUG: Token saved -> $token');
     return _storage.write(key: _accessTokenKey, value: token);
   }
 
