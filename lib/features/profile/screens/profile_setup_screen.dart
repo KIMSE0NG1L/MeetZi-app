@@ -29,6 +29,21 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   String? _drinking;
   bool _isLoading = false;
   String _result = '';
+  bool _isEditing = false;
+  bool _forceEdit = false;
+  bool _didReadArgs = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_didReadArgs) return;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is bool) {
+      _forceEdit = args;
+    }
+    _didReadArgs = true;
+    _loadProfileIfExists();
+  }
 
   @override
   void dispose() {
@@ -39,6 +54,52 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     _instagramController.dispose();
     _bioController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadProfileIfExists() async {
+    try {
+      final result = await _repository.getProfile();
+      final user = (result['user'] as Map?) ?? result;
+      final nickname = user['nickname']?.toString();
+      final birthYear = user['birthYear'];
+      final gender = user['gender']?.toString();
+      final affiliation = user['affiliationText']?.toString();
+
+      if (nickname != null) {
+        _nicknameController.text = nickname;
+      }
+      if (birthYear is int) {
+        final birth = DateTime(birthYear, 1, 1);
+        _birthDate = birth;
+        _birthDateController.text = _formatDate(birth);
+      }
+      if (gender != null) {
+        _gender = gender;
+      }
+      if (affiliation != null && affiliation.isNotEmpty) {
+        _affiliation = affiliation;
+      }
+      final heightCm = user['heightCm'];
+      if (heightCm != null) {
+        _heightController.text = heightCm.toString();
+      }
+      final smoking = user['smoking']?.toString();
+      final drinking = user['drinking']?.toString();
+      if (smoking != null) _smoking = smoking;
+      if (drinking != null) _drinking = drinking;
+      final mbti = user['mbti']?.toString();
+      if (mbti != null) _mbtiController.text = mbti;
+      final instagram = user['instagramHandle']?.toString();
+      if (instagram != null) _instagramController.text = instagram;
+      final bio = user['bio']?.toString();
+      if (bio != null) _bioController.text = bio;
+
+      setState(() {
+        _isEditing = _forceEdit || (affiliation != null && affiliation.isNotEmpty);
+      });
+    } catch (_) {
+      // ignore if profile not found
+    }
   }
 
   String _formatDate(DateTime date) {
@@ -136,7 +197,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       _applyThemeForAffiliation();
       setState(() => _result = response.toString());
       if (!mounted) return;
-      Navigator.of(context).pushNamed(AppRoutes.environment);
+      if (_isEditing) {
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          AppRoutes.home,
+          (route) => false,
+        );
+      } else {
+        Navigator.of(context).pushNamed(AppRoutes.environment);
+      }
     } on DioException catch (error) {
       setState(() => _result = error.response?.data.toString() ?? '요청 실패');
     } finally {
@@ -162,7 +230,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('프로필 등록'),
+        title: Text(_isEditing ? '프로필 수정' : '프로필 등록'),
       ),
       body: SafeArea(
         child: Padding(
@@ -229,6 +297,12 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 value: _affiliation,
+                onChanged: _isEditing
+                    ? null
+                    : (value) {
+                        if (value == null) return;
+                        setState(() => _affiliation = value);
+                      },
                 decoration: const InputDecoration(
                   labelText: '소속 대학교',
                   border: OutlineInputBorder(),
@@ -238,10 +312,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   DropdownMenuItem(value: '건국대학교', child: Text('건국대학교')),
                   DropdownMenuItem(value: '한양대학교', child: Text('한양대학교')),
                 ],
-                onChanged: (value) {
-                  if (value == null) return;
-                  setState(() => _affiliation = value);
-                },
               ),
               const SizedBox(height: 12),
               TextField(
@@ -311,7 +381,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               ),
               const SizedBox(height: 12),
               PrimaryButton(
-                label: '프로필 저장',
+                label: _isEditing ? '프로필 수정' : '프로필 저장',
                 isLoading: _isLoading,
                 onPressed: _submit,
               ),

@@ -60,6 +60,8 @@ class MatchingHomeScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('매칭 홈'),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Colors.white,
       ),
       body: SafeArea(
         child: PageView.builder(
@@ -147,9 +149,13 @@ class _ProfileCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: Colors.black.withOpacity(0.06),
+            width: 1,
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withOpacity(0.08),
               blurRadius: 16,
               offset: const Offset(0, 8),
             ),
@@ -167,14 +173,14 @@ class _ProfileCard extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _chip('${profile.birthYear}년생'),
-                _chip(profile.gender),
-                _chip(profile.preferredGender),
-                _chip(profile.affiliation),
-                _chip('${profile.heightCm}cm'),
-                _chip(profile.smoking),
-                _chip(profile.mbti),
-                _chip(profile.instagram),
+                _chip(context, '${profile.birthYear}년생'),
+                _chip(context, profile.gender),
+                _chip(context, profile.preferredGender),
+                _chip(context, profile.affiliation),
+                _chip(context, '${profile.heightCm}cm'),
+                _chip(context, profile.smoking),
+                _chip(context, profile.mbti),
+                _chip(context, profile.instagram),
               ],
             ),
             const SizedBox(height: 12),
@@ -199,16 +205,20 @@ class _ProfileCard extends StatelessWidget {
     );
   }
 
-  Widget _chip(String text) {
+  Widget _chip(BuildContext context, String text) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F2F7),
+        color: Theme.of(context).colorScheme.primary.withOpacity(0.12),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         text,
-        style: const TextStyle(fontSize: 12),
+        style: TextStyle(
+          fontSize: 12,
+          color: Theme.of(context).colorScheme.primary,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }

@@ -179,7 +179,7 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('환경 선택/인증'),
+        title: const Text('학교 메일 인증'),
       ),
       body: SafeArea(
         child: Padding(

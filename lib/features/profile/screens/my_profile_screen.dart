@@ -44,6 +44,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('내 프로필'),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Colors.white,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -70,8 +72,10 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                           PrimaryButton(
                             label: '내 프로필 수정',
                             onPressed: () {
-                              Navigator.of(context)
-                                  .pushNamed(AppRoutes.profileSetup);
+                              Navigator.of(context).pushNamed(
+                                AppRoutes.profileSetup,
+                                arguments: true,
+                              );
                             },
                           ),
                           const SizedBox(height: 12),

@@ -31,4 +31,8 @@ class AuthRepository {
   Future<void> logout() {
     return _tokenStorage.clear();
   }
+
+  Future<void> deleteAccount() async {
+    await _client.dio.delete(ApiEndpoints.accountDelete);
+  }
 }

@@ -18,6 +18,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('메시지함'),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Colors.white,
       ),
       body: threads.isEmpty
           ? const Center(child: Text('아직 대화가 없습니다.'))

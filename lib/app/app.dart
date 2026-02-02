@@ -100,10 +100,7 @@ class _NearoAppState extends State<NearoApp> {
       if (token != null && token.isNotEmpty) {
         _tokenStorage.saveAccessToken(token);
       }
-      _navigatorKey.currentState?.pushNamedAndRemoveUntil(
-        AppRoutes.profileSetup,
-        (route) => false,
-      );
+      _restoreSession();
     }
   }
 

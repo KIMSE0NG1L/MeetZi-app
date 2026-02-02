@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/matching/screens/matching_home_screen.dart';
 import 'package:nearo_app/features/messages/screens/messages_screen.dart';
 import 'package:nearo_app/features/profile/screens/my_profile_screen.dart';
 import 'package:nearo_app/features/ratings/screens/ratings_screen.dart';
 import 'package:nearo_app/features/settings/screens/settings_screen.dart';
+import 'package:nearo_app/shared/theme/theme_controller.dart';
 
 class HomeShellScreen extends StatefulWidget {
   const HomeShellScreen({super.key});
@@ -14,6 +16,7 @@ class HomeShellScreen extends StatefulWidget {
 
 class _HomeShellScreenState extends State<HomeShellScreen> {
   int _currentIndex = 2;
+  final _authRepository = AuthRepository();
 
   static const _pages = [
     MyProfileScreen(),
@@ -22,6 +25,35 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
     SettingsScreen(),
     RatingsScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadThemeFromProfile();
+  }
+
+  Future<void> _loadThemeFromProfile() async {
+    try {
+      final result = await _authRepository.getProfile();
+      final user = (result['user'] as Map?) ?? result;
+      final affiliation = user['affiliationText']?.toString();
+      if (affiliation == null || affiliation.isEmpty) return;
+
+      switch (affiliation) {
+        case '세종대학교':
+          ThemeController.setSeedColor(const Color(0xFFB93234));
+          break;
+        case '건국대학교':
+          ThemeController.setSeedColor(const Color(0xFF036B3F));
+          break;
+        case '한양대학교':
+          ThemeController.setSeedColor(const Color(0xFF1D2475));
+          break;
+      }
+    } catch (_) {
+      // ignore
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
