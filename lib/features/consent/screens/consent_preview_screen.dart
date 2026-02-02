@@ -14,6 +14,7 @@ class ConsentPreviewScreen extends StatefulWidget {
 
 class _ConsentPreviewScreenState extends State<ConsentPreviewScreen> {
   final _chatStore = ChatHistoryStore.instance;
+  bool _didLoadHistory = false;
   static const Map<String, dynamic> _fallbackProfile = {
     'nickname': '두쫀쿠공주',
     'birthYear': 2005,
@@ -38,6 +39,33 @@ class _ConsentPreviewScreenState extends State<ConsentPreviewScreen> {
     _matchIdController.dispose();
     _chatController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_didLoadHistory) return;
+    _didLoadHistory = true;
+    _loadHistoryForPartner();
+  }
+
+  Future<void> _loadHistoryForPartner() async {
+    await _chatStore.ensureLoaded();
+    final args = ModalRoute.of(context)?.settings.arguments;
+    final partnerProfile =
+        args is Map<String, dynamic> ? args : _fallbackProfile;
+    final partnerName = partnerProfile['nickname']?.toString() ?? '상대';
+    final thread = _chatStore.getThread(partnerName);
+    if (thread == null || !mounted) return;
+    setState(() {
+      _messages
+        ..clear()
+        ..addAll(
+          thread.messages.map(
+            (m) => _ChatMessage(text: m.text, isMine: m.isMine),
+          ),
+        );
+    });
   }
 
   void _requestPhotoShare() {
@@ -98,9 +126,10 @@ class _ConsentPreviewScreenState extends State<ConsentPreviewScreen> {
     final args = ModalRoute.of(context)?.settings.arguments;
     final partnerProfile =
         args is Map<String, dynamic> ? args : _fallbackProfile;
+    final partnerName = partnerProfile['nickname']?.toString() ?? '대화';
     return Scaffold(
       appBar: AppBar(
-        title: const Text('익명 대화 프리뷰'),
+      title: Text(partnerName),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),

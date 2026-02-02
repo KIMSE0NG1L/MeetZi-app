@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
+import 'package:nearo_app/features/messages/data/chat_history_store.dart';
 import 'package:nearo_app/shared/utils/token_storage.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
   Future<void> _logout(BuildContext context) async {
+    await ChatHistoryStore.instance.clear();
     final storage = TokenStorage();
     await storage.clear();
     if (!context.mounted) return;
@@ -45,6 +47,7 @@ class SettingsScreen extends StatelessWidget {
     try {
       final repo = AuthRepository();
       await repo.deleteAccount();
+      await ChatHistoryStore.instance.clear();
       await _logout(context);
     } catch (_) {
       messenger.showSnackBar(

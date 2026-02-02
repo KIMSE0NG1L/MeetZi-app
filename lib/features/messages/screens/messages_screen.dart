@@ -13,6 +13,18 @@ class _MessagesScreenState extends State<MessagesScreen> {
   final _store = ChatHistoryStore.instance;
 
   @override
+  void initState() {
+    super.initState();
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    await _store.ensureLoaded();
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
     final threads = _store.threads;
     return Scaffold(
@@ -41,7 +53,12 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   subtitle: Text(last, maxLines: 1, overflow: TextOverflow.ellipsis),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
-                    Navigator.of(context).pushNamed(AppRoutes.chatPreview);
+                    Navigator.of(context).pushNamed(
+                      AppRoutes.chatPreview,
+                      arguments: {
+                        'nickname': thread.partner,
+                      },
+                    );
                   },
                 );
               },
