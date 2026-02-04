@@ -69,14 +69,32 @@ class _NearoAppState extends State<NearoApp> {
                 .isNotEmpty ??
             false;
         if (hasProfile && hasAffiliation) {
-          final status =
-              await _environmentStatusRepository.getMyEnvironmentStatus();
-          if (status['verified'] == true) {
-            _navigatorKey.currentState?.pushNamedAndRemoveUntil(
-              AppRoutes.home,
-              (route) => false,
-            );
-          } else {
+          try {
+            // 환경 정보 확인
+            final status =
+                await _environmentStatusRepository.getMyEnvironmentStatus();
+            if (status != null && status['environmentId'] != null) {
+              // 환경이 설정되어 있음
+              if (status['verified'] == true) {
+                _navigatorKey.currentState?.pushNamedAndRemoveUntil(
+                  AppRoutes.home,
+                  (route) => false,
+                );
+              } else {
+                _navigatorKey.currentState?.pushNamedAndRemoveUntil(
+                  AppRoutes.environment,
+                  (route) => false,
+                );
+              }
+            } else {
+              // 환경이 설정되지 않았으면 환경 선택 화면으로
+              _navigatorKey.currentState?.pushNamedAndRemoveUntil(
+                AppRoutes.environment,
+                (route) => false,
+              );
+            }
+          } catch (_) {
+            // 환경 조회 실패 시 환경 선택 화면으로
             _navigatorKey.currentState?.pushNamedAndRemoveUntil(
               AppRoutes.environment,
               (route) => false,

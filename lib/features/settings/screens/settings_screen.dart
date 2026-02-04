@@ -46,12 +46,23 @@ class SettingsScreen extends StatelessWidget {
     final messenger = ScaffoldMessenger.of(context);
     try {
       final repo = AuthRepository();
-      await repo.deleteAccount();
+      await repo.deleteAccount(); // deleteAccount()에서 토큰도 자동 삭제됨
       await ChatHistoryStore.instance.clear();
-      await _logout(context);
-    } catch (_) {
+      
+      if (!context.mounted) return;
+      
+      // 로그인 화면으로 이동 (모든 라우트 제거)
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        AppRoutes.login,
+        (route) => false,
+      );
+      
       messenger.showSnackBar(
-        const SnackBar(content: Text('계정 삭제에 실패했습니다.')),
+        const SnackBar(content: Text('계정이 삭제되었습니다.')),
+      );
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('계정 삭제에 실패했습니다: $e')),
       );
     }
   }

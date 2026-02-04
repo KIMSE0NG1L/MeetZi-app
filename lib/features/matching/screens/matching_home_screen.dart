@@ -1,225 +1,154 @@
 import 'package:flutter/material.dart';
 import 'package:nearo_app/app/app_routes.dart';
+import 'package:nearo_app/features/matching/data/matching_repository.dart';
 
-class MatchingHomeScreen extends StatelessWidget {
+class MatchingHomeScreen extends StatefulWidget {
   const MatchingHomeScreen({super.key});
 
-  static const _profiles = [
-    _MatchProfile(
-      nickname: '두쫀쿠공주1',
-      birthYear: 2005,
-      gender: '여성',
-      preferredGender: '남성 선호',
-      affiliation: '세종대학교',
-      heightCm: 160,
-      smoking: '비흡연',
-      mbti: 'INFP',
-      instagram: '@dck',
-      bio: '세종대 컴공과에요!',
-    ),
-    _MatchProfile(
-      nickname: '두쫀쿠공주2',
-      birthYear: 2005,
-      gender: '여성',
-      preferredGender: '남성 선호',
-      affiliation: '세종대학교',
-      heightCm: 160,
-      smoking: '비흡연',
-      mbti: 'INFP',
-      instagram: '@dck',
-      bio: '세종대 컴공과에요!',
-    ),
-    _MatchProfile(
-      nickname: '두쫀쿠공주3',
-      birthYear: 2005,
-      gender: '여성',
-      preferredGender: '남성 선호',
-      affiliation: '세종대학교',
-      heightCm: 160,
-      smoking: '비흡연',
-      mbti: 'INFP',
-      instagram: '@dck',
-      bio: '세종대 컴공과에요!',
-    ),
-    _MatchProfile(
-      nickname: '두쫀쿠공주4',
-      birthYear: 2005,
-      gender: '여성',
-      preferredGender: '남성 선호',
-      affiliation: '세종대학교',
-      heightCm: 160,
-      smoking: '비흡연',
-      mbti: 'INFP',
-      instagram: '@dck',
-      bio: '세종대 컴공과에요!',
-    ),
-  ];
+  @override
+  State<MatchingHomeScreen> createState() => _MatchingHomeScreenState();
+}
+
+class _MatchingHomeScreenState extends State<MatchingHomeScreen> {
+  final MatchingRepository _matchingRepository = MatchingRepository();
+  bool _isLoading = false;
+  String? _message;
+
+  void _requestMatch() async {
+    if (!mounted) return;
+    
+    setState(() {
+      _isLoading = true;
+      _message = null;
+    });
+
+    try {
+      final result = await _matchingRepository.requestMatch();
+      
+      if (!mounted) return;
+      
+      setState(() {
+        _message = '✅ ${result['message'] ?? '매칭 요청이 완료되었습니다.'}';
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_message!), duration: const Duration(seconds: 2)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      
+      // 에러 메시지 파싱
+      String errorMessage = e.toString();
+      if (errorMessage.contains('소속된 환경') || errorMessage.contains('학교')) {
+        errorMessage = '프로필을 먼저 완성해주세요.\n(학교 선택 및 이메일 인증 필요)';
+        // 프로필 화면으로 이동
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            Navigator.pushNamed(context, AppRoutes.profileSetup);
+          }
+        });
+      } else if (errorMessage.contains('이미 매칭')) {
+        errorMessage = '이미 매칭된 상태입니다.';
+      } else if (errorMessage.contains('대기')) {
+        errorMessage = '이미 매칭 대기 중입니다.';
+      } else {
+        errorMessage = '매칭 요청 실패: $errorMessage';
+      }
+      
+      setState(() {
+        _message = '❌ $errorMessage';
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('매칭 홈'),
+        title: const Text('매칭'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
       ),
       body: SafeArea(
-        child: PageView.builder(
-          controller: PageController(viewportFraction: 0.88),
-          itemCount: _profiles.length,
-          itemBuilder: (context, index) {
-            final profile = _profiles[index];
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(8, 16, 8, 24),
-              child: _ProfileCard(
-                profile: profile,
-                onTap: () {
-                  Navigator.of(context).pushNamed(
-                    AppRoutes.chatPreview,
-                    arguments: profile.toMap(),
-                  );
-                },
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-class _MatchProfile {
-  final String nickname;
-  final int birthYear;
-  final String gender;
-  final String preferredGender;
-  final String affiliation;
-  final int heightCm;
-  final String smoking;
-  final String mbti;
-  final String instagram;
-  final String bio;
-
-  const _MatchProfile({
-    required this.nickname,
-    required this.birthYear,
-    required this.gender,
-    required this.preferredGender,
-    required this.affiliation,
-    required this.heightCm,
-    required this.smoking,
-    required this.mbti,
-    required this.instagram,
-    required this.bio,
-  });
-
-  Map<String, dynamic> toMap() {
-    return {
-      'nickname': nickname,
-      'birthYear': birthYear,
-      'gender': gender,
-      'preferredGender': preferredGender,
-      'affiliation': affiliation,
-      'heightCm': heightCm,
-      'smoking': smoking,
-      'mbti': mbti,
-      'instagram': instagram,
-      'bio': bio,
-    };
-  }
-}
-
-class _ProfileCard extends StatelessWidget {
-  final _MatchProfile profile;
-  final VoidCallback onTap;
-
-  const _ProfileCard({
-    required this.profile,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Ink(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: Colors.black.withOpacity(0.06),
-            width: 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 16,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              profile.nickname,
-              style: theme.textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _chip(context, '${profile.birthYear}년생'),
-                _chip(context, profile.gender),
-                _chip(context, profile.preferredGender),
-                _chip(context, profile.affiliation),
-                _chip(context, '${profile.heightCm}cm'),
-                _chip(context, profile.smoking),
-                _chip(context, profile.mbti),
-                _chip(context, profile.instagram),
+                Icon(
+                  Icons.favorite,
+                  size: 80,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(height: 30),
+                Text(
+                  '매칭 준비 완료!',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  '프로필이 완성되었습니다.\n아래 버튼을 클릭해서 매칭을 시작하세요!',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 40),
+                if (_message != null)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      _message!,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _requestMatch,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Text(
+                          '💕 매칭 시작',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                ),
               ],
             ),
-            const SizedBox(height: 12),
-            Text(
-              profile.bio,
-              style: theme.textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 16),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Text(
-                '선택하기',
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: theme.colorScheme.primary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _chip(BuildContext context, String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primary.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 12,
-          color: Theme.of(context).colorScheme.primary,
-          fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );
   }
 }
+

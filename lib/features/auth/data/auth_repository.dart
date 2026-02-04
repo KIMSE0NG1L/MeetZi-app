@@ -33,6 +33,11 @@ class AuthRepository {
   }
 
   Future<void> deleteAccount() async {
-    await _client.dio.delete(ApiEndpoints.accountDelete);
+    try {
+      await _client.dio.delete(ApiEndpoints.accountDelete);
+    } finally {
+      // 계정 삭제 완료 후 토큰 삭제 (로그아웃)
+      await _tokenStorage.clear();
+    }
   }
 }

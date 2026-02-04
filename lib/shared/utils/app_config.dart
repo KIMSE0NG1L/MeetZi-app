@@ -1,3 +1,3 @@
 class AppConfig {
-  static const String baseUrl = 'http://192.168.219.101:3000';
+  static const String baseUrl = 'https://hurtlingly-blatant-tari.ngrok-free.dev';
 }
