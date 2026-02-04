@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/features/matching/data/matching_repository.dart';
+import 'package:nearo_app/features/auth/data/auth_repository.dart';
 
 class MatchingHomeScreen extends StatefulWidget {
   const MatchingHomeScreen({super.key});
@@ -9,44 +9,65 @@ class MatchingHomeScreen extends StatefulWidget {
   State<MatchingHomeScreen> createState() => _MatchingHomeScreenState();
 }
 
-class _MatchingHomeScreenState extends State<MatchingHomeScreen> {
+class _MatchingHomeScreenState extends State<MatchingHomeScreen>
+    with WidgetsBindingObserver {
   final MatchingRepository _matchingRepository = MatchingRepository();
-  bool _isLoading = false;
-  String? _message;
+  final AuthRepository _authRepository = AuthRepository();
+  String? _matchStatus;
 
-  void _requestMatch() async {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _checkMatchStatus();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkMatchStatus();
+    }
+  }
+
+  Future<void> _checkMatchStatus() async {
     if (!mounted) return;
-    
-    setState(() {
-      _isLoading = true;
-      _message = null;
-    });
 
     try {
-      final result = await _matchingRepository.requestMatch();
+      final profile = await _authRepository.getProfile();
+      final matchStatus = profile['matchStatus'] as String?;
+
+      if (!mounted) return;
+
+      setState(() {
+        _matchStatus = matchStatus;
+      });
+    } catch (e) {
+      debugPrint('매칭 상태 확인 실패: $e');
+    }
+  }
+
+  Future<void> _requestMatch() async {
+    if (!mounted) return;
+
+    try {
+      await _matchingRepository.requestMatch();
       
       if (!mounted) return;
       
-      setState(() {
-        _message = '✅ ${result['message'] ?? '매칭 요청이 완료되었습니다.'}';
-      });
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_message!), duration: const Duration(seconds: 2)),
-      );
+      // 매칭 요청 성공 - 매칭 대기 화면으로 이동
+      Navigator.pushReplacementNamed(context, '/matching/wait');
     } catch (e) {
       if (!mounted) return;
       
-      // 에러 메시지 파싱
       String errorMessage = e.toString();
       if (errorMessage.contains('소속된 환경') || errorMessage.contains('학교')) {
         errorMessage = '프로필을 먼저 완성해주세요.\n(학교 선택 및 이메일 인증 필요)';
-        // 프로필 화면으로 이동
-        Future.delayed(const Duration(seconds: 2), () {
-          if (mounted) {
-            Navigator.pushNamed(context, AppRoutes.profileSetup);
-          }
-        });
       } else if (errorMessage.contains('이미 매칭')) {
         errorMessage = '이미 매칭된 상태입니다.';
       } else if (errorMessage.contains('대기')) {
@@ -55,10 +76,6 @@ class _MatchingHomeScreenState extends State<MatchingHomeScreen> {
         errorMessage = '매칭 요청 실패: $errorMessage';
       }
       
-      setState(() {
-        _message = '❌ $errorMessage';
-      });
-      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(errorMessage),
@@ -66,23 +83,126 @@ class _MatchingHomeScreenState extends State<MatchingHomeScreen> {
           duration: const Duration(seconds: 3),
         ),
       );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+    }
+  }
+
+  Future<void> _cancelMatch() async {
+    if (!mounted) return;
+
+    try {
+      await _matchingRepository.cancelMatch();
+      
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ 매칭이 취소되었습니다.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      
+      await _checkMatchStatus();
+    } catch (e) {
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('취소 실패: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // WAITING 상태 - 매칭 대기 중
+    if (_matchStatus == 'WAITING') {
+      return Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 80,
+                    height: 80,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 4,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    '매칭중',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                  ElevatedButton(
+                    onPressed: _cancelMatch,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text(
+                      '✕ 매칭 취소',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // MATCHED 상태
+    if (_matchStatus == 'MATCHED') {
+      return Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.favorite,
+                    size: 120,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    '매칭이 성사됐어요!\n익명 대화로 먼저 연결돼요.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    '상호 동의 전까지는\n프로필 사진이 공개되지 않아요.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // NOT_MATCHED 상태 (기본)
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('매칭'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
-      ),
       body: SafeArea(
         child: Center(
           child: Padding(
@@ -108,40 +228,17 @@ class _MatchingHomeScreenState extends State<MatchingHomeScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 40),
-                if (_message != null)
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    margin: const EdgeInsets.only(bottom: 20),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      _message!,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
                 ElevatedButton(
-                  onPressed: _isLoading ? null : _requestMatch,
+                  onPressed: _requestMatch,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
                     backgroundColor: Theme.of(context).colorScheme.primary,
                     foregroundColor: Colors.white,
                   ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : const Text(
-                          '💕 매칭 시작',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
+                  child: const Text(
+                    '💕 매칭 시작',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ],
             ),
@@ -151,4 +248,3 @@ class _MatchingHomeScreenState extends State<MatchingHomeScreen> {
     );
   }
 }
-

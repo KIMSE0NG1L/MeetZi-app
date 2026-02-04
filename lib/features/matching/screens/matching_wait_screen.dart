@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/features/matching/data/matching_repository.dart';
 import 'package:nearo_app/shared/widgets/primary_button.dart';
@@ -29,13 +30,28 @@ class _MatchingWaitScreenState extends State<MatchingWaitScreen> {
   }
 
   Future<void> _cancelMatch() async {
+    if (_isCanceling) return; // 이미 취소 중이면 무시
+    
     setState(() => _isCanceling = true);
     try {
       await _repository.cancelMatch();
-      _showMessage('매칭 요청을 취소했습니다.');
+      
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('✅ 매칭이 취소되었습니다.')),
+      );
+      
+      // 매칭 취소 성공 - 매칭 준비 화면으로 돌아가기
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, AppRoutes.matchingHome);
+        }
+      });
     } on DioException catch (error) {
+      if (!mounted) return;
+      
       _showMessage(error.response?.data.toString() ?? '매칭 취소에 실패했습니다.');
-    } finally {
       setState(() => _isCanceling = false);
     }
   }
@@ -53,16 +69,19 @@ class _MatchingWaitScreenState extends State<MatchingWaitScreen> {
         title: const Text('매칭 대기'),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
               const SizedBox(height: 24),
-              Icon(
-                Icons.search,
-                size: 120,
-                color: Theme.of(context).colorScheme.primary,
+              Lottie.asset(
+                'assets/animations/Couple sharing and caring love.json',
+                width: 200,
+                height: 200,
+                fit: BoxFit.contain,
               ),
               const SizedBox(height: 24),
               Text(
@@ -77,12 +96,6 @@ class _MatchingWaitScreenState extends State<MatchingWaitScreen> {
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
               const Spacer(),
-              PrimaryButton(
-                label: '매칭 요청 시작',
-                isLoading: _isRequesting,
-                onPressed: _requestMatch,
-              ),
-              const SizedBox(height: 12),
               OutlinedButton(
                 onPressed: _isCanceling ? null : _cancelMatch,
                 child: _isCanceling
@@ -101,6 +114,7 @@ class _MatchingWaitScreenState extends State<MatchingWaitScreen> {
                 child: const Text('매칭됐다고 가정하기'),
               ),
             ],
+            ),
           ),
         ),
       ),
