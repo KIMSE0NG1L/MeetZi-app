@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/features/matching/data/matching_repository.dart';
+import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/shared/widgets/primary_button.dart';
 
 class MatchingWaitScreen extends StatefulWidget {
@@ -14,8 +16,52 @@ class MatchingWaitScreen extends StatefulWidget {
 
 class _MatchingWaitScreenState extends State<MatchingWaitScreen> {
   final _repository = MatchingRepository();
+  final _authRepository = AuthRepository();
   bool _isRequesting = false;
   bool _isCanceling = false;
+  Timer? _statusCheckTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startStatusCheck();
+  }
+
+  @override
+  void dispose() {
+    _statusCheckTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startStatusCheck() {
+    // 3초마다 매칭 상태 확인
+    _statusCheckTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      _checkMatchStatus();
+    });
+  }
+
+  Future<void> _checkMatchStatus() async {
+    if (!mounted) return;
+
+    try {
+      final profile = await _authRepository.getProfile();
+      final matchStatus = profile['matchStatus'] as String?;
+
+      if (!mounted) return;
+
+      if (matchStatus == 'MATCHED') {
+        // 매칭 완료! 매칭 결과 화면으로 이동
+        _statusCheckTimer?.cancel();
+        Navigator.pushReplacementNamed(context, AppRoutes.matchingResult);
+      } else if (matchStatus != 'WAITING') {
+        // WAITING이 아니면 (NOT_MATCHED 등) 매칭 홈으로 돌아가기
+        _statusCheckTimer?.cancel();
+        Navigator.pushReplacementNamed(context, AppRoutes.matchingHome);
+      }
+    } catch (e) {
+      debugPrint('매칭 상태 확인 실패: $e');
+    }
+  }
 
   Future<void> _requestMatch() async {
     setState(() => _isRequesting = true);
@@ -32,6 +78,7 @@ class _MatchingWaitScreenState extends State<MatchingWaitScreen> {
   Future<void> _cancelMatch() async {
     if (_isCanceling) return; // 이미 취소 중이면 무시
     
+    _statusCheckTimer?.cancel(); // 타이머 중지
     setState(() => _isCanceling = true);
     try {
       await _repository.cancelMatch();
@@ -53,6 +100,7 @@ class _MatchingWaitScreenState extends State<MatchingWaitScreen> {
       
       _showMessage(error.response?.data.toString() ?? '매칭 취소에 실패했습니다.');
       setState(() => _isCanceling = false);
+      _startStatusCheck(); // 타이머 재시작
     }
   }
 
