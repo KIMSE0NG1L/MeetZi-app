@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:nearo_app/shared/api/api_client.dart';
 import 'package:nearo_app/shared/api/endpoints.dart';
 
@@ -15,6 +17,21 @@ class PhotoRepository {
     final response = await _client.dio.post(
       ApiEndpoints.photosUpload,
       data: {'storageKey': storageKey},
+    );
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> uploadPhotoFile({required XFile file}) async {
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(
+        file.path,
+        filename: file.name,
+      ),
+    });
+    final response = await _client.dio.post(
+      ApiEndpoints.photosUpload,
+      data: formData,
+      options: Options(contentType: 'multipart/form-data'),
     );
     return response.data as Map<String, dynamic>;
   }

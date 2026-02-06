@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/features/messages/data/chat_repository.dart';
+import 'package:nearo_app/shared/utils/app_config.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -34,6 +35,13 @@ class _MessagesScreenState extends State<MessagesScreen> {
     }
   }
 
+  String? _resolvePhotoUrl(String? storageKey) {
+    if (storageKey == null || storageKey.isEmpty) return null;
+    if (storageKey.startsWith('http')) return storageKey;
+    if (storageKey.startsWith('/')) return '${AppConfig.baseUrl}$storageKey';
+    return '${AppConfig.baseUrl}/$storageKey';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -54,10 +62,16 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 final room = _rooms[index];
                 final partner = room['partnerNickname']?.toString() ?? '대화';
                 final last = room['lastMessage']?.toString() ?? '';
+                final photoKey = room['partnerPhotoStorageKey']?.toString();
+                final photoUrl = _resolvePhotoUrl(photoKey);
                 return ListTile(
                   leading: CircleAvatar(
                     backgroundColor: Theme.of(context).colorScheme.primary,
-                    child: Text(partner.substring(0, 1)),
+                    backgroundImage:
+                        photoUrl == null ? null : NetworkImage(photoUrl),
+                    child: photoUrl == null
+                        ? Text(partner.substring(0, 1))
+                        : null,
                   ),
                   title: Text(partner),
                   subtitle: Text(last, maxLines: 1, overflow: TextOverflow.ellipsis),

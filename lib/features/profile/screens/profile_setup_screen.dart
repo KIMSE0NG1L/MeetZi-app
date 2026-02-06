@@ -1,9 +1,14 @@
 import 'package:dio/dio.dart';
+import 'dart:io';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
+import 'package:nearo_app/features/photo/data/photo_repository.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
+import 'package:nearo_app/shared/utils/app_config.dart';
 import 'package:nearo_app/shared/widgets/primary_button.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
@@ -15,6 +20,7 @@ class ProfileSetupScreen extends StatefulWidget {
 
 class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _repository = AuthRepository();
+  final _photoRepository = PhotoRepository();
   final _nicknameController = TextEditingController();
   final _birthDateController = TextEditingController();
   String _affiliation = '세종대학교';
@@ -32,6 +38,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   bool _isEditing = false;
   bool _forceEdit = false;
   bool _didReadArgs = false;
+  XFile? _selectedPhoto;
+  List<dynamic> _photos = [];
+  bool _isUploadingPhoto = false;
+  String? _photoError;
 
   @override
   void didChangeDependencies() {
@@ -97,9 +107,63 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       setState(() {
         _isEditing = _forceEdit || (affiliation != null && affiliation.isNotEmpty);
       });
+      await _loadPhotos();
     } catch (_) {
       // ignore if profile not found
     }
+  }
+
+  Future<void> _loadPhotos() async {
+    try {
+      final photos = await _photoRepository.getMyPhotos();
+      if (!mounted) return;
+      setState(() => _photos = photos);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _photoError = '사진을 불러오지 못했습니다.');
+    }
+  }
+
+  Future<void> _pickPhoto() async {
+    final picker = ImagePicker();
+    final file = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+    );
+    if (file == null) return;
+    setState(() {
+      _selectedPhoto = file;
+      _photoError = null;
+    });
+  }
+
+  Future<void> _uploadSelectedPhoto() async {
+    if (_selectedPhoto == null) {
+      setState(() => _photoError = '먼저 사진을 선택해 주세요.');
+      return;
+    }
+    setState(() {
+      _isUploadingPhoto = true;
+      _photoError = null;
+    });
+    try {
+      await _photoRepository.uploadPhotoFile(file: _selectedPhoto!);
+      if (!mounted) return;
+      setState(() => _selectedPhoto = null);
+      await _loadPhotos();
+    } on DioException catch (error) {
+      setState(() => _photoError = error.response?.data.toString() ?? '업로드 실패');
+    } finally {
+      if (mounted) {
+        setState(() => _isUploadingPhoto = false);
+      }
+    }
+  }
+
+  String _resolvePhotoUrl(String storageKey) {
+    if (storageKey.startsWith('http')) return storageKey;
+    if (storageKey.startsWith('/')) return '${AppConfig.baseUrl}$storageKey';
+    return '${AppConfig.baseUrl}/$storageKey';
   }
 
   String _formatDate(DateTime date) {
@@ -237,6 +301,116 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
           padding: const EdgeInsets.all(24),
           child: ListView(
             children: [
+              Text('프로필 사진', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: _selectedPhoto == null
+                        ? const Icon(Icons.photo, size: 40, color: Colors.grey)
+                        : Image.file(
+                            File(_selectedPhoto!.path),
+                            fit: BoxFit.cover,
+                          ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        OutlinedButton(
+                          onPressed: _pickPhoto,
+                          child: const Text('사진 선택'),
+                        ),
+                        const SizedBox(height: 8),
+                        PrimaryButton(
+                          label: '사진 업로드',
+                          isLoading: _isUploadingPhoto,
+                          onPressed: _uploadSelectedPhoto,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (_photoError != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  _photoError!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ],
+              if (_photos.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 88,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _photos.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, index) {
+                      final photo = _photos[index] as Map<String, dynamic>;
+                      final storageKey = photo['storageKey']?.toString() ?? '';
+                      final isPrimary = photo['isPrimary'] == true;
+                      return Stack(
+                        children: [
+                          Container(
+                            width: 88,
+                            height: 88,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              color: Colors.grey.shade100,
+                              border: Border.all(
+                                color: isPrimary
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Colors.transparent,
+                                width: 2,
+                              ),
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: storageKey.isEmpty
+                                ? const Icon(Icons.broken_image)
+                                : Image.network(
+                                    _resolvePhotoUrl(storageKey),
+                                    fit: BoxFit.cover,
+                                  ),
+                          ),
+                          if (isPrimary)
+                            Positioned(
+                              left: 6,
+                              top: 6,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Text(
+                                  '대표',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ],
+              const SizedBox(height: 16),
               TextField(
                 controller: _nicknameController,
                 keyboardType: TextInputType.name,

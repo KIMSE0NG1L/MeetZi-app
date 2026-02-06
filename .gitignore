@@ -23,3 +23,4 @@ ios/Pods/
 
 # Logs
 *.log
+package-lock.json
