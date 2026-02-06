@@ -45,7 +45,8 @@ class _MatchingWaitScreenState extends State<MatchingWaitScreen> {
 
     try {
       final profile = await _authRepository.getProfile();
-      final matchStatus = profile['matchStatus'] as String?;
+      final user = profile['user'] as Map<String, dynamic>?;
+      final matchStatus = (user?['matchStatus'] ?? profile['matchStatus']) as String?;
 
       if (!mounted) return;
 
@@ -53,7 +54,7 @@ class _MatchingWaitScreenState extends State<MatchingWaitScreen> {
         // 매칭 완료! 매칭 결과 화면으로 이동
         _statusCheckTimer?.cancel();
         Navigator.pushReplacementNamed(context, AppRoutes.matchingResult);
-      } else if (matchStatus != 'WAITING') {
+      } else if (matchStatus == 'NOT_MATCHED') {
         // WAITING이 아니면 (NOT_MATCHED 등) 매칭 홈으로 돌아가기
         _statusCheckTimer?.cancel();
         Navigator.pushReplacementNamed(context, AppRoutes.matchingHome);

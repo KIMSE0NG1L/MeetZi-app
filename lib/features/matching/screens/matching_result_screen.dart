@@ -1,9 +1,50 @@
 import 'package:flutter/material.dart';
 import 'package:nearo_app/app/app_routes.dart';
+import 'package:nearo_app/features/matching/data/matching_repository.dart';
+import 'package:nearo_app/features/messages/data/chat_repository.dart';
 import 'package:nearo_app/shared/widgets/primary_button.dart';
 
-class MatchingResultScreen extends StatelessWidget {
+class MatchingResultScreen extends StatefulWidget {
   const MatchingResultScreen({super.key});
+
+  @override
+  State<MatchingResultScreen> createState() => _MatchingResultScreenState();
+}
+
+class _MatchingResultScreenState extends State<MatchingResultScreen> {
+  final _matchingRepository = MatchingRepository();
+  final _chatRepository = ChatRepository();
+  bool _isLoading = false;
+
+  Future<void> _openChatRoom() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+    try {
+      final active = await _matchingRepository.getActiveMatch();
+      final matchId = active['matchId']?.toString();
+      if (matchId == null || matchId.isEmpty) {
+        throw Exception('matchId가 없습니다.');
+      }
+
+      final room = await _chatRepository.createRoom(matchId: matchId);
+      if (!mounted) return;
+
+      Navigator.of(context).pushNamed(
+        AppRoutes.chatRoom,
+        arguments: {
+          'roomId': room['roomId']?.toString(),
+          'partnerNickname': room['partnerNickname']?.toString(),
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('채팅방 생성 실패: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,10 +78,9 @@ class MatchingResultScreen extends StatelessWidget {
               ),
               const Spacer(),
               PrimaryButton(
-                label: '대화 미리보기로 이동',
-                onPressed: () {
-                  Navigator.of(context).pushNamed(AppRoutes.chatPreview);
-                },
+                label: '대화방으로 이동',
+                isLoading: _isLoading,
+                onPressed: _openChatRoom,
               ),
             ],
           ),

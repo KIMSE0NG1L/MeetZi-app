@@ -16,6 +16,7 @@ import 'package:nearo_app/features/health/screens/health_screen.dart';
 import 'package:nearo_app/features/matching/screens/matching_result_screen.dart';
 import 'package:nearo_app/features/matching/screens/matching_wait_screen.dart';
 import 'package:nearo_app/features/matching/screens/matching_home_screen.dart';
+import 'package:nearo_app/features/messages/screens/chat_room_screen.dart';
 import 'package:nearo_app/features/photo/screens/photo_screen.dart';
 import 'package:nearo_app/features/subscription/screens/subscription_screen.dart';
 import 'package:nearo_app/features/dev/screens/api_dashboard_screen.dart';
@@ -146,6 +147,7 @@ class _NearoAppState extends State<NearoApp> {
             AppRoutes.matchingResult: (_) => const MatchingResultScreen(),
             AppRoutes.matchingHome: (_) => const MatchingHomeScreen(),
             AppRoutes.chatPreview: (_) => const ConsentPreviewScreen(),
+            AppRoutes.chatRoom: (_) => const ChatRoomScreen(),
             AppRoutes.consentDecision: (_) => const ConsentDecisionScreen(),
             AppRoutes.consentSuccess: (_) => const ConsentSuccessScreen(),
             AppRoutes.apiDashboard: (_) => const ApiDashboardScreen(),

@@ -5,9 +5,12 @@ class ApiEndpoints {
     static const String accountDelete = '/users/me';
   static const String matchingRequest = '/matching/request';
   static const String matchingCancel = '/matching/cancel';
+  static const String matchingActive = '/matching/active';
   static String matchingConsent(String matchId) => '/matching/$matchId/consent';
   static String matchingConsentStatus(String matchId) =>
       '/matching/$matchId/consent-status';
+  static const String chatsRooms = '/chats/rooms';
+  static String chatsMessages(String roomId) => '/chats/rooms/$roomId/messages';
   static const String photos = '/photos';
   static const String photosUpload = '/photos/upload';
   static String photoById(String photoId) => '/photos/$photoId';

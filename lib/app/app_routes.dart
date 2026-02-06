@@ -7,6 +7,7 @@ class AppRoutes {
   static const String matchingHome = '/matching/home';
   static const String home = '/home';
   static const String chatPreview = '/consent/preview';
+  static const String chatRoom = '/chats/room';
   static const String partnerProfile = '/chat/partner-profile';
   static const String consentDecision = '/consent/decision';
   static const String consentSuccess = '/consent/success';

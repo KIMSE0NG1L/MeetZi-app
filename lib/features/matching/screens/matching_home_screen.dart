@@ -40,7 +40,8 @@ class _MatchingHomeScreenState extends State<MatchingHomeScreen>
 
     try {
       final profile = await _authRepository.getProfile();
-      final matchStatus = profile['matchStatus'] as String?;
+      final user = profile['user'] as Map<String, dynamic>?;
+      final matchStatus = (user?['matchStatus'] ?? profile['matchStatus']) as String?;
 
       if (!mounted) return;
 

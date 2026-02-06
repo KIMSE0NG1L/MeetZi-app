@@ -15,4 +15,9 @@ class MatchingRepository {
     final response = await _client.dio.delete(ApiEndpoints.matchingCancel);
     return response.data as Map<String, dynamic>;
   }
+
+  Future<Map<String, dynamic>> getActiveMatch() async {
+    final response = await _client.dio.get(ApiEndpoints.matchingActive);
+    return response.data as Map<String, dynamic>;
+  }
 }
