@@ -12,7 +12,7 @@ class ConsentRepository {
   }) async {
     final response = await _client.dio.post(
       ApiEndpoints.matchingConsent(matchId),
-      data: {'decision': decision},
+      data: {'decision': decision ? 'yes' : 'no'},
     );
     return response.data as Map<String, dynamic>;
   }

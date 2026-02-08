@@ -46,6 +46,9 @@ class _MatchingResultScreenState extends State<MatchingResultScreen> {
     }
   }
 
+  // TODO: 실제 상대 bio를 받아오려면 서버에서 matchId로 프로필을 조회해야 함. 임시로 예시 bio 사용
+  final String partnerBio = '자기소개: 세종대 컴공과에요!';
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -81,6 +84,11 @@ class _MatchingResultScreenState extends State<MatchingResultScreen> {
                 label: '대화방으로 이동',
                 isLoading: _isLoading,
                 onPressed: _openChatRoom,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                partnerBio,
+                style: Theme.of(context).textTheme.bodyMedium,
               ),
             ],
           ),

@@ -15,6 +15,11 @@ class ChatRepository {
     return [];
   }
 
+  Future<Map<String, dynamic>> getRoom({required String roomId}) async {
+    final response = await _client.dio.get(ApiEndpoints.chatsRoom(roomId));
+    return Map<String, dynamic>.from(response.data as Map);
+  }
+
   Future<Map<String, dynamic>> createRoom({required String matchId}) async {
     final response = await _client.dio.post(
       ApiEndpoints.chatsRooms,
@@ -46,6 +51,11 @@ class ChatRepository {
       ApiEndpoints.chatsMessages(roomId),
       data: {'content': content},
     );
+    return Map<String, dynamic>.from(response.data as Map);
+  }
+
+  Future<Map<String, dynamic>> deleteRoom({required String roomId}) async {
+    final response = await _client.dio.delete(ApiEndpoints.chatsRoom(roomId));
     return Map<String, dynamic>.from(response.data as Map);
   }
 }

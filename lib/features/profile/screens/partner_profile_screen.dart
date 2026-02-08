@@ -66,7 +66,9 @@ class PartnerProfileScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                profile['bio']?.toString() ?? '',
+                profile['bio'] != null && profile['bio'].toString().trim().isNotEmpty
+                    ? '자기소개: ${profile['bio']}'
+                    : '',
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
             ],
@@ -91,11 +93,44 @@ class PartnerProfileScreen extends StatelessWidget {
   }
 
   List<Widget> _buildChips(Map<String, dynamic> profile) {
+    String? _smokingToKr(String? value) {
+      switch (value) {
+        case 'none':
+          return '비흡연';
+        case 'sometimes':
+          return '가끔 흡연';
+        case 'often':
+          return '자주 흡연';
+        case '비흡연':
+        case '가끔':
+        case '자주':
+          return value; // 이미 한글로 저장된 경우
+        default:
+          return value;
+      }
+    }
+    String? _drinkingToKr(String? value) {
+      switch (value) {
+        case 'none':
+          return '음주 안 함';
+        case 'sometimes':
+          return '가끔 음주';
+        case 'often':
+          return '자주 음주';
+        case '안 함':
+        case '가끔':
+        case '자주':
+          return value; // 이미 한글로 저장된 경우
+        default:
+          return value;
+      }
+    }
     final values = <String?>[
       profile['preferredGender']?.toString(),
       profile['affiliation']?.toString(),
       profile['heightCm'] != null ? '${profile['heightCm']}cm' : null,
-      profile['smoking']?.toString(),
+      _smokingToKr(profile['smoking']?.toString()),
+      _drinkingToKr(profile['drinking']?.toString()),
       profile['mbti']?.toString(),
       profile['instagram']?.toString(),
     ];

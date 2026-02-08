@@ -143,7 +143,7 @@ class _NearoAppState extends State<NearoApp> {
             AppRoutes.onboarding: (_) => const OnboardingScreen(),
             AppRoutes.login: (_) => const LoginScreen(),
             AppRoutes.environment: (_) => const EnvironmentScreen(),
-            AppRoutes.matchingWait: (_) => const MatchingWaitScreen(),
+            //AppRoutes.matchingWait: (_) => const MatchingWaitScreen(), // 매칭 대기 화면 제거
             AppRoutes.matchingResult: (_) => const MatchingResultScreen(),
             AppRoutes.matchingHome: (_) => const MatchingHomeScreen(),
             AppRoutes.chatPreview: (_) => const ConsentPreviewScreen(),

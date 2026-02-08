@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nearo_app/features/matching/data/matching_repository.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
+import 'package:lottie/lottie.dart';
 
 class MatchingHomeScreen extends StatefulWidget {
   const MatchingHomeScreen({super.key});
@@ -58,14 +59,14 @@ class _MatchingHomeScreenState extends State<MatchingHomeScreen>
 
     try {
       await _matchingRepository.requestMatch();
-      
+
       if (!mounted) return;
-      
-      // 매칭 요청 성공 - 매칭 대기 화면으로 이동
-      Navigator.pushReplacementNamed(context, '/matching/wait');
+
+      // 매칭 요청 성공 - 홈(매칭 탭)으로 이동
+      Navigator.pushReplacementNamed(context, '/home');
     } catch (e) {
       if (!mounted) return;
-      
+
       String errorMessage = e.toString();
       if (errorMessage.contains('소속된 환경') || errorMessage.contains('학교')) {
         errorMessage = '프로필을 먼저 완성해주세요.\n(학교 선택 및 이메일 인증 필요)';
@@ -76,7 +77,7 @@ class _MatchingHomeScreenState extends State<MatchingHomeScreen>
       } else {
         errorMessage = '매칭 요청 실패: $errorMessage';
       }
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(errorMessage),
@@ -124,40 +125,34 @@ class _MatchingHomeScreenState extends State<MatchingHomeScreen>
         body: SafeArea(
           child: Center(
             child: Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(24),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  SizedBox(
-                    width: 80,
-                    height: 80,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 4,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
+                  const SizedBox(height: 24),
+                  Lottie.asset(
+                    'assets/animations/Couple sharing and caring love.json',
+                    width: 200,
+                    height: 200,
+                    fit: BoxFit.contain,
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
                   Text(
-                    '매칭중',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    '현재 같은 환경의\n누군가를 찾는 중이에요',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    '매칭이 성사되면 바로 알려드릴게요.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyLarge,
                   ),
                   const SizedBox(height: 30),
-                  ElevatedButton(
+                  OutlinedButton(
                     onPressed: _cancelMatch,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text(
-                      '✕ 매칭 취소',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
+                    child: const Text('매칭 요청 취소'),
                   ),
                 ],
               ),
@@ -193,6 +188,30 @@ class _MatchingHomeScreenState extends State<MatchingHomeScreen>
                     '상호 동의 전까지는\n프로필 사진이 공개되지 않아요.',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                  const SizedBox(height: 32),
+                  ElevatedButton(
+                    onPressed: () async {
+                      // 활성 매칭에서 roomId 조회 후 이동
+                      final match = await _matchingRepository.getActiveMatch();
+                      final roomId = match['roomId'] ?? (match['chatRoom']?['id']);
+                      if (roomId != null) {
+                        Navigator.pushNamed(context, '/chats/room', arguments: {'roomId': roomId});
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('채팅방 정보를 찾을 수 없습니다.')),
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text(
+                      '대화방으로 이동하기',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ],
               ),

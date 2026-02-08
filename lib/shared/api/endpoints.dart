@@ -10,6 +10,7 @@ class ApiEndpoints {
   static String matchingConsentStatus(String matchId) =>
       '/matching/$matchId/consent-status';
   static const String chatsRooms = '/chats/rooms';
+  static String chatsRoom(String roomId) => '/chats/rooms/$roomId';
   static String chatsMessages(String roomId) => '/chats/rooms/$roomId/messages';
   static const String photos = '/photos';
   static const String photosUpload = '/photos/upload';
