@@ -38,8 +38,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
-  void _goToLogin() {
-    Navigator.of(context).pushNamed(AppRoutes.login);
+  void _goToAuthChoice() {
+    Navigator.of(context).pushNamed('/auth-choice');
   }
 
   @override
@@ -62,7 +62,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                   ),
                   TextButton(
-                    onPressed: _goToLogin,
+                    onPressed: _goToAuthChoice,
                     child: const Text('건너뛰기'),
                   ),
                 ],
@@ -142,7 +142,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 label: _currentPage == _pages.length - 1 ? '시작하기' : '다음',
                 onPressed: () {
                   if (_currentPage == _pages.length - 1) {
-                    _goToLogin();
+                    _goToAuthChoice();
                     return;
                   }
                   _pageController.nextPage(

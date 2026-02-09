@@ -9,6 +9,9 @@ import 'package:nearo_app/shared/utils/token_storage.dart';
 import 'package:nearo_app/features/auth/screens/environment_screen.dart';
 import 'package:nearo_app/features/auth/screens/login_screen.dart';
 import 'package:nearo_app/features/auth/screens/onboarding_screen.dart';
+import 'package:nearo_app/features/auth/screens/auth_choice_screen.dart';
+import 'package:nearo_app/features/auth/screens/login_email_screen.dart';
+import 'package:nearo_app/features/auth/screens/register_screen.dart';
 import 'package:nearo_app/features/consent/screens/consent_decision_screen.dart';
 import 'package:nearo_app/features/consent/screens/consent_preview_screen.dart';
 import 'package:nearo_app/features/consent/screens/consent_success_screen.dart';
@@ -141,6 +144,9 @@ class _NearoAppState extends State<NearoApp> {
           initialRoute: AppRoutes.onboarding,
           routes: {
             AppRoutes.onboarding: (_) => const OnboardingScreen(),
+            AppRoutes.authChoice: (_) => const AuthChoiceScreen(),
+            '/login-email': (_) => const LoginEmailScreen(),
+            '/register': (_) => const RegisterScreen(),
             AppRoutes.login: (_) => const LoginScreen(),
             AppRoutes.environment: (_) => const EnvironmentScreen(),
             //AppRoutes.matchingWait: (_) => const MatchingWaitScreen(), // 매칭 대기 화면 제거

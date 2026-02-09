@@ -23,7 +23,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _photoRepository = PhotoRepository();
   final _nicknameController = TextEditingController();
   final _birthDateController = TextEditingController();
-  String _affiliation = '세종대학교';
+  String? _affiliation; // 대학교 입력 제거, 표시만
   final _heightController = TextEditingController();
   final _mbtiController = TextEditingController();
   final _instagramController = TextEditingController();
@@ -74,7 +74,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       final birthYear = user['birthYear'];
       final gender = user['gender']?.toString();
       final affiliation = user['affiliationText']?.toString();
-
       if (nickname != null) {
         _nicknameController.text = nickname;
       }
@@ -469,25 +468,18 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 },
               ),
               const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: _affiliation,
-                onChanged: _isEditing
-                    ? null
-                    : (value) {
-                        if (value == null) return;
-                        setState(() => _affiliation = value);
-                      },
-                decoration: const InputDecoration(
-                  labelText: '소속 대학교',
-                  border: OutlineInputBorder(),
+              if (_affiliation != null && _affiliation!.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: '소속 대학교',
+                      border: OutlineInputBorder(),
+                    ),
+                    child: Text(_affiliation!),
+                  ),
                 ),
-                items: const [
-                  DropdownMenuItem(value: '세종대학교', child: Text('세종대학교')),
-                  DropdownMenuItem(value: '건국대학교', child: Text('건국대학교')),
-                  DropdownMenuItem(value: '한양대학교', child: Text('한양대학교')),
-                ],
-              ),
-              const SizedBox(height: 12),
+              ],
               TextField(
                 controller: _heightController,
                 keyboardType: TextInputType.number,
