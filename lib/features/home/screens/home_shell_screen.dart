@@ -6,6 +6,7 @@ import 'package:nearo_app/features/profile/screens/my_profile_screen.dart';
 import 'package:nearo_app/features/ratings/screens/ratings_screen.dart';
 import 'package:nearo_app/features/settings/screens/settings_screen.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
+import 'package:nearo_app/features/matching_board/screens/matching_board_screen.dart';
 
 class HomeShellScreen extends StatefulWidget {
   const HomeShellScreen({super.key});
@@ -19,12 +20,12 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
   final _authRepository = AuthRepository();
 
   static const _pages = [
-    MyProfileScreen(),
-    MessagesScreen(),
-    MatchingHomeScreen(),
-    SettingsScreen(),
-    RatingsScreen(),
-  ];
+      MyProfileScreen(),
+      MessagesScreen(),
+      MatchingBoardScreen(), // 매칭 게시판
+      SettingsScreen(),
+      RatingsScreen(),
+    ];
 
   @override
   void initState() {
@@ -74,8 +75,8 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
             label: '메시지함',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.favorite_outline),
-            label: '매칭',
+            icon: Icon(Icons.dashboard_outlined),
+            label: '게시판',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings_outlined),
