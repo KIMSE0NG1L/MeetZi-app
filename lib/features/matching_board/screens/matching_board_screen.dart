@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nearo_app/features/matching_board/data/matching_board_repository.dart';
+import 'package:nearo_app/features/auth/data/auth_repository.dart';
 
 class MatchingBoardScreen extends StatelessWidget {
   const MatchingBoardScreen({super.key});
@@ -17,23 +18,31 @@ class _MatchingBoardScreenBody extends StatefulWidget {
 
 class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   final MatchingBoardRepository _repository = MatchingBoardRepository();
-  String _selectedGender = '여성';
-  String _selectedSchool = '세종대학교';
   List<Map<String, dynamic>> _profiles = [];
   bool _loading = false;
   int _profileViewCount = 0;
   DateTime? _lastViewTime;
-
+  int? _myCredit;
   @override
   void initState() {
     super.initState();
     _fetchProfiles();
+    _fetchMyCredit();
+  }
+
+  Future<void> _fetchMyCredit() async {
+    try {
+      final credit = await _repository.fetchMyCredit();
+      setState(() => _myCredit = credit);
+    } catch (_) {
+      setState(() => _myCredit = null);
+    }
   }
 
   Future<void> _fetchProfiles() async {
     setState(() => _loading = true);
     try {
-      final profiles = await _repository.fetchProfiles(gender: _selectedGender, school: _selectedSchool);
+      final profiles = await _repository.fetchProfiles();
       setState(() => _profiles = profiles);
     } catch (_) {
       setState(() => _profiles = []);
@@ -43,14 +52,32 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   }
 
   Future<void> _registerProfile() async {
-    // 예시 프로필 등록
+    // 내 프로필 정보 가져오기
+    final authRepo = AuthRepository();
+    final profile = await authRepo.getProfile();
+    final nickname = profile['nickname'];
+    final gender = profile['gender'];
+    String school = profile['school'] ?? '세종대';
+    final userEnvs = profile['userEnvironments'];
+    if (school == null || school.isEmpty) {
+      if (userEnvs != null && userEnvs is List && userEnvs.isNotEmpty) {
+        final env = userEnvs[0]['environment'];
+        if (env != null && env['name'] != null) {
+          school = env['name'];
+        }
+      }
+    }
+    if (nickname == null || gender == null || school == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('프로필 정보가 없습니다.')));
+      return;
+    }
     await _repository.registerProfile({
-      'nickname': '테스트',
-      'gender': _selectedGender,
-      'school': _selectedSchool,
+      'nickname': nickname,
+      'gender': gender,
+      'school': school,
     });
     await _fetchProfiles();
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('프로필 등록 완료, 크레딧 1 지급')));
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('프로필 등록 완료')));
   }
 
   Future<void> _takeNote(String profileId) async {
@@ -88,44 +115,23 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('매칭 게시판')),
-      body: Column(
-        children: [
+      appBar: AppBar(
+        title: const Text('매칭 게시판'),
+        actions: [
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
-                Expanded(
-                  child: DropdownButton<String>(
-                    value: _selectedGender,
-                    items: const [
-                      DropdownMenuItem(value: '여성', child: Text('여성')),
-                      DropdownMenuItem(value: '남성', child: Text('남성')),
-                    ],
-                    onChanged: (v) {
-                      setState(() => _selectedGender = v ?? '여성');
-                      _fetchProfiles();
-                    },
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: DropdownButton<String>(
-                    value: _selectedSchool,
-                    items: const [
-                      DropdownMenuItem(value: '세종대학교', child: Text('세종대학교')),
-                      DropdownMenuItem(value: '건국대학교', child: Text('건국대학교')),
-                      DropdownMenuItem(value: '한양대학교', child: Text('한양대학교')),
-                    ],
-                    onChanged: (v) {
-                      setState(() => _selectedSchool = v ?? '세종대학교');
-                      _fetchProfiles();
-                    },
-                  ),
-                ),
+                const Icon(Icons.monetization_on, color: Colors.amber),
+                const SizedBox(width: 4),
+                Text(_myCredit != null ? '${_myCredit}코인' : '-'),
               ],
             ),
           ),
+        ],
+      ),
+      body: Column(
+        children: [
           Padding(
             padding: const EdgeInsets.all(16),
             child: ElevatedButton(
@@ -144,17 +150,8 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         child: ListTile(
                           title: Text(profile['nickname'] ?? '사용자 프로필'),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('상세 정보 보기 제한: 1시간 4회'),
-                              Text('내 학교와 다른 성별만 표시'),
-                            ],
-                          ),
-                          trailing: ElevatedButton(
-                            onPressed: () => _takeNote(profile['id']?.toString() ?? ''),
-                            child: const Text('쪽지 가져가기'),
-                          ),
+                          subtitle: Text('성별: ${profile['gender'] ?? '-'}'),
+                          // 쪽지 가져가기 버튼 완전 제거
                           onTap: () => _viewProfile(profile),
                         ),
                       );

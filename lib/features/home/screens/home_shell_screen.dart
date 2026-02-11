@@ -83,8 +83,8 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
             label: '설정',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.star_border),
-            label: '평가',
+            icon: Icon(Icons.shopping_bag_outlined),
+            label: '상점',
           ),
         ],
       ),

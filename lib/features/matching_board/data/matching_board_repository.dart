@@ -5,12 +5,9 @@ class MatchingBoardRepository {
 
   MatchingBoardRepository({ApiClient? client}) : _client = client ?? ApiClient();
 
-  Future<List<Map<String, dynamic>>> fetchProfiles({String? gender, String? school}) async {
+  Future<List<Map<String, dynamic>>> fetchProfiles() async {
     // TODO: 실제 서버 API 엔드포인트로 변경
-    final response = await _client.dio.get('/matching-board', queryParameters: {
-      'gender': gender,
-      'school': school,
-    });
+    final response = await _client.dio.get('/matching-board');
     return List<Map<String, dynamic>>.from(response.data);
   }
 
@@ -20,5 +17,14 @@ class MatchingBoardRepository {
 
   Future<void> takeNote(String profileId) async {
     await _client.dio.post('/matching-board/take-note', data: {'profileId': profileId});
+  }
+
+  Future<int> fetchMyCredit() async {
+    final response = await _client.dio.get('/users/me/credit');
+    return response.data['credit'] as int;
+  }
+
+  Future<void> buyCredit(int coins) async {
+    await _client.dio.post('/users/me/credit/increase', data: {'amount': coins});
   }
 }

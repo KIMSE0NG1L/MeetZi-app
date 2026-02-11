@@ -11,7 +11,7 @@ class AuthRepository {
         _tokenStorage = tokenStorage ?? TokenStorage();
 
   Future<Map<String, dynamic>> getProfile() async {
-    final response = await _client.dio.get(ApiEndpoints.authProfile);
+    final response = await _client.dio.get('/users/me');
     return response.data as Map<String, dynamic>;
   }
 

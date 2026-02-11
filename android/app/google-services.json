@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "142580069628",
+    "project_id": "nearo-b1c16",
+    "storage_bucket": "nearo-b1c16.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:142580069628:android:ffb258cc067791b97e5379",
+        "android_client_info": {
+          "package_name": "com.nearo.nearo_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCgqm3rRLj4gu3C_ADFu8OCZ91pzmk9zgE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
