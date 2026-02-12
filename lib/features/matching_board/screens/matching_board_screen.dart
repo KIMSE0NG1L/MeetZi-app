@@ -130,35 +130,81 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: ElevatedButton(
-              onPressed: _registerProfile,
-              child: const Text('프로필 등록'),
-            ),
-          ),
-          Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : ListView.builder(
-                    itemCount: _profiles.length,
-                    itemBuilder: (context, index) {
-                      final profile = _profiles[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        child: ListTile(
-                          title: Text(profile['nickname'] ?? '사용자 프로필'),
-                          subtitle: Text('성별: ${profile['gender'] ?? '-'}'),
-                          // 쪽지 가져가기 버튼 완전 제거
-                          onTap: () => _viewProfile(profile),
-                        ),
-                      );
-                    },
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: GridView.builder(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        childAspectRatio: 0.57,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                      ),
+                      itemCount: _profiles.length,
+                      itemBuilder: (context, index) {
+                        final profile = _profiles[index];
+                        return Card(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          elevation: 4,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: () async {
+                              final result = await showDialog<bool>(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('매칭 확인'),
+                                  content: const Text('이 프로필과 매칭하시겠습니까?'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context, false),
+                                      child: const Text('취소'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context, true),
+                                      child: const Text('확인'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (result == true) {
+                                await _takeNote(profile['id']);
+                              }
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  CircleAvatar(
+                                    radius: 32,
+                                    child: const Icon(Icons.person, size: 40),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(profile['nickname'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                                  const SizedBox(height: 8),
+                                  Text(profile['gender'] ?? '-', style: const TextStyle(fontSize: 14)),
+                                  const SizedBox(height: 8),
+                                  Text(profile['school'] ?? '-', style: const TextStyle(fontSize: 14, color: Colors.grey)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
-          ),
-        ],
+                ),
+              ],
+            ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _registerProfile,
+        label: const Text('등록'),
+        icon: const Icon(Icons.add),
       ),
     );
   }
