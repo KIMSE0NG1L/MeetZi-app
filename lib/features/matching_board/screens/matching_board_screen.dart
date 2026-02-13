@@ -52,32 +52,37 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   }
 
   Future<void> _registerProfile() async {
-    // 내 프로필 정보 가져오기
-    final authRepo = AuthRepository();
-    final profile = await authRepo.getProfile();
-    final nickname = profile['nickname'];
-    final gender = profile['gender'];
-    String school = profile['school'] ?? '세종대';
-    final userEnvs = profile['userEnvironments'];
-    if (school == null || school.isEmpty) {
-      if (userEnvs != null && userEnvs is List && userEnvs.isNotEmpty) {
-        final env = userEnvs[0]['environment'];
-        if (env != null && env['name'] != null) {
-          school = env['name'];
+    try {
+      // 내 프로필 정보 가져오기
+      final authRepo = AuthRepository();
+      final profile = await authRepo.getProfile();
+      final nickname = profile['nickname'];
+      final gender = profile['gender'];
+      String school = profile['school'] ?? '세종대';
+      final userEnvs = profile['userEnvironments'];
+      if (school == null || school.isEmpty) {
+        if (userEnvs != null && userEnvs is List && userEnvs.isNotEmpty) {
+          final env = userEnvs[0]['environment'];
+          if (env != null && env['name'] != null) {
+            school = env['name'];
+          }
         }
       }
+      if (nickname == null || gender == null || school == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('프로필 정보가 없습니다.')));
+        return;
+      }
+      await _repository.registerProfile({
+        'nickname': nickname,
+        'gender': gender,
+        'school': school,
+      });
+      await _fetchProfiles();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('프로필 등록 완료')));
+    } catch (e) {
+      final msg = e is String ? e : e.toString();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     }
-    if (nickname == null || gender == null || school == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('프로필 정보가 없습니다.')));
-      return;
-    }
-    await _repository.registerProfile({
-      'nickname': nickname,
-      'gender': gender,
-      'school': school,
-    });
-    await _fetchProfiles();
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('프로필 등록 완료')));
   }
 
   Future<void> _takeNote(String profileId) async {
@@ -114,98 +119,110 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('매칭 게시판'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                const Icon(Icons.monetization_on, color: Colors.amber),
-                const SizedBox(width: 4),
-                Text(_myCredit != null ? '${_myCredit}코인' : '-'),
-              ],
-            ),
-          ),
-        ],
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: GridView.builder(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        childAspectRatio: 0.57,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                      ),
-                      itemCount: _profiles.length,
-                      itemBuilder: (context, index) {
-                        final profile = _profiles[index];
-                        return Card(
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          elevation: 4,
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(16),
-                            onTap: () async {
-                              final result = await showDialog<bool>(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('매칭 확인'),
-                                  content: const Text('이 프로필과 매칭하시겠습니까?'),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(context, false),
-                                      child: const Text('취소'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(context, true),
-                                      child: const Text('확인'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                              if (result == true) {
-                                await _takeNote(profile['id']);
-                              }
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  CircleAvatar(
-                                    radius: 32,
-                                    child: const Icon(Icons.person, size: 40),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Text(profile['nickname'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                                  const SizedBox(height: 8),
-                                  Text(profile['gender'] ?? '-', style: const TextStyle(fontSize: 14)),
-                                  const SizedBox(height: 8),
-                                  Text(profile['school'] ?? '-', style: const TextStyle(fontSize: 14, color: Colors.grey)),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
+    return FutureBuilder<Map<String, dynamic>>(
+      future: AuthRepository().getProfile(),
+      builder: (context, snapshot) {
+        final myUserId = snapshot.data?['id'];
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('매칭 게시판'),
+            actions: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    const Icon(Icons.monetization_on, color: Colors.amber),
+                    const SizedBox(width: 4),
+                    Text(_myCredit != null ? '${_myCredit}코인' : '-'),
+                  ],
                 ),
-              ],
-            ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _registerProfile,
-        label: const Text('등록'),
-        icon: const Icon(Icons.add),
-      ),
+              ),
+            ],
+          ),
+          body: _loading
+              ? const Center(child: CircularProgressIndicator())
+              : Column(
+                  children: [
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: GridView.builder(
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            childAspectRatio: 0.57,
+                            crossAxisSpacing: 16,
+                            mainAxisSpacing: 16,
+                          ),
+                          itemCount: _profiles.length,
+                          itemBuilder: (context, index) {
+                            final profile = _profiles[index];
+                            final isMe = myUserId != null && profile['userId'] == myUserId;
+                            return Card(
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              elevation: 4,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(16),
+                                onTap: isMe
+                                    ? null
+                                    : () async {
+                                        final result = await showDialog<bool>(
+                                          context: context,
+                                          builder: (context) => AlertDialog(
+                                            title: const Text('매칭 확인'),
+                                            content: const Text('이 프로필과 매칭하시겠습니까?'),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(context, false),
+                                                child: const Text('취소'),
+                                              ),
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(context, true),
+                                                child: const Text('확인'),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                        if (result == true) {
+                                          await _takeNote(profile['id']);
+                                        }
+                                      },
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 32,
+                                        child: const Icon(Icons.person, size: 40),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        isMe ? '나' : (profile['nickname'] ?? ''),
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(profile['gender'] ?? '-', style: const TextStyle(fontSize: 14)),
+                                      const SizedBox(height: 8),
+                                      Text(profile['school'] ?? '-', style: const TextStyle(fontSize: 14, color: Colors.grey)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: _registerProfile,
+            label: const Text('등록'),
+            icon: const Icon(Icons.add),
+          ),
+        );
+      },
     );
   }
 }

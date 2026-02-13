@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:nearo_app/features/matching/data/matching_repository.dart';
 import 'package:nearo_app/features/messages/data/chat_repository.dart';
 import 'package:nearo_app/features/consent/data/consent_repository.dart';
 import 'package:nearo_app/features/messages/data/partner_profile_repository.dart';
+
+import 'package:nearo_app/core/auth/auth_repository.dart';
 
 class ChatRoomScreen extends StatefulWidget {
   const ChatRoomScreen({super.key});
@@ -12,6 +15,8 @@ class ChatRoomScreen extends StatefulWidget {
 }
 
 class _ChatRoomScreenState extends State<ChatRoomScreen> {
+  IO.Socket? _socket;
+  String? _myUserId;
   final _consentRepository = ConsentRepository();
   final _partnerProfileRepository = PartnerProfileRepository();
   final _repository = ChatRepository();
@@ -43,9 +48,29 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       }
     }
     if (_roomId != null) {
+      // 내 userId를 먼저 받아온 뒤 소켓 연결
+      _fetchMyUserIdAndInitSocket();
       _loadMessages();
     } else {
       setState(() => _loading = false);
+    }
+
+  }
+
+  Future<void> _fetchMyUserIdAndInitSocket() async {
+    try {
+      final profile = await AuthRepository().getProfile();
+      final userId = profile['id']?.toString();
+      if (userId != null && userId.isNotEmpty) {
+        _myUserId = userId;
+        _initSocket();
+      } else {
+        // userId가 없으면 소켓 연결 생략
+        _myUserId = null;
+      }
+    } catch (_) {
+      // 실패 시 소켓 연결 생략
+      _myUserId = null;
     }
   }
 
@@ -60,7 +85,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           ..addAll(result.map(
             (m) => _ChatMessage(
               text: m['content']?.toString() ?? '',
-              isMine: m['isMine'] == true,
+              isMine: m['senderId']?.toString() == _myUserId,
               isSystem: m['isSystem'] == true,
             ),
           ));
@@ -71,6 +96,32 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       if (!mounted) return;
       setState(() => _loading = false);
     }
+  }
+
+  void _initSocket() {
+    if (_roomId == null || _myUserId == null || _myUserId!.isEmpty) return;
+    _socket = IO.io(
+      'https://hurtlingly-blatant-tari.ngrok-free.dev/chat',
+      IO.OptionBuilder()
+          .setTransports(['websocket'])
+          .setAuth({'userId': _myUserId})
+          .disableAutoConnect()
+          .build(),
+    );
+    _socket!.onConnect((_) {
+      _socket!.emit('joinRoom', {'roomId': _roomId});
+    });
+    _socket!.on('newMessage', (data) {
+      if (!mounted) return;
+      setState(() {
+        _messages.add(_ChatMessage(
+          text: data['content'] ?? '',
+          isMine: data['senderId']?.toString() == _myUserId,
+          isSystem: false,
+        ));
+      });
+    });
+    _socket!.connect();
   }
 
   Future<void> _loadRoomState() async {
@@ -107,17 +158,20 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     final text = _controller.text.trim();
     if (text.isEmpty || _roomId == null) return;
     _controller.clear();
-    setState(() {
-      _messages.add(_ChatMessage(text: text, isMine: true));
-    });
-
-    try {
-      await _repository.sendMessage(roomId: _roomId!, content: text);
-    } catch (_) {
-      if (!mounted) return;
+    if (_socket != null && _socket!.connected) {
+      _socket!.emit('sendMessage', {'roomId': _roomId, 'content': text});
+    } else {
       setState(() {
-        _messages.add(const _ChatMessage(text: '메시지 전송 실패', isMine: false));
+        _messages.add(_ChatMessage(text: text, isMine: true));
       });
+      try {
+        await _repository.sendMessage(roomId: _roomId!, content: text);
+      } catch (_) {
+        if (!mounted) return;
+        setState(() {
+          _messages.add(_ChatMessage(text: '메시지 전송 실패', isMine: false));
+        });
+      }
     }
   }
 
@@ -348,7 +402,7 @@ class _ChatMessage {
   final bool isMine;
   final bool isSystem;
 
-  const _ChatMessage({
+  _ChatMessage({
     required this.text,
     required this.isMine,
     this.isSystem = false,

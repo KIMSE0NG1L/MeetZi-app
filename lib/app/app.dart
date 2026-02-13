@@ -27,6 +27,7 @@ import 'package:nearo_app/features/users/screens/users_screen.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/auth/data/environment_status_repository.dart';
 import 'package:nearo_app/features/home/screens/home_shell_screen.dart';
+import 'package:nearo_app/features/profile/screens/avatar_setup_screen.dart';
 
 class NearoApp extends StatefulWidget {
   const NearoApp({super.key});
@@ -157,7 +158,7 @@ class _NearoAppState extends State<NearoApp> {
             AppRoutes.authProfile: (_) => const ProfileScreen(),
             AppRoutes.users: (_) => const UsersScreen(),
             AppRoutes.profileSetup: (_) => const ProfileSetupScreen(),
-            AppRoutes.avatarSetup: (_) => const AvatarSetupScreen(),
+            AppRoutes.avatarSetup: (_) => AvatarSetupScreen(),
             AppRoutes.partnerProfile: (_) => const PartnerProfileScreen(),
             AppRoutes.home: (_) => const HomeShellScreen(),
           },

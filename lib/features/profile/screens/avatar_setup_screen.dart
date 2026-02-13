@@ -67,7 +67,6 @@ class _AvatarSetupScreenState extends State<AvatarSetupScreen> {
             clothesColor: clothesColor,
             accessory: accessory,
             skinColor: skinColor,
-            background: background,
           ),
           const SizedBox(height: 24),
           // 파츠별 선택 UI (예시: 버튼)

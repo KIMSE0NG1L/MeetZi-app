@@ -1,3 +1,5 @@
+
+import 'package:dio/dio.dart';
 import 'package:nearo_app/shared/api/api_client.dart';
 
 class MatchingBoardRepository {
@@ -12,7 +14,15 @@ class MatchingBoardRepository {
   }
 
   Future<void> registerProfile(Map<String, dynamic> profile) async {
-    await _client.dio.post('/matching-board/register', data: profile);
+    try {
+      await _client.dio.post('/matching-board/register', data: profile);
+    } on DioError catch (e) {
+      // 서버에서 온 에러 메시지 추출
+      final msg = e.response?.data is Map && e.response?.data['message'] != null
+          ? e.response?.data['message'].toString()
+          : e.message;
+      throw msg ?? '등록 중 오류가 발생했습니다.';
+    }
   }
 
   Future<void> takeNote(String profileId) async {

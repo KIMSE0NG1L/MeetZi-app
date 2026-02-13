@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 
 class EyesPainter extends CustomPainter {
   final String eyes;
@@ -97,8 +98,8 @@ class EyesPainter extends CustomPainter {
           final cy = centerY + 10;
           for (int i = 0; i < 5; i++) {
             final angle = (i * 144) * 3.14159 / 180;
-            final x = cx + 8 * Math.cos(angle);
-            final y = cy + 8 * Math.sin(angle);
+            final x = cx + 8 * math.cos(angle);
+            final y = cy + 8 * math.sin(angle);
             if (i == 0) {
               path.moveTo(x, y);
             } else {
