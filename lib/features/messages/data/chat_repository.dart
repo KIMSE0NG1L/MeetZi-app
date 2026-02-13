@@ -58,4 +58,14 @@ class ChatRepository {
     final response = await _client.dio.delete(ApiEndpoints.chatsRoom(roomId));
     return Map<String, dynamic>.from(response.data as Map);
   }
+
+  Future<Map<String, dynamic>> readMessage({
+    required String roomId,
+    required String messageId,
+  }) async {
+    final response = await _client.dio.post(
+      ApiEndpoints.chatsMessageRead(roomId, messageId),
+    );
+    return Map<String, dynamic>.from(response.data as Map);
+  }
 }

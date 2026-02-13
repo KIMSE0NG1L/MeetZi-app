@@ -12,6 +12,8 @@ class ApiEndpoints {
   static const String chatsRooms = '/chats/rooms';
   static String chatsRoom(String roomId) => '/chats/rooms/$roomId';
   static String chatsMessages(String roomId) => '/chats/rooms/$roomId/messages';
+  static String chatsMessageRead(String roomId, String messageId) =>
+      '/chats/rooms/$roomId/messages/$messageId/read';
   static const String photos = '/photos';
   static const String photosUpload = '/photos/upload';
   static String photoById(String photoId) => '/photos/$photoId';

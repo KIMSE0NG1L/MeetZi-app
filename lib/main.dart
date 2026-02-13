@@ -4,6 +4,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:nearo_app/app/app.dart';
 import 'package:nearo_app/shared/api/api_client.dart';
+import 'package:app_badge_plus/app_badge_plus.dart';
 
 // 1. 백그라운드 메시지 핸들러 (최상위 함수)
 @pragma('vm:entry-point')
@@ -73,30 +74,33 @@ void main() async {
     }
   }
 
+
+
   // 3. 포그라운드(앱이 켜져있을 때) 알림 처리
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-    RemoteNotification? notification = message.notification;
-    AndroidNotification? android = message.notification?.android;
-
-    if (notification != null && android != null) {
-      // 에러 해결: show 메서드 호출 시 모든 인자에 이름(Named)을 붙임
-      flutterLocalNotificationsPlugin.show(
-        id: notification.hashCode,
-        title: notification.title,
-        body: notification.body,
-        notificationDetails: NotificationDetails(
-          android: AndroidNotificationDetails(
-            channel.id,
-            channel.name,
-            channelDescription: channel.description,
-            importance: Importance.max,
-            priority: Priority.high,
-            icon: '@mipmap/ic_launcher',
-          ),
-        ),
-        payload: message.data.toString(),
-      );
-    }
+    // 앱이 포그라운드일 때는 FCM 푸시를 무시(로컬 알림만 표시)
+    // (아래 코드를 주석 처리하거나, 조건문으로 분기 가능)
+    // RemoteNotification? notification = message.notification;
+    // AndroidNotification? android = message.notification?.android;
+    // if (notification != null && android != null) {
+    //   flutterLocalNotificationsPlugin.show(
+    //     id: notification.hashCode,
+    //     title: notification.title,
+    //     body: notification.body,
+    //     notificationDetails: NotificationDetails(
+    //       android: AndroidNotificationDetails(
+    //         channel.id,
+    //         channel.name,
+    //         channelDescription: channel.description,
+    //         importance: Importance.max,
+    //         priority: Priority.high,
+    //         icon: '@mipmap/ic_launcher',
+    //       ),
+    //     ),
+    //     payload: message.data.toString(),
+    //   );
+    // }
+    // FCM 푸시 무시: 아무 동작도 하지 않음
   });
 
   // 4. 알림 클릭 시 앱 오픈 핸들러

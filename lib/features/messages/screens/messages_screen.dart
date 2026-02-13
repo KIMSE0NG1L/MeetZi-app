@@ -26,6 +26,12 @@ class _MessagesScreenState extends State<MessagesScreen> {
     try {
       final rooms = await _repository.listRooms();
       if (!mounted) return;
+      // updatedAt 기준 내림차순 정렬(최신 대화방이 위로)
+      rooms.sort((a, b) {
+        final aTime = DateTime.tryParse(a['updatedAt']?.toString() ?? '') ?? DateTime(2000);
+        final bTime = DateTime.tryParse(b['updatedAt']?.toString() ?? '') ?? DateTime(2000);
+        return bTime.compareTo(aTime);
+      });
       setState(() {
         _rooms = rooms;
         _loading = false;

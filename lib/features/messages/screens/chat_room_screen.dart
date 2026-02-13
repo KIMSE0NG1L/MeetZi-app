@@ -4,8 +4,28 @@ import 'package:nearo_app/features/matching/data/matching_repository.dart';
 import 'package:nearo_app/features/messages/data/chat_repository.dart';
 import 'package:nearo_app/features/consent/data/consent_repository.dart';
 import 'package:nearo_app/features/messages/data/partner_profile_repository.dart';
+import 'package:nearo_app/shared/notification_utils.dart';
+
 
 import 'package:nearo_app/core/auth/auth_repository.dart';
+
+class _ChatMessage {
+  final String id;
+  final String text;
+  final bool isMine;
+  final bool isSystem;
+  final DateTime? readAt;
+  final String senderId;
+
+  _ChatMessage({
+    required this.id,
+    required this.text,
+    required this.isMine,
+    required this.senderId,
+    this.isSystem = false,
+    this.readAt,
+  });
+}
 
 class ChatRoomScreen extends StatefulWidget {
   const ChatRoomScreen({super.key});
@@ -35,6 +55,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   String? _user2Consent;
   String? _matchId;
 
+  final ScrollController _scrollController = ScrollController();
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -48,9 +70,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       }
     }
     if (_roomId != null) {
-      // 내 userId를 먼저 받아온 뒤 소켓 연결
       _fetchMyUserIdAndInitSocket();
-      _loadMessages();
+      _loadMessages().then((_) => _scrollToBottom());
     } else {
       setState(() => _loading = false);
     }
@@ -84,13 +105,36 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           ..clear()
           ..addAll(result.map(
             (m) => _ChatMessage(
+              id: m['id']?.toString() ?? '',
               text: m['content']?.toString() ?? '',
               isMine: m['senderId']?.toString() == _myUserId,
+              senderId: m['senderId']?.toString() ?? '',
               isSystem: m['isSystem'] == true,
+              readAt: m['readAt'] != null ? DateTime.tryParse(m['readAt'].toString()) : null,
             ),
           ));
         _loading = false;
       });
+      // 읽지 않은 상대 메시지 읽음 처리
+      for (int i = 0; i < _messages.length; i++) {
+        final msg = _messages[i];
+        if (!msg.isMine && msg.readAt == null) {
+          await _repository.readMessage(roomId: _roomId!, messageId: msg.id);
+          // 읽음 처리 후 readAt을 즉시 갱신하여 UI에서 뱃지 사라지게
+          setState(() {
+            _messages[i] = _ChatMessage(
+              id: msg.id,
+              text: msg.text,
+              isMine: msg.isMine,
+              senderId: msg.senderId,
+              isSystem: msg.isSystem,
+              readAt: DateTime.now(),
+            );
+          });
+        }
+      }
+      // 알림/뱃지 클리어
+      await clearAllNotifications();
       await _loadRoomState();
     } catch (_) {
       if (!mounted) return;
@@ -115,11 +159,15 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       if (!mounted) return;
       setState(() {
         _messages.add(_ChatMessage(
+          id: data['id']?.toString() ?? '',
           text: data['content'] ?? '',
           isMine: data['senderId']?.toString() == _myUserId,
+          senderId: data['senderId']?.toString() ?? '',
           isSystem: false,
+          readAt: data['readAt'] != null ? DateTime.tryParse(data['readAt'].toString()) : null,
         ));
       });
+      _scrollToBottom();
     });
     _socket!.connect();
   }
@@ -162,14 +210,24 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       _socket!.emit('sendMessage', {'roomId': _roomId, 'content': text});
     } else {
       setState(() {
-        _messages.add(_ChatMessage(text: text, isMine: true));
+        _messages.add(_ChatMessage(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          text: text,
+          isMine: true,
+          senderId: _myUserId ?? '',
+        ));
       });
       try {
         await _repository.sendMessage(roomId: _roomId!, content: text);
       } catch (_) {
         if (!mounted) return;
         setState(() {
-          _messages.add(_ChatMessage(text: '메시지 전송 실패', isMine: false));
+          _messages.add(_ChatMessage(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            text: '메시지 전송 실패',
+            isMine: false,
+            senderId: _myUserId ?? '',
+          ));
         });
       }
     }
@@ -318,11 +376,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                         : _messages.isEmpty
                             ? const Center(child: Text('첫 메시지를 보내 보세요.'))
                             : ListView.separated(
+                                controller: _scrollController,
+                                reverse: true,
                                 padding: const EdgeInsets.all(16),
                                 itemCount: _messages.length,
                                 separatorBuilder: (_, __) => const SizedBox(height: 8),
                                 itemBuilder: (context, index) {
-                                  final message = _messages[index];
+                                  final message = _messages[_messages.length - 1 - index];
                                   if (message.isSystem) {
                                     return Center(
                                       child: Container(
@@ -348,18 +408,31 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                                   final textColor = message.isMine
                                       ? Colors.white
                                       : Colors.black87;
-                                  return Align(
-                                    alignment: message.isMine
-                                        ? Alignment.centerRight
-                                        : Alignment.centerLeft,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                      decoration: BoxDecoration(
-                                        color: color,
-                                        borderRadius: BorderRadius.circular(16),
+                                  return Row(
+                                    mainAxisAlignment: message.isMine
+                                        ? MainAxisAlignment.end
+                                        : MainAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      if (message.isMine && message.readAt == null)
+                                        Padding(
+                                          padding: const EdgeInsets.only(right: 4),
+                                          child: Text('1', style: TextStyle(color: Colors.red, fontSize: 14, fontWeight: FontWeight.bold)),
+                                        ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                        decoration: BoxDecoration(
+                                          color: color,
+                                          borderRadius: BorderRadius.circular(16),
+                                        ),
+                                        child: Text(message.text, style: TextStyle(color: textColor)),
                                       ),
-                                      child: Text(message.text, style: TextStyle(color: textColor)),
-                                    ),
+                                      if (!message.isMine && message.readAt == null)
+                                        Padding(
+                                          padding: const EdgeInsets.only(left: 4),
+                                          child: Text('1', style: TextStyle(color: Colors.red, fontSize: 14, fontWeight: FontWeight.bold)),
+                                        ),
+                                    ],
                                   );
                                 },
                               ),
@@ -395,16 +468,16 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       ),
     );
   }
-}
 
-class _ChatMessage {
-  final String text;
-  final bool isMine;
-  final bool isSystem;
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0.0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+  }
 
-  _ChatMessage({
-    required this.text,
-    required this.isMine,
-    this.isSystem = false,
-  });
+  // removed duplicate _ChatMessage class
 }
