@@ -83,6 +83,15 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                             onPressed: _load,
                             child: const Text('새로고침'),
                           ),
+                          const SizedBox(height: 12),
+                          OutlinedButton(
+                            onPressed: () {
+                              Navigator.of(context).pushNamed(
+                                '/profile/avatar-setup',
+                              );
+                            },
+                            child: const Text('아바타 편집'),
+                          ),
                         ],
                       ),
                     ),

@@ -157,6 +157,7 @@ class _NearoAppState extends State<NearoApp> {
             AppRoutes.authProfile: (_) => const ProfileScreen(),
             AppRoutes.users: (_) => const UsersScreen(),
             AppRoutes.profileSetup: (_) => const ProfileSetupScreen(),
+            AppRoutes.avatarSetup: (_) => const AvatarSetupScreen(),
             AppRoutes.partnerProfile: (_) => const PartnerProfileScreen(),
             AppRoutes.home: (_) => const HomeShellScreen(),
           },

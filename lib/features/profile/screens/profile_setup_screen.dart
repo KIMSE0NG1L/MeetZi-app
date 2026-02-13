@@ -108,6 +108,12 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         _isEditing = _forceEdit || (affiliation != null && affiliation.isNotEmpty);
       });
       await _loadPhotos();
+      // 프로필 등록 완료 후 아바타 생성 화면으로 이동
+      if (!_forceEdit && _isEditing) {
+        Future.delayed(Duration.zero, () {
+          Navigator.of(context).pushReplacementNamed('/profile/avatar-setup');
+        });
+      }
     } catch (_) {
       // ignore if profile not found
     }
