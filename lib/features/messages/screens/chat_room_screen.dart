@@ -51,8 +51,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   String? _partnerPhotoStorageKey;
   String? _partnerNickname;
   Map<String, dynamic>? _partnerProfile;
-  String? _user1Consent;
-  String? _user2Consent;
+  // Removed unused fields _user1Consent and _user2Consent
   String? _matchId;
 
   final ScrollController _scrollController = ScrollController();
@@ -70,30 +69,50 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       }
     }
     if (_roomId != null) {
-      _fetchMyUserIdAndInitSocket();
-      _loadMessages().then((_) => _scrollToBottom());
+      _fetchMyUserIdAndInitSocketAndLoadMessages();
     } else {
       setState(() => _loading = false);
     }
-
   }
 
-  Future<void> _fetchMyUserIdAndInitSocket() async {
+  Future<void> _fetchMyUserIdAndInitSocketAndLoadMessages() async {
     try {
       final profile = await AuthRepository().getProfile();
       final userId = profile['id']?.toString();
       if (userId != null && userId.isNotEmpty) {
         _myUserId = userId;
         _initSocket();
+        await _loadMessages();
+        _sendReadReceipts();
+        _scrollToBottom();
       } else {
-        // userId가 없으면 소켓 연결 생략
         _myUserId = null;
+        setState(() => _loading = false);
       }
     } catch (_) {
-      // 실패 시 소켓 연결 생략
       _myUserId = null;
+      setState(() => _loading = false);
     }
   }
+
+  // 읽지 않은 메시지에 대해 소켓으로 읽음 이벤트 전송
+  void _sendReadReceipts() {
+    if (_socket == null || !_socket!.connected || _roomId == null || _myUserId == null) return;
+    for (final msg in _messages) {
+      if (!msg.isMine && msg.readAt == null) {
+        final payload = {
+          'roomId': _roomId,
+          'messageId': msg.id,
+          'userId': _myUserId,
+          'readAt': DateTime.now().toIso8601String(),
+        };
+        print('[소켓 읽음 emit] $payload');
+        _socket!.emit('read', payload);
+      }
+    }
+  }
+
+  // Removed unused method _fetchMyUserIdAndInitSocket
 
   Future<void> _loadMessages() async {
     if (_roomId == null) return;
@@ -103,16 +122,19 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       setState(() {
         _messages
           ..clear()
-          ..addAll(result.map(
-            (m) => _ChatMessage(
+          ..addAll(result.map((m) {
+            final senderId = m['senderId']?.toString();
+            final isMine = senderId == _myUserId;
+            print('[isMine 판별] senderId=$senderId, _myUserId=$_myUserId, isMine=$isMine, text=${m['content']}');
+            return _ChatMessage(
               id: m['id']?.toString() ?? '',
               text: m['content']?.toString() ?? '',
-              isMine: m['senderId']?.toString() == _myUserId,
-              senderId: m['senderId']?.toString() ?? '',
+              isMine: isMine,
+              senderId: senderId ?? '',
               isSystem: m['isSystem'] == true,
               readAt: m['readAt'] != null ? DateTime.tryParse(m['readAt'].toString()) : null,
-            ),
-          ));
+            );
+          }));
         _loading = false;
       });
       // 읽지 않은 상대 메시지 읽음 처리
@@ -120,6 +142,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         final msg = _messages[i];
         if (!msg.isMine && msg.readAt == null) {
           await _repository.readMessage(roomId: _roomId!, messageId: msg.id);
+          final now = DateTime.now();
           // 읽음 처리 후 readAt을 즉시 갱신하여 UI에서 뱃지 사라지게
           setState(() {
             _messages[i] = _ChatMessage(
@@ -128,9 +151,18 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
               isMine: msg.isMine,
               senderId: msg.senderId,
               isSystem: msg.isSystem,
-              readAt: DateTime.now(),
+              readAt: now,
             );
           });
+          // 소켓으로 읽음 이벤트도 같이 전송
+          if (_socket != null && _socket!.connected) {
+            _socket!.emit('read', {
+              'roomId': _roomId,
+              'messageId': msg.id,
+              'userId': _myUserId,
+              'readAt': now.toIso8601String(),
+            });
+          }
         }
       }
       // 알림/뱃지 클리어
@@ -144,6 +176,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
   void _initSocket() {
     if (_roomId == null || _myUserId == null || _myUserId!.isEmpty) return;
+    print('[소켓 연결 시도] roomId=$_roomId, myUserId=$_myUserId');
     _socket = IO.io(
       'https://hurtlingly-blatant-tari.ngrok-free.dev/chat',
       IO.OptionBuilder()
@@ -153,9 +186,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           .build(),
     );
     _socket!.onConnect((_) {
+      print('[소켓 연결 성공]');
       _socket!.emit('joinRoom', {'roomId': _roomId});
+      print('[소켓 joinRoom emit] roomId=$_roomId');
     });
     _socket!.on('newMessage', (data) {
+      print('[소켓 newMessage 핸들러 등록됨] data=$data');
       if (!mounted) return;
       setState(() {
         _messages.add(_ChatMessage(
@@ -169,7 +205,34 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       });
       _scrollToBottom();
     });
+    print('[소켓 read 핸들러 등록됨]');
+    // 읽음 이벤트 처리: 해당 메시지의 readAt 갱신
+    _socket!.on('read', (data) {
+      print('[소켓 read 이벤트 수신] messageId=${data['messageId']}, userId=${data['userId']}, readAt=${data['readAt']}, 전체 메시지=${_messages.map((m) => m.id).toList()}');
+      if (!mounted) return;
+      final String? messageId = data['messageId']?.toString();
+      final String? userId = data['userId']?.toString();
+      final DateTime? readAt = data['readAt'] != null ? DateTime.tryParse(data['readAt'].toString()) : null;
+      if (messageId == null || userId == null || readAt == null) return;
+      setState(() {
+        for (int i = 0; i < _messages.length; i++) {
+          final msg = _messages[i];
+          if (msg.id == messageId && msg.isMine && msg.readAt == null) {
+            print('[읽음 갱신] 내 메시지 readAt 갱신: id=${msg.id}, 기존 readAt=${msg.readAt}, 새 readAt=$readAt');
+            _messages[i] = _ChatMessage(
+              id: msg.id,
+              text: msg.text,
+              isMine: msg.isMine,
+              senderId: msg.senderId,
+              isSystem: msg.isSystem,
+              readAt: readAt,
+            );
+          }
+        }
+      });
+    });
     _socket!.connect();
+    print('[소켓 connect 호출됨]');
   }
 
   Future<void> _loadRoomState() async {
@@ -181,9 +244,24 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       _isProfileRevealed = room['isProfileRevealed'] == true;
       _partnerPhotoStorageKey = room['partnerPhotoStorageKey']?.toString();
       _partnerNickname = room['partnerNickname']?.toString();
-      _user1Consent = room['user1Consent']?.toString();
-      _user2Consent = room['user2Consent']?.toString();
+      // Removed assignments to _user1Consent and _user2Consent
       _matchId = room['matchId']?.toString();
+      // getRoom이 호출되면 내 메시지의 읽음 표시(1) 모두 사라지게 처리
+      setState(() {
+        for (int i = 0; i < _messages.length; i++) {
+          final msg = _messages[i];
+          if (msg.isMine && msg.readAt == null) {
+            _messages[i] = _ChatMessage(
+              id: msg.id,
+              text: msg.text,
+              isMine: msg.isMine,
+              senderId: msg.senderId,
+              isSystem: msg.isSystem,
+              readAt: DateTime.now(),
+            );
+          }
+        }
+      });
       if (_isProfileRevealed && _matchId != null) {
         try {
           final profile = await _partnerProfileRepository.getPartnerProfile(matchId: _matchId!);
@@ -427,7 +505,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                                         ),
                                         child: Text(message.text, style: TextStyle(color: textColor)),
                                       ),
-                                      if (!message.isMine && message.readAt == null)
+                                      if (!_isActive && !message.isMine && message.readAt == null)
                                         Padding(
                                           padding: const EdgeInsets.only(left: 4),
                                           child: Text('1', style: TextStyle(color: Colors.red, fontSize: 14, fontWeight: FontWeight.bold)),

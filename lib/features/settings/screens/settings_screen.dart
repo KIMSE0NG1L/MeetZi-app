@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:nearo_app/app/app_routes.dart';
-import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/messages/data/chat_history_store.dart';
 import 'package:nearo_app/shared/utils/token_storage.dart';
 
@@ -20,52 +19,26 @@ class SettingsScreen extends StatelessWidget {
 
   Future<void> _confirmDeleteAccount(BuildContext context) async {
     final confirmed = await showDialog<bool>(
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('설정'),
-          backgroundColor: Theme.of(context).colorScheme.primary,
-          foregroundColor: Colors.white,
-        ),
-        body: Stack(
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Theme.of(context).colorScheme.primary,
-                    Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                    Theme.of(context).colorScheme.background,
-                  ],
-                  stops: const [0.0, 0.08, 0.25],
-                ),
-              ),
-            ),
-            SafeArea(
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.logout),
-                    title: const Text('로그아웃'),
-                    onTap: () => _logout(context),
-                  ),
-                  const Divider(),
-                  ListTile(
-                    leading: const Icon(Icons.delete_outline, color: Colors.red),
-                    title: const Text(
-                      '계정 삭제',
-                      style: TextStyle(color: Colors.red),
-                    ),
-                    onTap: () => _confirmDeleteAccount(context),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('계정 삭제'),
+        content: const Text('정말로 계정을 삭제하시겠습니까?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      // 계정 삭제 로직 추가
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

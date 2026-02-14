@@ -23,6 +23,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _photoRepository = PhotoRepository();
   final _nicknameController = TextEditingController();
   final _birthDateController = TextEditingController();
+  final _idealTypeController = TextEditingController();
+  final _departmentController = TextEditingController();
+  final _favoriteFoodController = TextEditingController();
+  String? _isEnrolled;
   String _affiliation = '세종대학교';
   final _heightController = TextEditingController();
   final _mbtiController = TextEditingController();
@@ -63,6 +67,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     _mbtiController.dispose();
     _instagramController.dispose();
     _bioController.dispose();
+    _idealTypeController.dispose();
+    _departmentController.dispose();
+    _favoriteFoodController.dispose();
     super.dispose();
   }
 
@@ -103,6 +110,15 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       if (instagram != null) _instagramController.text = instagram;
       final bio = user['bio']?.toString();
       if (bio != null) _bioController.text = bio;
+
+      final idealType = user['idealType']?.toString();
+      if (idealType != null) _idealTypeController.text = idealType;
+      final department = user['department']?.toString();
+      if (department != null) _departmentController.text = department;
+      final isEnrolled = user['isEnrolled'];
+      if (isEnrolled != null) _isEnrolled = isEnrolled.toString();
+      final favoriteFood = user['favoriteFood']?.toString();
+      if (favoriteFood != null) _favoriteFoodController.text = favoriteFood;
 
       setState(() {
         _isEditing = _forceEdit || (affiliation != null && affiliation.isNotEmpty);
@@ -262,6 +278,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
           'instagramHandle': _instagramController.text.trim(),
         if (_bioController.text.trim().isNotEmpty)
           'bio': _bioController.text.trim(),
+        if (_idealTypeController.text.trim().isNotEmpty)
+          'idealType': _idealTypeController.text.trim(),
+        if (_departmentController.text.trim().isNotEmpty)
+          'department': _departmentController.text.trim(),
+        if (_isEnrolled != null)
+          'isEnrolled': _isEnrolled,
+        if (_favoriteFoodController.text.trim().isNotEmpty)
+          'favoriteFood': _favoriteFoodController.text.trim(),
         'preferredGenders': preferredGenders,
       });
       _applyThemeForAffiliation();
@@ -556,6 +580,48 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 maxLines: 3,
                 decoration: const InputDecoration(
                   labelText: '자기소개',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // --- 신규 프로필 항목 입력란 추가 ---
+              const SizedBox(height: 12),
+              TextField(
+                controller: _idealTypeController,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: '이상형',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _departmentController,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: '학과',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: _isEnrolled,
+                decoration: const InputDecoration(
+                  labelText: '재학 여부',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'true', child: Text('재학 중')),
+                  DropdownMenuItem(value: 'false', child: Text('휴학/졸업')),
+                ],
+                onChanged: (value) => setState(() => _isEnrolled = value),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _favoriteFoodController,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: '좋아하는 음식',
                   border: OutlineInputBorder(),
                 ),
               ),
