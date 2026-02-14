@@ -23,36 +23,36 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   Future<void> _loadRooms() async {
-    try {
-      final rooms = await _repository.listRooms();
-      if (!mounted) return;
-      // updatedAt 기준 내림차순 정렬(최신 대화방이 위로)
-      rooms.sort((a, b) {
-        final aTime = DateTime.tryParse(a['updatedAt']?.toString() ?? '') ?? DateTime(2000);
-        final bTime = DateTime.tryParse(b['updatedAt']?.toString() ?? '') ?? DateTime(2000);
-        return bTime.compareTo(aTime);
-      });
-      setState(() {
-        _rooms = rooms;
-        _loading = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _deleteRoom(String roomId) async {
-    if (_deleting) return;
-    setState(() => _deleting = true);
-    try {
-      await _repository.deleteRoom(roomId: roomId);
-      if (!mounted) return;
-      _rooms.removeWhere((room) => room['roomId']?.toString() == roomId);
-      setState(() {});
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      body: Stack(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Theme.of(context).colorScheme.primary,
+                  Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  Theme.of(context).colorScheme.background,
+                ],
+                stops: const [0.0, 0.08, 0.25],
+              ),
+            ),
+          ),
+          _loading
+              ? const Center(child: CircularProgressIndicator())
+              : _rooms.isEmpty
+                  ? const Center(child: Text('아직 대화가 없습니다.'))
+                  : ListView.separated(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _rooms.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        // ...existing code...
+                      },
+                    ),
+        ],
+      ),
         const SnackBar(content: Text('대화방 삭제에 실패했습니다.')),
       );
     } finally {

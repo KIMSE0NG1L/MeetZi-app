@@ -59,8 +59,38 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.06),
-      body: _pages[_currentIndex],
+      backgroundColor: Theme.of(context).colorScheme.background,
+      body: Stack(
+        children: [
+          Container(
+            height: 120,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Theme.of(context).colorScheme.primary,
+                  Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  Theme.of(context).colorScheme.background,
+                ],
+                stops: const [0.0, 0.12, 0.22],
+              ),
+            ),
+          ),
+          GestureDetector(
+            onHorizontalDragEnd: (details) {
+              if (details.primaryVelocity == null) return;
+              if (details.primaryVelocity! > 200 && _currentIndex > 0) {
+                setState(() => _currentIndex = _currentIndex - 1);
+              }
+              if (details.primaryVelocity! < -200 && _currentIndex < _pages.length - 1) {
+                setState(() => _currentIndex = _currentIndex + 1);
+              }
+            },
+            child: _pages[_currentIndex],
+          ),
+        ],
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         type: BottomNavigationBarType.fixed,

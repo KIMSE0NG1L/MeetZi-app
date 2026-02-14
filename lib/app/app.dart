@@ -28,6 +28,7 @@ import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/auth/data/environment_status_repository.dart';
 import 'package:nearo_app/features/home/screens/home_shell_screen.dart';
 import 'package:nearo_app/features/profile/screens/avatar_setup_screen.dart';
+import 'package:nearo_app/shared/widgets/version_overlay.dart';
 
 class NearoApp extends StatefulWidget {
   const NearoApp({super.key});
@@ -140,6 +141,26 @@ class _NearoAppState extends State<NearoApp> {
           theme: NearoTheme.light(seedColor: color),
           navigatorKey: _navigatorKey,
           initialRoute: AppRoutes.onboarding,
+          builder: (context, child) {
+            return Stack(
+              children: [
+                Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0xFFB6A4F7), // 연보라
+                        Color(0xFFF7F6FB), // 밝은 배경
+                      ],
+                    ),
+                  ),
+                ),
+                if (child != null) child,
+                  const VersionOverlay(version: "1.0.0.1"),
+              ],
+            );
+          },
           routes: {
             AppRoutes.onboarding: (_) => const OnboardingScreen(),
             AppRoutes.login: (_) => const LoginScreen(),

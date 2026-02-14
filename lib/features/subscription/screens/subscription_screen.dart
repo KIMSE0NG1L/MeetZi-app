@@ -35,48 +35,66 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       appBar: AppBar(
         title: const Text('구독 API'),
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: ListView(
-            children: [
-              PrimaryButton(
-                label: '구독 조회',
-                isLoading: _isLoading,
-                onPressed: () => _run(_repository.getSubscription),
+      body: Stack(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Theme.of(context).colorScheme.primary,
+                  Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  Theme.of(context).colorScheme.background,
+                ],
+                stops: const [0.0, 0.08, 0.25],
               ),
-              const SizedBox(height: 12),
-              PrimaryButton(
-                label: '구독 취소',
-                isLoading: _isLoading,
-                onPressed: () => _run(_repository.cancelSubscription),
-              ),
-              const SizedBox(height: 12),
-              PrimaryButton(
-                label: '구독 일시중지',
-                isLoading: _isLoading,
-                onPressed: () => _run(_repository.pauseSubscription),
-              ),
-              const SizedBox(height: 12),
-              PrimaryButton(
-                label: '구독 재개',
-                isLoading: _isLoading,
-                onPressed: () => _run(_repository.resumeSubscription),
-              ),
-              const SizedBox(height: 12),
-              PrimaryButton(
-                label: '구독 활성 여부',
-                isLoading: _isLoading,
-                onPressed: () => _run(_repository.isSubscriptionActive),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                _result,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ],
+            ),
           ),
-        ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: ListView(
+                children: [
+                  PrimaryButton(
+                    label: '구독 조회',
+                    isLoading: _isLoading,
+                    onPressed: () => _run(_repository.getSubscription),
+                  ),
+                  const SizedBox(height: 12),
+                  PrimaryButton(
+                    label: '구독 취소',
+                    isLoading: _isLoading,
+                    onPressed: () => _run(_repository.cancelSubscription),
+                  ),
+                  const SizedBox(height: 12),
+                  PrimaryButton(
+                    label: '구독 일시중지',
+                    isLoading: _isLoading,
+                    onPressed: () => _run(_repository.pauseSubscription),
+                  ),
+                  const SizedBox(height: 12),
+                  PrimaryButton(
+                    label: '구독 재개',
+                    isLoading: _isLoading,
+                    onPressed: () => _run(_repository.resumeSubscription),
+                  ),
+                  const SizedBox(height: 12),
+                  PrimaryButton(
+                    label: '구독 활성 여부',
+                    isLoading: _isLoading,
+                    onPressed: () => _run(_repository.isSubscriptionActive),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    _result,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

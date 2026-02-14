@@ -20,10 +20,10 @@ class LoginScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'NEARO',
-                style: Theme.of(context).textTheme.headlineLarge,
-              ),
+                Text(
+                  'MeetZy',
+                  style: Theme.of(context).textTheme.headlineLarge,
+                ),
               const SizedBox(height: 12),
               Text(
                 '같은 공간에서 자연스럽게\n이어지는 자만추 매칭',

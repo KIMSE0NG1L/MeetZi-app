@@ -20,52 +20,52 @@ class SettingsScreen extends StatelessWidget {
 
   Future<void> _confirmDeleteAccount(BuildContext context) async {
     final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('계정 삭제'),
-          content: const Text(
-            '카카오 계정과 연동된 프로필 정보가 삭제됩니다. 이 작업은 되돌릴 수 없습니다. 계속할까요?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('취소'),
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('설정'),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          foregroundColor: Colors.white,
+        ),
+        body: Stack(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Theme.of(context).colorScheme.primary,
+                    Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    Theme.of(context).colorScheme.background,
+                  ],
+                  stops: const [0.0, 0.08, 0.25],
+                ),
+              ),
             ),
-            FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('삭제'),
+            SafeArea(
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.logout),
+                    title: const Text('로그아웃'),
+                    onTap: () => _logout(context),
+                  ),
+                  const Divider(),
+                  ListTile(
+                    leading: const Icon(Icons.delete_outline, color: Colors.red),
+                    title: const Text(
+                      '계정 삭제',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                    onTap: () => _confirmDeleteAccount(context),
+                  ),
+                ],
+              ),
             ),
           ],
-        );
-      },
-    );
-
-    if (confirmed != true || !context.mounted) return;
-
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      final repo = AuthRepository();
-      await repo.deleteAccount(); // deleteAccount()에서 토큰도 자동 삭제됨
-      await ChatHistoryStore.instance.clear();
-      
-      if (!context.mounted) return;
-      
-      // 로그인 화면으로 이동 (모든 라우트 제거)
-      Navigator.of(context).pushNamedAndRemoveUntil(
-        AppRoutes.login,
-        (route) => false,
+        ),
       );
-      
-      messenger.showSnackBar(
-        const SnackBar(content: Text('계정이 삭제되었습니다.')),
-      );
-    } catch (e) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('계정 삭제에 실패했습니다: $e')),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {

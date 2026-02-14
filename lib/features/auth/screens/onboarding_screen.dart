@@ -54,7 +54,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'NEARO',
+                    'MeetZy',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,

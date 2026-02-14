@@ -7,39 +7,39 @@ import 'package:nearo_app/shared/widgets/primary_button.dart';
 class MyProfileScreen extends StatefulWidget {
   const MyProfileScreen({super.key});
 
-  @override
-  State<MyProfileScreen> createState() => _MyProfileScreenState();
-}
-
-class _MyProfileScreenState extends State<MyProfileScreen> {
-  final _repo = AuthRepository();
-  Map<String, dynamic>? _profile;
-  bool _isLoading = false;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-    try {
-      final result = await _repo.getProfile();
-      final user = (result['user'] as Map?) ?? result;
-      setState(() => _profile = Map<String, dynamic>.from(user as Map));
-    } on DioException catch (error) {
-      setState(() => _error = error.response?.data.toString() ?? '불러오기 실패');
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  @override
+      body: Stack(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Theme.of(context).colorScheme.primary,
+                  Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  Theme.of(context).colorScheme.background,
+                ],
+                stops: const [0.0, 0.08, 0.25],
+              ),
+            ),
+          ),
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _error != null
+                  ? Center(child: Text(_error!))
+                  : _profile == null
+                      ? const Center(child: Text('프로필 정보가 없습니다.'))
+                      : Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // ...existing code...
+                            ],
+                          ),
+                        ),
+        ],
+      ),
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
