@@ -9,7 +9,6 @@ class UsersRepository {
   Future<Map<String, dynamic>> createProfile({
     required String nickname,
     required String gender,
-    required int birthYear,
     required String baseType,
     String? affiliationText,
     int? heightCm,
@@ -25,7 +24,6 @@ class UsersRepository {
     final payload = <String, dynamic>{
       'nickname': nickname,
       'gender': gender,
-      'birthYear': birthYear,
       'baseType': baseType,
       if (affiliationText != null) 'affiliationText': affiliationText,
       if (heightCm != null) 'heightCm': heightCm,

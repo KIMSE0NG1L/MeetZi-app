@@ -68,7 +68,6 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                             const SizedBox(height: 12),
                             Text('소속: ${_profile?['affiliationText'] ?? '-'}'),
                             Text('성별: ${_profile?['gender'] ?? '-'}'),
-                            Text('출생년도: ${_profile?['birthYear'] ?? '-'}'),
                             Text('MBTI: ${_profile?['mbti'] ?? '-'}'),
                             Text('인스타: ${_profile?['instagramHandle'] ?? '-'}'),
                             const SizedBox(height: 20),

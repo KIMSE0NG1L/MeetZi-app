@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nearo_app/app/app_routes.dart';
+import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/messages/data/chat_history_store.dart';
 import 'package:nearo_app/shared/utils/token_storage.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
@@ -23,7 +24,9 @@ class SettingsScreen extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('계정 삭제'),
-        content: const Text('정말로 계정을 삭제하시겠습니까?'),
+        content: const Text(
+          '정말로 계정을 삭제하시겠습니까? 삭제 후 다시 카카오 로그인이 필요합니다.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -31,13 +34,26 @@ class SettingsScreen extends StatelessWidget {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('확인'),
+            child: const Text('삭제'),
           ),
         ],
       ),
     );
-    if (confirmed == true) {
-      // 계정 삭제 로직 추가
+    if (confirmed != true) return;
+    try {
+      await AuthRepository().deleteAccount();
+      await ChatHistoryStore.instance.clear();
+      await TokenStorage().clear();
+      if (!context.mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        AppRoutes.login,
+        (route) => false,
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('계정 삭제 실패: $e')),
+      );
     }
   }
 
@@ -80,20 +96,6 @@ class SettingsScreen extends StatelessWidget {
                   onChanged: (val) {
                     ThemeController.setThemeMode(ThemeMode.dark);
                     ThemeController.setSecretMode(false);
-                  },
-                ),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.visibility_off),
-              title: const Text('시크릿 모드'),
-              trailing: ValueListenableBuilder<bool>(
-                valueListenable: ThemeController.secretMode,
-                builder: (context, secret, _) => Radio<bool>(
-                  value: true,
-                  groupValue: secret,
-                  onChanged: (val) {
-                    ThemeController.setSecretMode(true);
                   },
                 ),
               ),

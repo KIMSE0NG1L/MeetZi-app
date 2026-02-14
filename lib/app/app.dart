@@ -66,7 +66,7 @@ class _NearoAppState extends State<NearoApp> {
       try {
         final profile = await _authRepository.getProfile();
         final user = (profile['user'] as Map?) ?? profile;
-        final hasProfile = user['nickname'] != null && user['birthYear'] != null;
+        final hasProfile = user['nickname'] != null;
         final hasAffiliation = (user['affiliationText'] as String?)
                 ?.trim()
                 .isNotEmpty ??

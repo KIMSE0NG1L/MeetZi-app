@@ -6,7 +6,9 @@ class VersionOverlay extends StatelessWidget {
 
   Future<String> _getVersion() async {
     final info = await PackageInfo.fromPlatform();
-    return info.version;
+    final v = info.version;
+    if (v == '1.0.1') return '1.0.1.1';
+    return v.split('.').length >= 3 ? '${v}.0' : v;
   }
 
   @override

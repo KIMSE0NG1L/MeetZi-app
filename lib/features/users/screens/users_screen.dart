@@ -13,7 +13,6 @@ class UsersScreen extends StatefulWidget {
 class _UsersScreenState extends State<UsersScreen> {
   final _repository = UsersRepository();
   final _nicknameController = TextEditingController();
-  final _birthYearController = TextEditingController();
   final _genderController = TextEditingController(text: 'MALE');
   final _baseTypeController = TextEditingController(text: 'default');
   final _matchIdController = TextEditingController();
@@ -23,7 +22,6 @@ class _UsersScreenState extends State<UsersScreen> {
   @override
   void dispose() {
     _nicknameController.dispose();
-    _birthYearController.dispose();
     _genderController.dispose();
     _baseTypeController.dispose();
     _matchIdController.dispose();
@@ -62,15 +60,6 @@ class _UsersScreenState extends State<UsersScreen> {
               ),
               const SizedBox(height: 12),
               TextField(
-                controller: _birthYearController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: '출생년도',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
                 controller: _genderController,
                 decoration: const InputDecoration(
                   labelText: '성별 (MALE/FEMALE)',
@@ -93,7 +82,6 @@ class _UsersScreenState extends State<UsersScreen> {
                   () => _repository.createProfile(
                     nickname: _nicknameController.text.trim(),
                     gender: _genderController.text.trim(),
-                    birthYear: int.tryParse(_birthYearController.text.trim()) ?? 0,
                     baseType: _baseTypeController.text.trim(),
                   ),
                 ),

@@ -17,7 +17,6 @@ class _ConsentPreviewScreenState extends State<ConsentPreviewScreen> {
   bool _didLoadHistory = false;
   static const Map<String, dynamic> _fallbackProfile = {
     'nickname': '두쫀쿠공주',
-    'birthYear': 2005,
     'gender': '여성',
     'preferredGender': '남성 선호',
     'affiliation': '세종대학교',

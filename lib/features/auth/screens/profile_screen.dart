@@ -13,7 +13,6 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final _repository = AuthRepository();
   final _nicknameController = TextEditingController();
-  final _birthYearController = TextEditingController();
   final _genderController = TextEditingController(text: 'MALE');
   final _baseTypeController = TextEditingController(text: 'default');
   String _result = '';
@@ -22,7 +21,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void dispose() {
     _nicknameController.dispose();
-    _birthYearController.dispose();
     _genderController.dispose();
     _baseTypeController.dispose();
     super.dispose();
@@ -62,15 +60,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               const SizedBox(height: 12),
               TextField(
-                controller: _birthYearController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: '출생년도',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
                 controller: _genderController,
                 decoration: const InputDecoration(
                   labelText: '성별 (MALE/FEMALE)',
@@ -98,7 +87,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onPressed: () => _run(
                   () => _repository.updateProfile({
                     'nickname': _nicknameController.text.trim(),
-                    'birthYear': int.tryParse(_birthYearController.text.trim()),
                     'gender': _genderController.text.trim(),
                     'baseType': _baseTypeController.text.trim(),
                   }),

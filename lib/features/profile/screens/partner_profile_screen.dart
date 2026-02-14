@@ -5,7 +5,6 @@ class PartnerProfileScreen extends StatelessWidget {
 
   static const Map<String, dynamic> fallbackProfile = {
     'nickname': '두쫀쿠공주',
-    'birthYear': 2005,
     'gender': '여성',
     'preferredGender': '남성 선호',
     'affiliation': '세종대학교',
@@ -51,7 +50,7 @@ class PartnerProfileScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${profile['birthYear']}년생 · ${profile['gender']}',
+                        profile['gender']?.toString() ?? '',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ],

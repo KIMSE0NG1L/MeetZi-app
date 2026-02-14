@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:nearo_app/features/matching_board/data/matching_board_repository.dart';
@@ -95,23 +97,59 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       await _repository.takeNote(profileId);
       await _fetchProfiles();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('쪽지 뽑아가기 완료, 크레딧 1 차감')));
-    } catch (_) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('가져가기 완료! 매칭이 성사되었어요.')));
+    } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('쪽지 뽑아가기 실패')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
     }
+  }
+
+  void _openNoteSheet(BuildContext context, int startIndex, String? myUserId) {
+    final others = myUserId != null
+        ? _profiles.where((p) => p['userId'] != myUserId).toList()
+        : List<Map<String, dynamic>>.from(_profiles);
+    final tappedProfile = startIndex < _profiles.length ? _profiles[startIndex] : null;
+    final startInOthers = tappedProfile != null ? others.indexWhere((p) => p['id'] == tappedProfile['id']) : 0;
+    final initialIndex = startInOthers >= 0 ? startInOthers : 0;
+    if (others.isEmpty) return;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _BoardNoteSheetContent(
+        profiles: others,
+        startIndex: initialIndex,
+        buildAvatar: _buildBoardAvatar,
+        onTakeNote: _takeNote,
+        onPop: _fetchProfiles,
+      ),
+    );
+  }
+
+  Map<String, String> _parseAvatarOptions(dynamic raw) {
+    if (raw == null) return {};
+    final s = raw.toString();
+    if (s.isEmpty) return {};
+    try {
+      final decoded = jsonDecode(s);
+      if (decoded is Map<String, dynamic>) {
+        return decoded.map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
+      }
+    } catch (_) {}
+    return {};
   }
 
   Widget _buildBoardAvatar(BuildContext context, Map<String, dynamic> profile) {
     final user = profile['user'] as Map<String, dynamic>?;
     final seed = user?['avatarSeed']?.toString() ?? profile['userId']?.toString();
+    final options = _parseAvatarOptions(user?['avatarOptions']);
     if (seed != null && seed.isNotEmpty) {
       return CircleAvatar(
         radius: 32,
         backgroundColor: Colors.white,
         child: ClipOval(
           child: SvgPicture.network(
-            diceBearAvatarUrl(seed),
+            diceBearAvatarUrl(seed, options: options.isNotEmpty ? options : null),
             fit: BoxFit.cover,
             width: 64,
             height: 64,
@@ -176,22 +214,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                                 color: Theme.of(context).colorScheme.primary,
                                 child: InkWell(
                                   borderRadius: BorderRadius.circular(16),
-                                  onTap: isMe
-                                      ? null
-                                      : () async {
-                                          final result = await showDialog<bool>(
-                                            context: context,
-                                            builder: (ctx) => AlertDialog(
-                                              title: const Text('매칭 확인'),
-                                              content: const Text('이 프로필과 매칭하시겠습니까?'),
-                                              actions: [
-                                                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('취소')),
-                                                TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('확인')),
-                                              ],
-                                            ),
-                                          );
-                                          if (result == true) await _takeNote(profile['id']);
-                                        },
+                                  onTap: isMe ? null : () => _openNoteSheet(context, index, myUserId),
                                   child: Padding(
                                     padding: const EdgeInsets.all(16),
                                     child: Column(
@@ -209,7 +232,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                                         ),
                                         const SizedBox(height: 6),
                                         Text(
-                                          (profile['department'] ?? profile['user']?['department'])?.toString() ?? '-',
+                                          isMe ? '' : ((profile['idealType'] ?? (profile['user'] as Map<String, dynamic>?)?['idealType'])?.toString() ?? '-'),
                                           style: const TextStyle(fontSize: 13, color: Colors.white70),
                                           textAlign: TextAlign.center,
                                           maxLines: 1,
@@ -253,6 +276,171 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
           ),
         );
       },
+    );
+  }
+}
+
+class _BoardNoteSheetContent extends StatefulWidget {
+  const _BoardNoteSheetContent({
+    required this.profiles,
+    required this.startIndex,
+    required this.buildAvatar,
+    required this.onTakeNote,
+    required this.onPop,
+  });
+
+  final List<Map<String, dynamic>> profiles;
+  final int startIndex;
+  final Widget Function(BuildContext context, Map<String, dynamic> profile) buildAvatar;
+  final Future<void> Function(String profileId) onTakeNote;
+  final VoidCallback onPop;
+
+  @override
+  State<_BoardNoteSheetContent> createState() => _BoardNoteSheetContentState();
+}
+
+class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
+  late int _currentIndex;
+  bool _taking = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.startIndex;
+  }
+
+  Map<String, dynamic> get _profile => widget.profiles[_currentIndex];
+  Map<String, dynamic>? get _user => _profile['user'] as Map<String, dynamic>?;
+
+  void _skip() {
+    if (_currentIndex + 1 < widget.profiles.length) {
+      setState(() => _currentIndex++);
+    } else {
+      Navigator.of(context).pop();
+      widget.onPop();
+    }
+  }
+
+  Future<void> _take() async {
+    if (_taking) return;
+    setState(() => _taking = true);
+    try {
+      await widget.onTakeNote(_profile['id'] as String);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      widget.onPop();
+    } finally {
+      if (mounted) setState(() => _taking = false);
+    }
+  }
+
+  static String _str(dynamic v) => v?.toString() ?? '-';
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final profile = _profile;
+    final user = _user;
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.88,
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 12),
+          Container(width: 40, height: 4, decoration: BoxDecoration(color: theme.colorScheme.onSurface.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2))),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 280),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                transitionBuilder: (Widget child, Animation<double> animation) {
+                  return SlideTransition(
+                    position: Tween<Offset>(begin: const Offset(0.15, 0), end: Offset.zero).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+                    child: FadeTransition(opacity: animation, child: child),
+                  );
+                },
+                child: Column(
+                  key: ValueKey<int>(_currentIndex),
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    widget.buildAvatar(context, profile),
+                    const SizedBox(height: 16),
+                    Text(_str(profile['nickname']), style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 20),
+                    _row(theme, '학과', _str(profile['department'] ?? user?['department'])),
+                    _row(theme, '성별', _str(profile['gender'] ?? user?['gender'])),
+                    _row(theme, '소속', _str(user?['affiliationText'])),
+                    _row(theme, '키', user?['heightCm'] != null ? '${user!['heightCm']} cm' : '-'),
+                    _row(theme, '학년', _str(user?['gradeYear'])),
+                    _row(theme, 'MBTI', _str(user?['mbti'])),
+                    _row(theme, '흡연', _str(user?['smoking'])),
+                    _row(theme, '음주', _str(user?['drinking'])),
+                    _row(theme, '한 줄 소개', _str(user?['introOneLine'])),
+                    _row(theme, '요즘 빠진 것', _str(user?['intoLately'])),
+                    _row(theme, '이상형', _str(user?['idealType'])),
+                    _row(theme, '패션 스타일', _str(user?['fashionStyle'])),
+                    _row(theme, '선호 데이트', _str(user?['preferredDateType'])),
+                    _row(theme, '활동 시간대', _str(user?['activityTime'])),
+                    if (user?['idealTypeKeywords'] is List)
+                      _row(theme, '나를 소개하는 키워드', (user!['idealTypeKeywords'] as List).join(', ')),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _taking ? null : _skip,
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text(_currentIndex + 1 < widget.profiles.length ? '넘기기' : '닫기'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: _taking ? null : _take,
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: _taking ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('가져가기'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _row(ThemeData theme, String label, String value) {
+    if (value.isEmpty || value == '-') return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(width: 100, child: Text(label, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.7)), maxLines: 1, overflow: TextOverflow.ellipsis)),
+          Expanded(child: Text(value, style: theme.textTheme.bodyMedium, maxLines: 3, overflow: TextOverflow.ellipsis)),
+        ],
+      ),
     );
   }
 }

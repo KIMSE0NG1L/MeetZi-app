@@ -1,5 +1,7 @@
-import 'package:dio/dio.dart';
+import 'dart:convert';
 import 'dart:io';
+
+import 'package:dio/dio.dart';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -24,20 +26,13 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _repository = AuthRepository();
   final _photoRepository = PhotoRepository();
   final _nicknameController = TextEditingController();
-  final _birthDateController = TextEditingController();
   final _idealTypeController = TextEditingController();
   final _departmentController = TextEditingController();
-  final _favoriteFoodController = TextEditingController();
-  String? _isEnrolled;
   String _affiliation = '세종대학교';
   final _heightController = TextEditingController();
   final _mbtiController = TextEditingController();
-  final _instagramController = TextEditingController();
-  final _bioController = TextEditingController();
   final _introOneLineController = TextEditingController();
-  final _oneWordMeController = TextEditingController();
   final _intoLatelyController = TextEditingController();
-  DateTime? _birthDate;
   String _gender = 'male';
   String _preferredGender = 'opposite';
   String? _smoking;
@@ -50,6 +45,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   int? _heightCm; // 150~195 스크롤용
   String? _avatarSeed;
   String? _avatarStyle;
+  Map<String, String> _avatarOptions = {};
   bool _isLoading = false;
   String _result = '';
   bool _isEditing = false;
@@ -75,16 +71,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   @override
   void dispose() {
     _nicknameController.dispose();
-    _birthDateController.dispose();
     _heightController.dispose();
     _mbtiController.dispose();
-    _instagramController.dispose();
-    _bioController.dispose();
     _idealTypeController.dispose();
     _departmentController.dispose();
-    _favoriteFoodController.dispose();
     _introOneLineController.dispose();
-    _oneWordMeController.dispose();
     _intoLatelyController.dispose();
     super.dispose();
   }
@@ -129,17 +120,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       final result = await _repository.getProfile();
       final user = (result['user'] as Map?) ?? result;
       final nickname = user['nickname']?.toString();
-      final birthYear = user['birthYear'];
       final gender = user['gender']?.toString();
       final affiliation = user['affiliationText']?.toString();
 
       if (nickname != null) {
         _nicknameController.text = nickname;
-      }
-      if (birthYear is int) {
-        final birth = DateTime(birthYear, 1, 1);
-        _birthDate = birth;
-        _birthDateController.text = _formatDate(birth);
       }
       if (gender != null) {
         _gender = gender;
@@ -157,24 +142,13 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       if (drinking != null) _drinking = drinking;
       final mbti = user['mbti']?.toString();
       if (mbti != null) _mbtiController.text = mbti;
-      final instagram = user['instagramHandle']?.toString();
-      if (instagram != null) _instagramController.text = instagram;
-      final bio = user['bio']?.toString();
-      if (bio != null) _bioController.text = bio;
 
       final idealType = user['idealType']?.toString();
       if (idealType != null) _idealTypeController.text = idealType;
       final department = user['department']?.toString();
       if (department != null) _departmentController.text = department;
-      final isEnrolled = user['isEnrolled'];
-      if (isEnrolled != null) _isEnrolled = isEnrolled.toString();
-      final favoriteFood = user['favoriteFood']?.toString();
-      if (favoriteFood != null) _favoriteFoodController.text = favoriteFood;
-
       final introOneLine = user['introOneLine']?.toString();
       if (introOneLine != null) _introOneLineController.text = introOneLine;
-      final oneWordMe = user['oneWordMe']?.toString();
-      if (oneWordMe != null) _oneWordMeController.text = oneWordMe;
       final intoLately = user['intoLately']?.toString();
       if (intoLately != null) _intoLatelyController.text = intoLately;
       final gradeYear = user['gradeYear']?.toString();
@@ -194,6 +168,15 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       final avatarStyle = user['avatarStyle']?.toString();
       if (avatarSeed != null) _avatarSeed = avatarSeed;
       if (avatarStyle != null) _avatarStyle = avatarStyle;
+      final avatarOptionsRaw = user['avatarOptions']?.toString();
+      if (avatarOptionsRaw != null && avatarOptionsRaw.isNotEmpty) {
+        try {
+          final decoded = jsonDecode(avatarOptionsRaw);
+          if (decoded is Map<String, dynamic>) {
+            _avatarOptions = decoded.map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
+          }
+        } catch (_) {}
+      }
 
       setState(() {
         _isEditing = _forceEdit || (affiliation != null && affiliation.isNotEmpty);
@@ -257,65 +240,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     return '${AppConfig.baseUrl}/$storageKey';
   }
 
-  String _formatDate(DateTime date) {
-    final y = date.year.toString().padLeft(4, '0');
-    final m = date.month.toString().padLeft(2, '0');
-    final d = date.day.toString().padLeft(2, '0');
-    return '$y-$m-$d';
-  }
-
-  Future<void> _pickBirthDate() async {
-    final initial = _birthDate ?? DateTime(2000, 1, 1);
-    final picked = await showModalBottomSheet<DateTime>(
-      context: context,
-      builder: (context) {
-        DateTime temp = initial;
-        return SafeArea(
-          child: SizedBox(
-            height: 320,
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('취소'),
-                      ),
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(temp),
-                        child: const Text('완료'),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: CupertinoDatePicker(
-                    mode: CupertinoDatePickerMode.date,
-                    initialDateTime: initial,
-                    maximumDate: DateTime.now(),
-                    onDateTimeChanged: (value) {
-                      temp = value;
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-
-    if (picked != null) {
-      setState(() {
-        _birthDate = picked;
-        _birthDateController.text = _formatDate(picked);
-      });
-    }
-  }
-
   /// 닉네임: 2~8자, 한글/영문/숫자만, 특수문자·공백 불가
   static bool _isValidNickname(String s) {
     final t = s.trim();
@@ -325,8 +249,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
   Future<void> _submit() async {
     final nickname = _nicknameController.text.trim();
-    if (nickname.isEmpty || _birthDate == null) {
-      setState(() => _result = '닉네임과 생년월일을 입력해 주세요.');
+    if (nickname.isEmpty) {
+      setState(() => _result = '닉네임을 입력해 주세요.');
       return;
     }
     if (!_isValidNickname(nickname)) {
@@ -352,35 +276,22 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       final response = await _repository.updateProfile({
         'nickname': nickname,
         'gender': _gender,
-        'birthYear': _birthDate!.year,
         'affiliationText': _affiliation,
         if (heightCm != null) 'heightCm': heightCm,
         if (_smoking != null) 'smoking': _smoking,
         if (_drinking != null) 'drinking': _drinking,
         if (_mbtiController.text.trim().isNotEmpty)
           'mbti': _mbtiController.text.trim(),
-        if (_instagramController.text.trim().isNotEmpty)
-          'instagramHandle': _instagramController.text.trim(),
-        if (_bioController.text.trim().isNotEmpty)
-          'bio': _bioController.text.trim(),
         if (_idealTypeController.text.trim().isNotEmpty)
           'idealType': _idealTypeController.text.trim(),
         if (_departmentController.text.trim().isNotEmpty)
           'department': _departmentController.text.trim(),
-        if (_isEnrolled != null)
-          'isEnrolled': _isEnrolled,
-        if (_favoriteFoodController.text.trim().isNotEmpty)
-          'favoriteFood': _favoriteFoodController.text.trim(),
         'preferredGenders': preferredGenders,
         if (_gradeYear != null) 'gradeYear': _gradeYear,
         if (_introOneLineController.text.trim().isNotEmpty)
           'introOneLine': _introOneLineController.text.trim().length > 40
               ? _introOneLineController.text.trim().substring(0, 40)
               : _introOneLineController.text.trim(),
-        if (_oneWordMeController.text.trim().isNotEmpty)
-          'oneWordMe': _oneWordMeController.text.trim().length > 12
-              ? _oneWordMeController.text.trim().substring(0, 12)
-              : _oneWordMeController.text.trim(),
         if (_idealTypeKeywords.isNotEmpty) 'idealTypeKeywords': _idealTypeKeywords,
         if (_fashionStyle != null) 'fashionStyle': _fashionStyle,
         if (_preferredDateType != null) 'preferredDateType': _preferredDateType,
@@ -451,7 +362,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                         ? ClipRRect(
                             borderRadius: BorderRadius.circular(40),
                             child: SvgPicture.network(
-                              diceBearAvatarUrl(_avatarSeed!),
+                              diceBearAvatarUrl(_avatarSeed!, options: _avatarOptions.isNotEmpty ? _avatarOptions : null),
                               fit: BoxFit.cover,
                               placeholderBuilder: (context) => const Center(child: CircularProgressIndicator()),
                             ),
@@ -604,17 +515,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              TextField(
-                controller: _birthDateController,
-                readOnly: true,
-                onTap: _pickBirthDate,
-                decoration: const InputDecoration(
-                  labelText: '생년월일',
-                  hintText: 'YYYY-MM-DD',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 value: _gender,
                 decoration: const InputDecoration(
@@ -718,19 +618,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 items: _mbtiOptions.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
                 onChanged: (v) { if (v != null) setState(() => _mbtiController.text = v); },
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _oneWordMeController,
-                maxLength: 12,
-                maxLines: 1,
-                decoration: const InputDecoration(
-                  labelText: '나를 한 단어로 (최대 12자)',
-                  border: OutlineInputBorder(),
-                  counterText: '',
-                ),
-              ),
               const SizedBox(height: 8),
-              Text('이상형 키워드 (3개 선택)', style: Theme.of(context).textTheme.bodyMedium),
+              Text('나를 소개하는 키워드 (3개 선택)', style: Theme.of(context).textTheme.bodyMedium),
               Wrap(
                 spacing: 8,
                 runSpacing: 4,
@@ -825,26 +714,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               ),
               const SizedBox(height: 12),
               TextField(
-                controller: _instagramController,
-                textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
-                  labelText: '인스타그램 아이디',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _bioController,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: '자기소개',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              // --- 신규 프로필 항목 입력란 추가 ---
-              const SizedBox(height: 12),
-              TextField(
                 controller: _idealTypeController,
                 textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
@@ -858,28 +727,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
                   labelText: '학과',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: _isEnrolled,
-                decoration: const InputDecoration(
-                  labelText: '재학 여부',
-                  border: OutlineInputBorder(),
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'true', child: Text('재학 중')),
-                  DropdownMenuItem(value: 'false', child: Text('휴학/졸업')),
-                ],
-                onChanged: (value) => setState(() => _isEnrolled = value),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _favoriteFoodController,
-                textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
-                  labelText: '좋아하는 음식',
                   border: OutlineInputBorder(),
                 ),
               ),
