@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:nearo_app/features/matching/data/matching_repository.dart';
@@ -34,7 +35,7 @@ class ChatRoomScreen extends StatefulWidget {
   State<ChatRoomScreen> createState() => _ChatRoomScreenState();
 }
 
-class _ChatRoomScreenState extends State<ChatRoomScreen> {
+class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObserver {
   IO.Socket? _socket;
   String? _myUserId;
   final _consentRepository = ConsentRepository();
@@ -55,6 +56,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   String? _matchId;
 
   final ScrollController _scrollController = ScrollController();
+  Timer? _readAtPollTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
 
   @override
   void didChangeDependencies() {
@@ -81,10 +89,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       final userId = profile['id']?.toString();
       if (userId != null && userId.isNotEmpty) {
         _myUserId = userId;
-        _initSocket();
+        await _initSocket();
         await _loadMessages();
         _sendReadReceipts();
         _scrollToBottom();
+        _readAtPollTimer?.cancel();
+        _readAtPollTimer = Timer.periodic(const Duration(seconds: 1), (_) => _syncReadAt());
       } else {
         _myUserId = null;
         setState(() => _loading = false);
@@ -93,6 +103,52 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       _myUserId = null;
       setState(() => _loading = false);
     }
+  }
+
+  /// getRoom 응답의 messageReadAts로 '1' 갱신 (listMessages 대신 가벼운 getRoom 사용)
+  void _applyMessageReadAts(List<dynamic>? messageReadAts) {
+    if (messageReadAts == null || messageReadAts.isEmpty || !mounted) return;
+    final serverReadAt = <String, DateTime>{};
+    for (final m in messageReadAts) {
+      final id = m['id']?.toString();
+      final readAt = m['readAt'] != null ? DateTime.tryParse(m['readAt'].toString()) : null;
+      if (id != null && readAt != null) {
+        serverReadAt[id] = readAt;
+      }
+    }
+    setState(() {
+      for (int i = 0; i < _messages.length; i++) {
+        final msg = _messages[i];
+        if (!msg.isMine || msg.readAt != null) continue;
+        final readAt = serverReadAt[msg.id];
+        if (readAt != null) {
+          _messages[i] = _ChatMessage(
+            id: msg.id,
+            text: msg.text,
+            isMine: msg.isMine,
+            senderId: msg.senderId,
+            isSystem: msg.isSystem,
+            readAt: readAt,
+          );
+        }
+      }
+    });
+  }
+
+  /// 채팅방에 있는 동안 getRoom으로 readAt만 가볍게 가져와서 '1' 갱신
+  /// '1'이 하나도 없으면 API 호출 안 함 → 사용자 많아도 부하 적음
+  Future<void> _syncReadAt() async {
+    if (_roomId == null || !mounted) return;
+    final hasUnreadMine = _messages.any((m) => m.isMine && m.readAt == null);
+    if (!hasUnreadMine) return;
+    try {
+      final room = await _repository.getRoom(roomId: _roomId!);
+      if (!mounted) return;
+      final list = room['messageReadAts'];
+      if (list is List) {
+        _applyMessageReadAts(list);
+      }
+    } catch (_) {}
   }
 
   // 읽지 않은 메시지에 대해 소켓으로 읽음 이벤트 전송
@@ -174,8 +230,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     }
   }
 
-  void _initSocket() {
+  Future<void> _initSocket() async {
     if (_roomId == null || _myUserId == null || _myUserId!.isEmpty) return;
+    final completer = Completer<void>();
     print('[소켓 연결 시도] roomId=$_roomId, myUserId=$_myUserId');
     _socket = IO.io(
       'https://hurtlingly-blatant-tari.ngrok-free.dev/chat',
@@ -188,6 +245,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     _socket!.onConnect((_) {
       print('[소켓 연결 성공]');
       _socket!.emit('joinRoom', {'roomId': _roomId});
+      if (!completer.isCompleted) completer.complete();
       print('[소켓 joinRoom emit] roomId=$_roomId');
     });
     _socket!.on('newMessage', (data) {
@@ -208,31 +266,37 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     print('[소켓 read 핸들러 등록됨]');
     // 읽음 이벤트 처리: 해당 메시지의 readAt 갱신
     _socket!.on('read', (data) {
-      print('[소켓 read 이벤트 수신] messageId=${data['messageId']}, userId=${data['userId']}, readAt=${data['readAt']}, 전체 메시지=${_messages.map((m) => m.id).toList()}');
+      debugPrint('[read 이벤트 수신] messageId=${data['messageId']}, userId=${data['userId']}, 내 메시지 수=${_messages.where((m) => m.isMine && m.readAt == null).length}');
       if (!mounted) return;
       final String? messageId = data['messageId']?.toString();
       final String? userId = data['userId']?.toString();
       final DateTime? readAt = data['readAt'] != null ? DateTime.tryParse(data['readAt'].toString()) : null;
       if (messageId == null || userId == null || readAt == null) return;
+      // 내가 보낸 메시지가 상대에게 읽혔을 때만 갱신 (userId = 읽은 사람 = 상대)
       setState(() {
-        for (int i = 0; i < _messages.length; i++) {
-          final msg = _messages[i];
+        final newList = <_ChatMessage>[];
+        for (final msg in _messages) {
           if (msg.id == messageId && msg.isMine && msg.readAt == null) {
-            print('[읽음 갱신] 내 메시지 readAt 갱신: id=${msg.id}, 기존 readAt=${msg.readAt}, 새 readAt=$readAt');
-            _messages[i] = _ChatMessage(
+            newList.add(_ChatMessage(
               id: msg.id,
               text: msg.text,
               isMine: msg.isMine,
               senderId: msg.senderId,
               isSystem: msg.isSystem,
               readAt: readAt,
-            );
+            ));
+          } else {
+            newList.add(msg);
           }
         }
+        _messages
+          ..clear()
+          ..addAll(newList);
       });
     });
     _socket!.connect();
     print('[소켓 connect 호출됨]');
+    await completer.future;
   }
 
   Future<void> _loadRoomState() async {
@@ -244,24 +308,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       _isProfileRevealed = room['isProfileRevealed'] == true;
       _partnerPhotoStorageKey = room['partnerPhotoStorageKey']?.toString();
       _partnerNickname = room['partnerNickname']?.toString();
-      // Removed assignments to _user1Consent and _user2Consent
       _matchId = room['matchId']?.toString();
-      // getRoom이 호출되면 내 메시지의 읽음 표시(1) 모두 사라지게 처리
-      setState(() {
-        for (int i = 0; i < _messages.length; i++) {
-          final msg = _messages[i];
-          if (msg.isMine && msg.readAt == null) {
-            _messages[i] = _ChatMessage(
-              id: msg.id,
-              text: msg.text,
-              isMine: msg.isMine,
-              senderId: msg.senderId,
-              isSystem: msg.isSystem,
-              readAt: DateTime.now(),
-            );
-          }
-        }
-      });
+      final list = room['messageReadAts'];
+      if (list is List) _applyMessageReadAts(list);
       if (_isProfileRevealed && _matchId != null) {
         try {
           final profile = await _partnerProfileRepository.getPartnerProfile(matchId: _matchId!);
@@ -349,7 +398,23 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_socket == null || !_socket!.connected || _roomId == null) return;
+    if (state == AppLifecycleState.resumed) {
+      _socket!.emit('joinRoom', {'roomId': _roomId});
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      _socket!.emit('outRoom', {'roomId': _roomId});
+    }
+  }
+
+  @override
   void dispose() {
+    if (_socket != null && _socket!.connected && _roomId != null) {
+      _socket!.emit('outRoom', {'roomId': _roomId});
+    }
+    _readAtPollTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     _controller.dispose();
     super.dispose();
   }
@@ -487,6 +552,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                                       ? Colors.white
                                       : Colors.black87;
                                   return Row(
+                                    key: ValueKey('${message.id}_${message.readAt?.millisecondsSinceEpoch ?? 0}'),
                                     mainAxisAlignment: message.isMine
                                         ? MainAxisAlignment.end
                                         : MainAxisAlignment.start,
