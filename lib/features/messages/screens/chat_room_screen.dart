@@ -135,19 +135,19 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
     });
   }
 
-  /// 채팅방에 있는 동안 getRoom으로 readAt만 가볍게 가져와서 '1' 갱신
-  /// '1'이 하나도 없으면 API 호출 안 함 → 사용자 많아도 부하 적음
+  /// 채팅방에 있는 동안 getRoom으로 readAt 갱신 + 매칭 취소 시 isActive 반영
   Future<void> _syncReadAt() async {
     if (_roomId == null || !mounted) return;
-    final hasUnreadMine = _messages.any((m) => m.isMine && m.readAt == null);
-    if (!hasUnreadMine) return;
     try {
       final room = await _repository.getRoom(roomId: _roomId!);
       if (!mounted) return;
-      final list = room['messageReadAts'];
-      if (list is List) {
-        _applyMessageReadAts(list);
+      // 매칭 취소 시 서버에서 isActive=false로 오므로 주기적으로 반영해 입력 막기
+      final isActiveFromServer = room['isActive'] == true;
+      if (!isActiveFromServer && _isActive) {
+        setState(() => _isActive = false);
       }
+      final list = room['messageReadAts'];
+      if (list is List) _applyMessageReadAts(list);
     } catch (_) {}
   }
 

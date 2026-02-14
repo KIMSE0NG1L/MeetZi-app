@@ -9,7 +9,9 @@ import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/photo/data/photo_repository.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/app_config.dart';
+import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/shared/widgets/primary_button.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
   const ProfileSetupScreen({super.key});
@@ -32,11 +34,22 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _mbtiController = TextEditingController();
   final _instagramController = TextEditingController();
   final _bioController = TextEditingController();
+  final _introOneLineController = TextEditingController();
+  final _oneWordMeController = TextEditingController();
+  final _intoLatelyController = TextEditingController();
   DateTime? _birthDate;
   String _gender = 'male';
   String _preferredGender = 'opposite';
   String? _smoking;
   String? _drinking;
+  String? _gradeYear;
+  List<String> _idealTypeKeywords = [];
+  String? _fashionStyle;
+  String? _preferredDateType;
+  String? _activityTime;
+  int? _heightCm; // 150~195 스크롤용
+  String? _avatarSeed;
+  String? _avatarStyle;
   bool _isLoading = false;
   String _result = '';
   bool _isEditing = false;
@@ -70,8 +83,46 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     _idealTypeController.dispose();
     _departmentController.dispose();
     _favoriteFoodController.dispose();
+    _introOneLineController.dispose();
+    _oneWordMeController.dispose();
+    _intoLatelyController.dispose();
     super.dispose();
   }
+
+  static const List<String> _idealKeywordOptions = [
+    '귀여운', '다정한', '장난기 많은', '차분한', '지적인',
+    '운동 좋아하는', '패션 감각 있는', '집돌이/집순이', '외향적인', '솔직한',
+  ];
+  static const List<String> _gradeYearOptions = ['1', '2', '3', '4', '5', '졸업유예'];
+  static const List<String> _gradeYearValues = ['one', 'two', 'three', 'four', 'five', 'graduation_deferred'];
+  static const List<String> _mbtiOptions = [
+    'INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP',
+    'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ', 'ISTP', 'ISFP', 'ESTP', 'ESFP',
+  ];
+  static const List<MapEntry<String, String>> _fashionOptions = [
+    MapEntry('hood_casual', '후드/캐주얼'),
+    MapEntry('shirt_neat', '셔츠/단정'),
+    MapEntry('street', '스트릿'),
+    MapEntry('knit', '니트/감성'),
+    MapEntry('sporty', '체육복/스포티'),
+    MapEntry('minimal', '미니멀'),
+    MapEntry('hip', '힙한'),
+  ];
+  static const List<MapEntry<String, String>> _dateTypeOptions = [
+    MapEntry('cafe', '카페 탐방'),
+    MapEntry('walk', '산책'),
+    MapEntry('movie', '영화'),
+    MapEntry('drink', '술 한잔'),
+    MapEntry('exercise', '운동'),
+    MapEntry('food_tour', '맛집 투어'),
+    MapEntry('drive', '드라이브'),
+  ];
+  static const List<MapEntry<String, String>> _activityTimeOptions = [
+    MapEntry('morning', '아침형'),
+    MapEntry('daytime', '낮 활동형'),
+    MapEntry('evening', '저녁형'),
+    MapEntry('night_owl', '야행성'),
+  ];
 
   Future<void> _loadProfileIfExists() async {
     try {
@@ -120,16 +171,34 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       final favoriteFood = user['favoriteFood']?.toString();
       if (favoriteFood != null) _favoriteFoodController.text = favoriteFood;
 
+      final introOneLine = user['introOneLine']?.toString();
+      if (introOneLine != null) _introOneLineController.text = introOneLine;
+      final oneWordMe = user['oneWordMe']?.toString();
+      if (oneWordMe != null) _oneWordMeController.text = oneWordMe;
+      final intoLately = user['intoLately']?.toString();
+      if (intoLately != null) _intoLatelyController.text = intoLately;
+      final gradeYear = user['gradeYear']?.toString();
+      if (gradeYear != null) _gradeYear = gradeYear;
+      final keywords = user['idealTypeKeywords'];
+      if (keywords is List) {
+        _idealTypeKeywords = keywords.map((e) => e.toString()).toList();
+      }
+      final fashion = user['fashionStyle']?.toString();
+      if (fashion != null) _fashionStyle = fashion;
+      final dateType = user['preferredDateType']?.toString();
+      if (dateType != null) _preferredDateType = dateType;
+      final activity = user['activityTime']?.toString();
+      if (activity != null) _activityTime = activity;
+      if (heightCm != null) _heightCm = heightCm is int ? heightCm : (heightCm as num).toInt();
+      final avatarSeed = user['avatarSeed']?.toString();
+      final avatarStyle = user['avatarStyle']?.toString();
+      if (avatarSeed != null) _avatarSeed = avatarSeed;
+      if (avatarStyle != null) _avatarStyle = avatarStyle;
+
       setState(() {
         _isEditing = _forceEdit || (affiliation != null && affiliation.isNotEmpty);
       });
       await _loadPhotos();
-      // 프로필 등록 완료 후 아바타 생성 화면으로 이동
-      if (!_forceEdit && _isEditing) {
-        Future.delayed(Duration.zero, () {
-          Navigator.of(context).pushReplacementNamed('/profile/avatar-setup');
-        });
-      }
     } catch (_) {
       // ignore if profile not found
     }
@@ -247,13 +316,29 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     }
   }
 
+  /// 닉네임: 2~8자, 한글/영문/숫자만, 특수문자·공백 불가
+  static bool _isValidNickname(String s) {
+    final t = s.trim();
+    if (t.length < 2 || t.length > 8) return false;
+    return RegExp(r'^[가-힣a-zA-Z0-9]+$').hasMatch(t);
+  }
+
   Future<void> _submit() async {
-    if (_nicknameController.text.trim().isEmpty || _birthDate == null) {
+    final nickname = _nicknameController.text.trim();
+    if (nickname.isEmpty || _birthDate == null) {
       setState(() => _result = '닉네임과 생년월일을 입력해 주세요.');
       return;
     }
+    if (!_isValidNickname(nickname)) {
+      setState(() => _result = '닉네임은 2~8자, 한글/영문/숫자만 가능하며 특수문자·공백은 불가합니다.');
+      return;
+    }
 
-    final heightCm = int.tryParse(_heightController.text.trim());
+    final heightCm = _heightCm ?? int.tryParse(_heightController.text.trim());
+    if (heightCm != null && (heightCm < 150 || heightCm > 195)) {
+      setState(() => _result = '키는 150~195cm 범위로 입력해 주세요.');
+      return;
+    }
 
     final preferredGenders = switch (_preferredGender) {
       'male' => ['male'],
@@ -265,7 +350,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     setState(() => _isLoading = true);
     try {
       final response = await _repository.updateProfile({
-        'nickname': _nicknameController.text.trim(),
+        'nickname': nickname,
         'gender': _gender,
         'birthYear': _birthDate!.year,
         'affiliationText': _affiliation,
@@ -287,6 +372,23 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         if (_favoriteFoodController.text.trim().isNotEmpty)
           'favoriteFood': _favoriteFoodController.text.trim(),
         'preferredGenders': preferredGenders,
+        if (_gradeYear != null) 'gradeYear': _gradeYear,
+        if (_introOneLineController.text.trim().isNotEmpty)
+          'introOneLine': _introOneLineController.text.trim().length > 40
+              ? _introOneLineController.text.trim().substring(0, 40)
+              : _introOneLineController.text.trim(),
+        if (_oneWordMeController.text.trim().isNotEmpty)
+          'oneWordMe': _oneWordMeController.text.trim().length > 12
+              ? _oneWordMeController.text.trim().substring(0, 12)
+              : _oneWordMeController.text.trim(),
+        if (_idealTypeKeywords.isNotEmpty) 'idealTypeKeywords': _idealTypeKeywords,
+        if (_fashionStyle != null) 'fashionStyle': _fashionStyle,
+        if (_preferredDateType != null) 'preferredDateType': _preferredDateType,
+        if (_activityTime != null) 'activityTime': _activityTime,
+        if (_intoLatelyController.text.trim().isNotEmpty)
+          'intoLately': _intoLatelyController.text.trim().length > 20
+              ? _intoLatelyController.text.trim().substring(0, 20)
+              : _intoLatelyController.text.trim(),
       });
       _applyThemeForAffiliation();
       setState(() => _result = response.toString());
@@ -300,7 +402,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         Navigator.of(context).pushNamed(AppRoutes.environment);
       }
     } on DioException catch (error) {
-      setState(() => _result = error.response?.data.toString() ?? '요청 실패');
+      String msg = '요청 실패';
+      final data = error.response?.data;
+      if (data is Map && data['message'] != null) {
+        msg = data['message'].toString();
+      } else if (data != null) {
+        msg = data.toString();
+      }
+      setState(() => _result = msg);
     } finally {
       setState(() => _isLoading = false);
     }
@@ -331,6 +440,45 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
           padding: const EdgeInsets.all(24),
           child: ListView(
             children: [
+              Text('아바타', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  SizedBox(
+                    width: 80,
+                    height: 80,
+                    child: _avatarSeed != null && _avatarSeed!.isNotEmpty
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(40),
+                            child: SvgPicture.network(
+                              diceBearAvatarUrl(_avatarSeed!),
+                              fit: BoxFit.cover,
+                              placeholderBuilder: (context) => const Center(child: CircularProgressIndicator()),
+                            ),
+                          )
+                        : Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade200,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.person, size: 40, color: Colors.grey.shade600),
+                          ),
+                  ),
+                  const SizedBox(width: 16),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      await Navigator.of(context).pushNamed(AppRoutes.avatarSetup);
+                      if (!mounted) return;
+                      _loadProfileIfExists();
+                    },
+                    icon: const Icon(Icons.edit, size: 18),
+                    label: const Text('아바타 편집'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
               Text('프로필 사진', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 12),
               Row(
@@ -448,9 +596,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 textCapitalization: TextCapitalization.words,
                 enableSuggestions: true,
                 autocorrect: true,
+                maxLength: 8,
                 decoration: const InputDecoration(
-                  labelText: '닉네임',
+                  labelText: '닉네임 (2~8자, 한글/영문/숫자)',
                   border: OutlineInputBorder(),
+                  counterText: '',
                 ),
               ),
               const SizedBox(height: 12),
@@ -518,13 +668,131 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 ],
               ),
               const SizedBox(height: 12),
+              InkWell(
+                onTap: () async {
+                  final v = await showModalBottomSheet<int>(
+                    context: context,
+                    builder: (ctx) => _HeightPicker(initial: _heightCm ?? 170),
+                  );
+                  if (v != null) setState(() { _heightCm = v; _heightController.text = v.toString(); });
+                },
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: '키 (150~195cm)',
+                    border: OutlineInputBorder(),
+                  ),
+                  child: Text(_heightCm != null ? '$_heightCm cm' : '탭하여 선택'),
+                ),
+              ),
+              const SizedBox(height: 12),
               TextField(
-                controller: _heightController,
-                keyboardType: TextInputType.number,
-                textInputAction: TextInputAction.next,
+                controller: _introOneLineController,
+                maxLength: 40,
+                maxLines: 1,
                 decoration: const InputDecoration(
-                  labelText: '키 (cm)',
+                  labelText: '한 줄 소개 (최대 40자)',
                   border: OutlineInputBorder(),
+                  counterText: '',
+                ),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: _gradeYear,
+                decoration: const InputDecoration(
+                  labelText: '학년',
+                  border: OutlineInputBorder(),
+                ),
+                items: List.generate(6, (i) => DropdownMenuItem(
+                  value: _gradeYearValues[i],
+                  child: Text(_gradeYearOptions[i]),
+                )),
+                onChanged: (v) => setState(() => _gradeYear = v),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: _mbtiOptions.contains(_mbtiController.text.trim()) ? _mbtiController.text.trim() : null,
+                decoration: const InputDecoration(
+                  labelText: 'MBTI',
+                  border: OutlineInputBorder(),
+                ),
+                items: _mbtiOptions.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                onChanged: (v) { if (v != null) setState(() => _mbtiController.text = v); },
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _oneWordMeController,
+                maxLength: 12,
+                maxLines: 1,
+                decoration: const InputDecoration(
+                  labelText: '나를 한 단어로 (최대 12자)',
+                  border: OutlineInputBorder(),
+                  counterText: '',
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text('이상형 키워드 (3개 선택)', style: Theme.of(context).textTheme.bodyMedium),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: _idealKeywordOptions.map((label) {
+                  final selected = _idealTypeKeywords.contains(label);
+                  final canSelect = selected || _idealTypeKeywords.length < 3;
+                  return FilterChip(
+                    label: Text(label),
+                    selected: selected,
+                    onSelected: canSelect
+                        ? (v) {
+                            setState(() {
+                              if (v == true) {
+                                if (_idealTypeKeywords.length < 3) _idealTypeKeywords.add(label);
+                              } else {
+                                _idealTypeKeywords.remove(label);
+                              }
+                            });
+                          }
+                        : null,
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: _fashionStyle,
+                decoration: const InputDecoration(
+                  labelText: '평소 패션 스타일',
+                  border: OutlineInputBorder(),
+                ),
+                items: _fashionOptions.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
+                onChanged: (v) => setState(() => _fashionStyle = v),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: _preferredDateType,
+                decoration: const InputDecoration(
+                  labelText: '선호 데이트 유형',
+                  border: OutlineInputBorder(),
+                ),
+                items: _dateTypeOptions.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
+                onChanged: (v) => setState(() => _preferredDateType = v),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: _activityTime,
+                decoration: const InputDecoration(
+                  labelText: '활동 시간대',
+                  border: OutlineInputBorder(),
+                ),
+                items: _activityTimeOptions.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
+                onChanged: (v) => setState(() => _activityTime = v),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _intoLatelyController,
+                maxLength: 20,
+                maxLines: 1,
+                decoration: const InputDecoration(
+                  labelText: '요즘 빠진 것 (최대 20자)',
+                  border: OutlineInputBorder(),
+                  counterText: '',
                 ),
               ),
               const SizedBox(height: 12),
@@ -554,16 +822,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   DropdownMenuItem(value: 'often', child: Text('자주')),
                 ],
                 onChanged: (value) => setState(() => _drinking = value),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _mbtiController,
-                textInputAction: TextInputAction.next,
-                textCapitalization: TextCapitalization.characters,
-                decoration: const InputDecoration(
-                  labelText: 'MBTI',
-                  border: OutlineInputBorder(),
-                ),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -635,6 +893,80 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               Text(_result, style: Theme.of(context).textTheme.bodyMedium),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HeightPicker extends StatefulWidget {
+  final int initial;
+
+  const _HeightPicker({required this.initial});
+
+  @override
+  State<_HeightPicker> createState() => _HeightPickerState();
+}
+
+class _HeightPickerState extends State<_HeightPicker> {
+  late int _value;
+  late FixedExtentScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _value = widget.initial.clamp(150, 195);
+    _scrollController = FixedExtentScrollController(initialItem: _value - 150);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: SizedBox(
+        height: 280,
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('취소')),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(_value),
+                  child: const Text('완료'),
+                ),
+              ],
+            ),
+            Expanded(
+              child: ListWheelScrollView.useDelegate(
+                controller: _scrollController,
+                itemExtent: 44,
+                diameterRatio: 1.2,
+                physics: const FixedExtentScrollPhysics(),
+                onSelectedItemChanged: (i) => setState(() => _value = 150 + i),
+                childDelegate: ListWheelChildBuilderDelegate(
+                  childCount: 46,
+                  builder: (context, index) {
+                    final cm = 150 + index;
+                    return Center(
+                      child: Text(
+                        '$cm cm',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: cm == _value ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

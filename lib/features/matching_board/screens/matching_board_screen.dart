@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:nearo_app/features/matching_board/data/matching_board_repository.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
+import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 
 class MatchingBoardScreen extends StatelessWidget {
   const MatchingBoardScreen({super.key});
@@ -58,9 +60,10 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       final profile = await authRepo.getProfile();
       final nickname = profile['nickname'];
       final gender = profile['gender'];
-      String school = profile['school'] ?? '세종대';
+      String school = profile['school'] ?? profile['affiliationText'] ?? '세종대';
+      final department = profile['department']?.toString();
       final userEnvs = profile['userEnvironments'];
-      if (school == null || school.isEmpty) {
+      if (school.isEmpty) {
         if (userEnvs != null && userEnvs is List && userEnvs.isNotEmpty) {
           final env = userEnvs[0]['environment'];
           if (env != null && env['name'] != null) {
@@ -68,15 +71,18 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
           }
         }
       }
+      if (school.isEmpty) school = '세종대';
       if (nickname == null || gender == null || school == null) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('프로필 정보가 없습니다.')));
         return;
       }
-      await _repository.registerProfile({
+      final payload = <String, dynamic>{
         'nickname': nickname,
         'gender': gender,
         'school': school,
-      });
+      };
+      if (department != null && department.isNotEmpty) payload['department'] = department;
+      await _repository.registerProfile(payload);
       await _fetchProfiles();
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('프로필 등록 완료')));
     } catch (_) {
@@ -88,10 +94,37 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     try {
       await _repository.takeNote(profileId);
       await _fetchProfiles();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('쪽지 가져가기 완료, 크레딧 1 차감')));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('쪽지 뽑아가기 완료, 크레딧 1 차감')));
     } catch (_) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('쪽지 가져오기 실패')));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('쪽지 뽑아가기 실패')));
     }
+  }
+
+  Widget _buildBoardAvatar(BuildContext context, Map<String, dynamic> profile) {
+    final user = profile['user'] as Map<String, dynamic>?;
+    final seed = user?['avatarSeed']?.toString() ?? profile['userId']?.toString();
+    if (seed != null && seed.isNotEmpty) {
+      return CircleAvatar(
+        radius: 32,
+        backgroundColor: Colors.white,
+        child: ClipOval(
+          child: SvgPicture.network(
+            diceBearAvatarUrl(seed),
+            fit: BoxFit.cover,
+            width: 64,
+            height: 64,
+            placeholderBuilder: (context) => Icon(Icons.person, size: 40, color: Theme.of(context).colorScheme.primary),
+          ),
+        ),
+      );
+    }
+    return CircleAvatar(
+      radius: 32,
+      backgroundColor: Colors.white,
+      child: Icon(Icons.person, size: 40, color: Theme.of(context).colorScheme.primary),
+    );
   }
 
   @override
@@ -148,24 +181,16 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                                       : () async {
                                           final result = await showDialog<bool>(
                                             context: context,
-                                            builder: (context) => AlertDialog(
+                                            builder: (ctx) => AlertDialog(
                                               title: const Text('매칭 확인'),
                                               content: const Text('이 프로필과 매칭하시겠습니까?'),
                                               actions: [
-                                                TextButton(
-                                                  onPressed: () => Navigator.pop(context, false),
-                                                  child: const Text('취소'),
-                                                ),
-                                                TextButton(
-                                                  onPressed: () => Navigator.pop(context, true),
-                                                  child: const Text('확인'),
-                                                ),
+                                                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('취소')),
+                                                TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('확인')),
                                               ],
                                             ),
                                           );
-                                          if (result == true) {
-                                            await _takeNote(profile['id']);
-                                          }
+                                          if (result == true) await _takeNote(profile['id']);
                                         },
                                   child: Padding(
                                     padding: const EdgeInsets.all(16),
@@ -173,24 +198,28 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                                       mainAxisSize: MainAxisSize.min,
                                       crossAxisAlignment: CrossAxisAlignment.center,
                                       children: [
-                                        CircleAvatar(
-                                          radius: 32,
-                                          child: const Icon(Icons.person, size: 40),
-                                        ),
+                                        _buildBoardAvatar(context, profile),
                                         const SizedBox(height: 12),
                                         Text(
                                           isMe ? '나' : (profile['nickname'] ?? ''),
                                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
+                                          textAlign: TextAlign.center,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
-                                        const SizedBox(height: 8),
-                                        Text(profile['gender'] ?? '-', style: const TextStyle(fontSize: 14, color: Colors.white)),
-                                        const SizedBox(height: 8),
-                                        Text(profile['school'] ?? '-', style: const TextStyle(fontSize: 14, color: Colors.white70)),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          (profile['department'] ?? profile['user']?['department'])?.toString() ?? '-',
+                                          style: const TextStyle(fontSize: 13, color: Colors.white70),
+                                          textAlign: TextAlign.center,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ],
                                     ),
                                   ),
                                 ),
-                              ); // Card 닫는 괄호 추가
+                              );
                             },
                           ),
                         ),

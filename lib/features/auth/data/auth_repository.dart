@@ -24,6 +24,12 @@ class AuthRepository {
     return response.data as Map<String, dynamic>;
   }
 
+  /// 대학 인증 성공 후 아바타 초기 생성(seed 발급)
+  Future<Map<String, dynamic>> initAvatar() async {
+    final response = await _client.dio.post(ApiEndpoints.avatarInit);
+    return response.data as Map<String, dynamic>;
+  }
+
   Future<void> saveAccessToken(String token) {
     return _tokenStorage.saveAccessToken(token);
   }

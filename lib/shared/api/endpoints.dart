@@ -2,6 +2,7 @@ class ApiEndpoints {
   static const String authKakao = '/auth/kakao';
   static const String authKakaoCallback = '/auth/kakao/callback';
   static const String authProfile = '/auth/profile';
+  static const String avatarInit = '/users/me/avatar/init';
     static const String accountDelete = '/users/me';
   static const String matchingRequest = '/matching/request';
   static const String matchingCancel = '/matching/cancel';

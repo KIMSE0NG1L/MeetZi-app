@@ -1,7 +1,11 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:nearo_app/ui/widgets/avatar_widget.dart';
+import 'package:nearo_app/features/auth/data/auth_repository.dart';
+import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
+import 'package:nearo_app/shared/widgets/primary_button.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
-/// 아바타 파츠 선택 및 실시간 미리보기, 등록 화면
+/// DiceBear notionists SVG 아바타 편집: 랜덤 생성(새 seed), 미리보기, 저장
 class AvatarSetupScreen extends StatefulWidget {
   const AvatarSetupScreen({super.key});
 
@@ -10,116 +14,155 @@ class AvatarSetupScreen extends StatefulWidget {
 }
 
 class _AvatarSetupScreenState extends State<AvatarSetupScreen> {
-  // 파츠별 선택값 (초기값은 임의)
-  String faceShape = 'round';
-  String hairBack = 'short-back';
-  String hairFront = 'bangs';
-  String hairColor = 'black';
-  String eyes = 'happy';
-  String mouth = 'smile';
-  String clothes = 'tshirt';
-  String clothesColor = 'blue';
-  String accessory = 'none';
-  String skinColor = '#FFE0D2';
-  String background = '#B0BEC5';
+  final AuthRepository _repository = AuthRepository();
+  String _avatarStyle = 'notionists';
+  String _avatarSeed = '';
+  bool _loading = true;
+  bool _saving = false;
+  String? _error;
 
-  // TODO: 서버에 등록하는 함수 구현 필요
-  Future<void> _registerAvatar() async {
-    // 서버에 POST 요청 등 구현
-    // 성공 시 홈으로 이동
-    if (!mounted) return;
-    Navigator.of(context).pushReplacementNamed('/home');
+  static String _randomSeed() {
+    final random = Random.secure();
+    final values = List<int>.generate(16, (_) => random.nextInt(256));
+    return values.map((e) => e.toRadixString(16).padLeft(2, '0')).join();
   }
 
-  void _onPartChanged(String part, String value) {
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrent();
+  }
+
+  Future<void> _loadCurrent() async {
+    setState(() { _loading = true; _error = null; });
+    try {
+      final profile = await _repository.getProfile();
+      final user = (profile['user'] as Map?) ?? profile;
+      final seed = user['avatarSeed']?.toString();
+      final style = user['avatarStyle']?.toString();
+      if (!mounted) return;
+      setState(() {
+        _avatarSeed = seed?.isNotEmpty == true ? seed! : _randomSeed();
+        _avatarStyle = style ?? 'notionists';
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _avatarSeed = _randomSeed();
+        _avatarStyle = 'notionists';
+        _loading = false;
+        _error = '프로필을 불러오지 못했습니다.';
+      });
+    }
+  }
+
+  void _randomize() {
     setState(() {
-      switch (part) {
-        case 'faceShape': faceShape = value; break;
-        case 'hairBack': hairBack = value; break;
-        case 'hairFront': hairFront = value; break;
-        case 'hairColor': hairColor = value; break;
-        case 'eyes': eyes = value; break;
-        case 'mouth': mouth = value; break;
-        case 'clothes': clothes = value; break;
-        case 'clothesColor': clothesColor = value; break;
-        case 'accessory': accessory = value; break;
-        case 'skinColor': skinColor = value; break;
-        case 'background': background = value; break;
-      }
+      _avatarSeed = _randomSeed();
+      _error = null;
     });
+  }
+
+  Future<void> _save() async {
+    setState(() { _saving = true; _error = null; });
+    try {
+      await _repository.updateProfile({
+        'avatarStyle': _avatarStyle,
+        'avatarSeed': _avatarSeed,
+      });
+      if (!mounted) return;
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _error = '저장에 실패했습니다.';
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('아바타 만들기')),
-      body: Column(
-        children: [
-          const SizedBox(height: 24),
-          AvatarWidget(
-            faceShape: faceShape,
-            hairBack: hairBack,
-            hairFront: hairFront,
-            hairColor: hairColor,
-            eyes: eyes,
-            mouth: mouth,
-            clothes: clothes,
-            clothesColor: clothesColor,
-            accessory: accessory,
-            skinColor: skinColor,
-          ),
-          const SizedBox(height: 24),
-          // 파츠별 선택 UI (예시: 버튼)
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              ElevatedButton(
-                onPressed: () => _onPartChanged('faceShape', 'round'),
-                child: const Text('둥근 얼굴'),
+      appBar: AppBar(title: const Text('아바타 편집')),
+      body: SafeArea(
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 16),
+                    // 미리보기
+                    Container(
+                      width: 160,
+                      height: 160,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: SvgPicture.network(
+                        diceBearAvatarUrl(_avatarSeed),
+                        fit: BoxFit.cover,
+                        placeholderBuilder: (context) => const Center(
+                          child: SizedBox(
+                            width: 32,
+                            height: 32,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      '같은 seed면 항상 같은 아바타가 나와요.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.grey.shade600,
+                          ),
+                    ),
+                    const SizedBox(height: 24),
+                    OutlinedButton.icon(
+                      onPressed: _randomize,
+                      icon: const Icon(Icons.shuffle),
+                      label: const Text('랜덤 생성'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                    if (_error != null) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        _error!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                    const Spacer(),
+                    SizedBox(
+                      width: double.infinity,
+                      child: PrimaryButton(
+                        label: '저장하기',
+                        isLoading: _saving,
+                        onPressed: () { if (!_saving) _save(); },
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              ElevatedButton(
-                onPressed: () => _onPartChanged('faceShape', 'long'),
-                child: const Text('긴 얼굴'),
-              ),
-              // ...다른 파츠도 추가
-
-              // 앞머리 파츠 선택 버튼
-              ElevatedButton(
-                onPressed: () => _onPartChanged('hairFront', 'bangs'),
-                child: const Text('앞머리: 뱅'),
-              ),
-              ElevatedButton(
-                onPressed: () => _onPartChanged('hairFront', 'short-front'),
-                child: const Text('앞머리: 짧은'),
-              ),
-              ElevatedButton(
-                onPressed: () => _onPartChanged('hairFront', 'side-swept'),
-                child: const Text('앞머리: 사이드'),
-              ),
-              ElevatedButton(
-                onPressed: () => _onPartChanged('hairFront', 'curtain'),
-                child: const Text('앞머리: 커튼'),
-              ),
-              ElevatedButton(
-                onPressed: () => _onPartChanged('hairFront', 'center-part'),
-                child: const Text('앞머리: 가운데'),
-              ),
-              ElevatedButton(
-                onPressed: () => _onPartChanged('hairFront', 'none'),
-                child: const Text('앞머리 없음'),
-              ),
-            ],
-          ),
-          const Spacer(),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ElevatedButton(
-              onPressed: _registerAvatar,
-              child: const Text('아바타 등록하고 홈으로'),
-            ),
-          ),
-        ],
       ),
     );
   }

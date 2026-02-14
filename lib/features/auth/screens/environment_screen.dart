@@ -158,6 +158,13 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
       );
       _showMessage('인증이 완료되었습니다.');
       if (!mounted) return;
+      // 아바타 초기 생성(seed 발급) 후 메인 홈으로
+      try {
+        await _authRepository.initAvatar();
+      } catch (_) {
+        // 아바타 생성 실패해도 홈으로 이동 (추후 재설정 가능)
+      }
+      if (!mounted) return;
       Navigator.of(context).pushNamedAndRemoveUntil(
         AppRoutes.home,
         (route) => false,
