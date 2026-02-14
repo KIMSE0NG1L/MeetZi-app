@@ -79,42 +79,19 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       });
       await _fetchProfiles();
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('프로필 등록 완료')));
-    } catch (e) {
-      final msg = e is String ? e : e.toString();
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    } catch (_) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('프로필 등록 실패')));
     }
   }
 
   Future<void> _takeNote(String profileId) async {
-    await _repository.takeNote(profileId);
-    await _fetchProfiles();
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('쪽지 가져가기 완료, 크레딧 1 차감')));
-  }
-
-  void _viewProfile(Map<String, dynamic> profile) {
-    final now = DateTime.now();
-    if (_lastViewTime == null || now.difference(_lastViewTime!).inHours >= 1) {
-      _profileViewCount = 0;
-      _lastViewTime = now;
+    try {
+      await _repository.takeNote(profileId);
+      await _fetchProfiles();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('쪽지 가져가기 완료, 크레딧 1 차감')));
+    } catch (_) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('쪽지 가져오기 실패')));
     }
-    if (_profileViewCount >= 4) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('1시간에 최대 4번만 상세보기 가능')));
-      return;
-    }
-    _profileViewCount++;
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text(profile['nickname'] ?? '프로필'),
-        content: Text('상세 정보: ${profile.toString()}'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('닫기'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override

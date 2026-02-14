@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/features/messages/data/chat_history_store.dart';
 import 'package:nearo_app/shared/utils/token_storage.dart';
+import 'package:nearo_app/shared/theme/theme_controller.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -48,10 +49,56 @@ class SettingsScreen extends StatelessWidget {
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
       ),
+      backgroundColor: Theme.of(context).colorScheme.background,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            ListTile(
+              leading: const Icon(Icons.light_mode),
+              title: const Text('일반 모드'),
+              trailing: ValueListenableBuilder<ThemeMode>(
+                valueListenable: ThemeController.themeMode,
+                builder: (context, mode, _) => Radio<ThemeMode>(
+                  value: ThemeMode.light,
+                  groupValue: mode,
+                  onChanged: (val) {
+                    ThemeController.setThemeMode(ThemeMode.light);
+                    ThemeController.setSecretMode(false);
+                  },
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.dark_mode),
+              title: const Text('다크 모드'),
+              trailing: ValueListenableBuilder<ThemeMode>(
+                valueListenable: ThemeController.themeMode,
+                builder: (context, mode, _) => Radio<ThemeMode>(
+                  value: ThemeMode.dark,
+                  groupValue: mode,
+                  onChanged: (val) {
+                    ThemeController.setThemeMode(ThemeMode.dark);
+                    ThemeController.setSecretMode(false);
+                  },
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.visibility_off),
+              title: const Text('시크릿 모드'),
+              trailing: ValueListenableBuilder<bool>(
+                valueListenable: ThemeController.secretMode,
+                builder: (context, secret, _) => Radio<bool>(
+                  value: true,
+                  groupValue: secret,
+                  onChanged: (val) {
+                    ThemeController.setSecretMode(true);
+                  },
+                ),
+              ),
+            ),
+            const Divider(),
             ListTile(
               leading: const Icon(Icons.logout),
               title: const Text('로그아웃'),

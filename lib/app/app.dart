@@ -139,41 +139,46 @@ class _NearoAppState extends State<NearoApp> {
         return ValueListenableBuilder<Color>(
           valueListenable: ThemeController.seedColor,
           builder: (context, color, __) {
-            return MaterialApp(
-              title: 'NEARO',
-              theme: NearoTheme.light(seedColor: color),
-              darkTheme: NearoTheme.dark(seedColor: color),
-              themeMode: mode,
-              navigatorKey: _navigatorKey,
-              initialRoute: AppRoutes.onboarding,
-              builder: (context, child) {
-                return Stack(
-                  children: [
-                    if (child != null) child,
-                    const VersionOverlay(version: "1.0.0.2"),
-                  ],
+            return ValueListenableBuilder<bool>(
+              valueListenable: ThemeController.secretMode,
+              builder: (context, secret, ___) {
+                return MaterialApp(
+                  title: 'NEARO',
+                  theme: secret ? NearoTheme.secret(seedColor: color) : NearoTheme.light(seedColor: color),
+                  darkTheme: secret ? NearoTheme.secret(seedColor: color) : NearoTheme.dark(seedColor: color),
+                  themeMode: mode,
+                  navigatorKey: _navigatorKey,
+                  initialRoute: AppRoutes.onboarding,
+                  builder: (context, child) {
+                    return Stack(
+                      children: [
+                        if (child != null) child,
+                        const VersionOverlay(),
+                      ],
+                    );
+                  },
+                  routes: {
+                    AppRoutes.onboarding: (_) => const OnboardingScreen(),
+                    AppRoutes.login: (_) => const LoginScreen(),
+                    AppRoutes.environment: (_) => const EnvironmentScreen(),
+                    AppRoutes.matchingResult: (_) => const MatchingResultScreen(),
+                    AppRoutes.matchingHome: (_) => const MatchingHomeScreen(),
+                    AppRoutes.chatPreview: (_) => const ConsentPreviewScreen(),
+                    AppRoutes.chatRoom: (_) => const ChatRoomScreen(),
+                    AppRoutes.consentDecision: (_) => const ConsentDecisionScreen(),
+                    AppRoutes.consentSuccess: (_) => const ConsentSuccessScreen(),
+                    AppRoutes.apiDashboard: (_) => const ApiDashboardScreen(),
+                    AppRoutes.photo: (_) => const PhotoScreen(),
+                    AppRoutes.subscription: (_) => const SubscriptionScreen(),
+                    AppRoutes.health: (_) => const HealthScreen(),
+                    AppRoutes.authProfile: (_) => const ProfileScreen(),
+                    AppRoutes.users: (_) => const UsersScreen(),
+                    AppRoutes.profileSetup: (_) => const ProfileSetupScreen(),
+                    AppRoutes.avatarSetup: (_) => AvatarSetupScreen(),
+                    AppRoutes.partnerProfile: (_) => const PartnerProfileScreen(),
+                    AppRoutes.home: (_) => const HomeShellScreen(),
+                  },
                 );
-              },
-              routes: {
-                AppRoutes.onboarding: (_) => const OnboardingScreen(),
-                AppRoutes.login: (_) => const LoginScreen(),
-                AppRoutes.environment: (_) => const EnvironmentScreen(),
-                AppRoutes.matchingResult: (_) => const MatchingResultScreen(),
-                AppRoutes.matchingHome: (_) => const MatchingHomeScreen(),
-                AppRoutes.chatPreview: (_) => const ConsentPreviewScreen(),
-                AppRoutes.chatRoom: (_) => const ChatRoomScreen(),
-                AppRoutes.consentDecision: (_) => const ConsentDecisionScreen(),
-                AppRoutes.consentSuccess: (_) => const ConsentSuccessScreen(),
-                AppRoutes.apiDashboard: (_) => const ApiDashboardScreen(),
-                AppRoutes.photo: (_) => const PhotoScreen(),
-                AppRoutes.subscription: (_) => const SubscriptionScreen(),
-                AppRoutes.health: (_) => const HealthScreen(),
-                AppRoutes.authProfile: (_) => const ProfileScreen(),
-                AppRoutes.users: (_) => const UsersScreen(),
-                AppRoutes.profileSetup: (_) => const ProfileSetupScreen(),
-                AppRoutes.avatarSetup: (_) => AvatarSetupScreen(),
-                AppRoutes.partnerProfile: (_) => const PartnerProfileScreen(),
-                AppRoutes.home: (_) => const HomeShellScreen(),
               },
             );
           },
