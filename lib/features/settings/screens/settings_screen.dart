@@ -60,15 +60,30 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('설정'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
-      ),
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: const Color(0xFFF5E3D0),
       body: SafeArea(
         child: Column(
           children: [
+            // 커스텀 헤더
+            Container(
+              height: 80,
+              decoration: const BoxDecoration(
+                color: Color(0xFFD08C7F),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(24),
+                  bottomRight: Radius.circular(24),
+                ),
+              ),
+              alignment: Alignment.center,
+              child: const Text(
+                '설정',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -76,6 +91,41 @@ class SettingsScreen extends StatelessWidget {
                   ListTile(
                     leading: const Icon(Icons.light_mode),
                     title: const Text('일반 모드'),
+                    trailing: ValueListenableBuilder<ThemeMode>(
+                      valueListenable: ThemeController.themeMode,
+                      builder: (context, mode, _) => Radio<ThemeMode>(
+                        value: ThemeMode.light,
+                        groupValue: mode,
+                        onChanged: (val) {
+                          ThemeController.setThemeMode(ThemeMode.light);
+                          ThemeController.setSecretMode(false);
+                        },
+                      ),
+                    ),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.dark_mode),
+                    title: const Text('다크 모드'),
+                    trailing: ValueListenableBuilder<ThemeMode>(
+                      valueListenable: ThemeController.themeMode,
+                      builder: (context, mode, _) => Radio<ThemeMode>(
+                        value: ThemeMode.dark,
+                        groupValue: mode,
+                        onChanged: (val) {
+                          ThemeController.setThemeMode(ThemeMode.dark);
+                          ThemeController.setSecretMode(false);
+                        },
+                      ),
+                    ),
+                  ),
+                  // ... 추가 설정 항목 ...
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
                     trailing: ValueListenableBuilder<ThemeMode>(
                       valueListenable: ThemeController.themeMode,
                       builder: (context, mode, _) => Radio<ThemeMode>(

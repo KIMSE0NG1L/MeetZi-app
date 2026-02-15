@@ -343,7 +343,17 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                                 ),
                                 textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                               ),
-								),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            );
+  }
+
 Future<BoxDecoration> _corkBoardDecoration() async {
   try {
     await rootBundle.load('assets/images/cork_board.png');
