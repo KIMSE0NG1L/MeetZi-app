@@ -14,8 +14,8 @@ class VersionOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      left: 12,
-      top: 40,
+      right: 16,
+      bottom: 70,
       child: FutureBuilder<String>(
         future: _getVersion(),
         builder: (context, snapshot) {
