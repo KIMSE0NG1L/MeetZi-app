@@ -41,33 +41,9 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     }
   }
 
-  /// 상대가 나를 눌렀을 때 보이는 형태로 맵 변환 (PartnerProfileScreen 인자용)
-  Map<String, dynamic> _toPartnerViewProfile() {
-    final p = _profile!;
-    return {
-      'nickname': p['nickname'],
-      'gender': p['gender'],
-      'preferredGender': (p['preferredGenders'] is List && (p['preferredGenders'] as List).isNotEmpty)
-          ? (p['preferredGenders'] as List).first.toString()
-          : null,
-      'affiliation': p['affiliationText'],
-      'heightCm': p['heightCm'],
-      'smoking': p['smoking'],
-      'drinking': p['drinking'],
-      'mbti': p['mbti'],
-      'instagram': p['instagramHandle'],
-      'bio': p['bio'],
-    };
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('내 프로필'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
-      ),
       backgroundColor: Theme.of(context).colorScheme.background,
       body: SafeArea(
         child: _isLoading
@@ -100,24 +76,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                           ),
                           Padding(
                             padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                OutlinedButton.icon(
-                                  onPressed: () {
-                                    Navigator.of(context).pushNamed(
-                                      AppRoutes.partnerProfile,
-                                      arguments: _toPartnerViewProfile(),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.visibility, size: 20),
-                                  label: const Text('상대가 보는 내 프로필 보기'),
-                                  style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(vertical: 14),
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                PrimaryButton(
+                            child: PrimaryButton(
                                   label: '내 프로필 수정',
                                   onPressed: () {
                                     Navigator.of(context).pushNamed(
@@ -126,8 +85,6 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                     );
                                   },
                                 ),
-                              ],
-                            ),
                           ),
                         ],
                       ),

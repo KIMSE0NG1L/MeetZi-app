@@ -172,22 +172,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       builder: (context, snapshot) {
         final myUserId = snapshot.data?['id'];
         return Scaffold(
-          appBar: AppBar(
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            title: const Text('매칭 게시판', style: TextStyle(color: Colors.white)),
-            actions: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    const Icon(Icons.monetization_on, color: Colors.amber),
-                    const SizedBox(width: 4),
-                    Text(_myCredit != null ? '${_myCredit}코인' : '-', style: TextStyle(color: Colors.white)),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          backgroundColor: Theme.of(context).colorScheme.background,
           body: Container(
             color: Theme.of(context).colorScheme.background,
             child: _loading

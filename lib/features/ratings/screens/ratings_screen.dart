@@ -18,11 +18,29 @@ class _RatingsScreenState extends State<RatingsScreen> {
 
   final MatchingBoardRepository _repository = MatchingBoardRepository();
   bool _loading = false;
+  int? _myCredit;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCredit();
+  }
+
+  Future<void> _fetchCredit() async {
+    try {
+      final credit = await _repository.fetchMyCredit();
+      if (mounted) setState(() => _myCredit = credit);
+    } catch (_) {
+      if (mounted) setState(() => _myCredit = null);
+    }
+  }
 
   Future<void> _buyCredit(int coins) async {
     setState(() => _loading = true);
     try {
       await _repository.buyCredit(coins);
+      await _fetchCredit();
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('$coins 코인 구매 완료!')),
       );
@@ -31,51 +49,67 @@ class _RatingsScreenState extends State<RatingsScreen> {
         SnackBar(content: Text('구매 실패: ${e.toString()}')),
       );
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('상점'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '크레딧(코인) 구매',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: _loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : ListView.separated(
-                      itemCount: creditOptions.length,
-                      separatorBuilder: (_, __) => const Divider(),
-                      itemBuilder: (context, index) {
-                        final option = creditOptions[index];
-                        return ListTile(
-                          leading: CircleAvatar(
-                            child: Text('${option["coins"]}'),
-                          ),
-                          title: Text('${option["coins"]} 코인'),
-                          subtitle: Text('${option["price"]}원'),
-                          trailing: ElevatedButton(
-                            onPressed: () => _buyCredit(option["coins"] as int),
-                            child: const Text('구매'),
-                          ),
-                        );
-                      },
-                    ),
-            ),
-          ],
+      backgroundColor: Theme.of(context).colorScheme.background,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    '크레딧(코인) 구매',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+                  Row(
+                    children: [
+                      Icon(Icons.monetization_on, color: Colors.amber.shade700, size: 22),
+                      const SizedBox(width: 4),
+                      Text(
+                        _myCredit != null ? '$_myCredit' : '-',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: _loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : ListView.separated(
+                        itemCount: creditOptions.length,
+                        separatorBuilder: (_, __) => const Divider(),
+                        itemBuilder: (context, index) {
+                          final option = creditOptions[index];
+                          return ListTile(
+                            leading: CircleAvatar(
+                              child: Text('${option["coins"]}'),
+                            ),
+                            title: Text('${option["coins"]} 코인'),
+                            subtitle: Text('${option["price"]}원'),
+                            trailing: ElevatedButton(
+                              onPressed: () => _buyCredit(option["coins"] as int),
+                              child: const Text('구매'),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );
