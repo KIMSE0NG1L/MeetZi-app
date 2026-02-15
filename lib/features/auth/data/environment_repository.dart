@@ -11,6 +11,14 @@ class EnvironmentRepository {
     return response.data as List<dynamic>;
   }
 
+  /// 대학별 가입자 수 랭킹 (온보딩용)
+  Future<List<Map<String, dynamic>>> getRanking() async {
+    final response = await _client.dio.get('/environments/ranking');
+    final list = response.data as List<dynamic>?;
+    if (list == null) return [];
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
   Future<Map<String, dynamic>> requestEmailVerification({
     required String environmentId,
     required String email,

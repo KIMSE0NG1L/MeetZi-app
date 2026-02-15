@@ -1,14 +1,16 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:nearo_app/features/matching/data/matching_repository.dart';
 import 'package:nearo_app/features/messages/data/chat_repository.dart';
 import 'package:nearo_app/features/consent/data/consent_repository.dart';
 import 'package:nearo_app/features/messages/data/partner_profile_repository.dart';
 import 'package:nearo_app/shared/notification_utils.dart';
-
-
+import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/core/auth/auth_repository.dart';
+import 'package:nearo_app/app/app_routes.dart';
 
 class _ChatMessage {
   final String id;
@@ -49,10 +51,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
   String? _roomId;
   bool _isActive = true;
   bool _isProfileRevealed = false;
+  String? _partnerConsentStatus; // 'yes' | 'pending' | 'no' - 상대방 동의 여부
   String? _partnerPhotoStorageKey;
   String? _partnerNickname;
+  String? _partnerAvatarSeed;
+  String? _partnerAvatarOptions;
   Map<String, dynamic>? _partnerProfile;
-  // Removed unused fields _user1Consent and _user2Consent
   String? _matchId;
 
   final ScrollController _scrollController = ScrollController();
@@ -306,8 +310,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
       if (!mounted) return;
       _isActive = room['isActive'] == true;
       _isProfileRevealed = room['isProfileRevealed'] == true;
+      _partnerConsentStatus = room['partnerConsentStatus']?.toString();
       _partnerPhotoStorageKey = room['partnerPhotoStorageKey']?.toString();
       _partnerNickname = room['partnerNickname']?.toString();
+      _partnerAvatarSeed = room['partnerAvatarSeed']?.toString();
+      _partnerAvatarOptions = room['partnerAvatarOptions']?.toString();
       _matchId = room['matchId']?.toString();
       final list = room['messageReadAts'];
       if (list is List) _applyMessageReadAts(list);
@@ -477,6 +484,29 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                         ],
                       )
                     else ...[
+                      if (_partnerConsentStatus == 'yes')
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.6),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary, size: 24),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  '상대방이 프로필 공개에 동의했어요. 아래 버튼을 눌러 동의하면 서로의 프로필이 공개됩니다.',
+                                  style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       const Text(
                         '상호 동의 시에만 프로필 사진이 공개됩니다.',
                         style: TextStyle(fontSize: 15, color: Colors.grey),
@@ -563,6 +593,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                                           padding: const EdgeInsets.only(right: 4),
                                           child: Text('1', style: TextStyle(color: Colors.red, fontSize: 14, fontWeight: FontWeight.bold)),
                                         ),
+                                      if (!message.isMine) ...[
+                                        _buildPartnerAvatar(context),
+                                        const SizedBox(width: 8),
+                                      ],
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                         decoration: BoxDecoration(
@@ -623,5 +657,67 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
     }
   }
 
-  // removed duplicate _ChatMessage class
+  static const double _partnerAvatarRadius = 18;
+
+  Widget _buildPartnerAvatar(BuildContext context) {
+    Widget avatar;
+    if (_partnerPhotoStorageKey != null && _partnerPhotoStorageKey!.isNotEmpty) {
+      avatar = CircleAvatar(
+        radius: _partnerAvatarRadius,
+        backgroundImage: NetworkImage(
+          'https://nearo-image.s3.ap-northeast-2.amazonaws.com/$_partnerPhotoStorageKey',
+        ),
+      );
+    } else {
+      final seed = _partnerProfile?['avatarSeed']?.toString() ?? _partnerProfile?['userId']?.toString() ?? _partnerAvatarSeed;
+      if (seed != null && seed.isNotEmpty) {
+        Map<String, String> opts = {};
+        final raw = _partnerProfile?['avatarOptions']?.toString() ?? _partnerAvatarOptions;
+        if (raw != null && raw.isNotEmpty) {
+          try {
+            final decoded = jsonDecode(raw);
+            if (decoded is Map<String, dynamic>) {
+              opts = decoded.map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
+            }
+          } catch (_) {}
+        }
+        final url = diceBearAvatarUrl(seed, options: opts.isNotEmpty ? opts : null);
+        avatar = CircleAvatar(
+          radius: _partnerAvatarRadius,
+          backgroundColor: Colors.grey.shade300,
+          child: ClipOval(
+            child: SvgPicture.network(
+              url,
+              fit: BoxFit.cover,
+              width: _partnerAvatarRadius * 2,
+              height: _partnerAvatarRadius * 2,
+              placeholderBuilder: (_) => Icon(Icons.person, size: _partnerAvatarRadius, color: Colors.grey.shade600),
+            ),
+          ),
+        );
+      } else {
+        avatar = CircleAvatar(
+          radius: _partnerAvatarRadius,
+          backgroundColor: Colors.grey.shade300,
+          child: Icon(Icons.person, size: _partnerAvatarRadius, color: Colors.grey.shade600),
+        );
+      }
+    }
+    return InkWell(
+      onTap: () {
+        if (_isProfileRevealed && _partnerProfile != null) {
+          Navigator.of(context).pushNamed(
+            AppRoutes.partnerProfile,
+            arguments: _partnerProfile,
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('상호 동의 후 프로필을 볼 수 있어요.')),
+          );
+        }
+      },
+      borderRadius: BorderRadius.circular(_partnerAvatarRadius),
+      child: avatar,
+    );
+  }
 }

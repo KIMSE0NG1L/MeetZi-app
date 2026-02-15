@@ -36,7 +36,9 @@ class PartnerProfileScreen extends StatelessWidget {
                     radius: 32,
                     backgroundColor: Theme.of(context).colorScheme.primary,
                     child: Text(
-                      profile['nickname']?.toString().substring(0, 1) ?? '',
+                      (profile['nickname']?.toString().isNotEmpty == true)
+                          ? (profile['nickname']?.toString().substring(0, 1) ?? '')
+                          : '?',
                       style: const TextStyle(color: Colors.white, fontSize: 20),
                     ),
                   ),

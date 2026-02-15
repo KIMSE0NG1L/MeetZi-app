@@ -123,7 +123,9 @@ List<AvatarOptionCategory> getNotionistsCategories() {
     AvatarOptionCategory(
       apiKey: 'gesture',
       label: '제스처',
+      allowNone: true,
       options: [
+        const AvatarOptionItem(value: '', label: '기본'),
         const AvatarOptionItem(value: 'hand', label: '손'),
         const AvatarOptionItem(value: 'handPhone', label: '손+폰'),
         const AvatarOptionItem(value: 'ok', label: 'OK'),

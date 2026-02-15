@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:nearo_app/app/app_routes.dart';
+import 'package:nearo_app/features/auth/data/environment_repository.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/widgets/primary_button.dart';
 
@@ -16,7 +17,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   int _currentPage = 0;
   late AnimationController _shakeController;
   bool _isTransitioning = false;
+  List<Map<String, dynamic>> _ranking = [];
+  final EnvironmentRepository _envRepo = EnvironmentRepository();
 
+  static const int _rankingPageCount = 1;
   final List<_OnboardingPage> _pages = const [
     _OnboardingPage(
       icon: Icons.favorite_border,
@@ -42,7 +46,17 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       vsync: this,
       duration: const Duration(milliseconds: 500),
     );
+    _loadRanking();
   }
+
+  Future<void> _loadRanking() async {
+    try {
+      final list = await _envRepo.getRanking();
+      if (mounted) setState(() => _ranking = list);
+    } catch (_) {}
+  }
+
+  int get _totalPages => _rankingPageCount + _pages.length;
 
   @override
   void dispose() {
@@ -71,13 +85,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _shakeController.reset();
 
     if (!mounted) return;
-    if (_currentPage == _pages.length - 1) {
+    if (_currentPage == _totalPages - 1) {
       _goToLogin();
       _isTransitioning = false;
       return;
     }
 
-    // 2. 다음 페이지로 (AnimatedSwitcher가 화면이 바뀌는 전환 처리)
     setState(() => _currentPage++);
     _isTransitioning = false;
   }
@@ -139,36 +152,38 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       child: Padding(
                         key: ValueKey<int>(_currentPage),
                         padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: 120,
-                              height: 120,
-                              decoration: BoxDecoration(
-                                color: NearoTheme.primary.withOpacity(0.12),
-                                borderRadius: BorderRadius.circular(32),
+                        child: _currentPage == 0
+                            ? _buildRankingPage(context)
+                            : Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    width: 120,
+                                    height: 120,
+                                    decoration: BoxDecoration(
+                                      color: NearoTheme.primary.withOpacity(0.12),
+                                      borderRadius: BorderRadius.circular(32),
+                                    ),
+                                    child: Icon(
+                                      _pages[_currentPage - 1].icon,
+                                      size: 56,
+                                      color: NearoTheme.primary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 32),
+                                  Text(
+                                    _pages[_currentPage - 1].title,
+                                    textAlign: TextAlign.center,
+                                    style: Theme.of(context).textTheme.headlineLarge,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    _pages[_currentPage - 1].description,
+                                    textAlign: TextAlign.center,
+                                    style: Theme.of(context).textTheme.bodyLarge,
+                                  ),
+                                ],
                               ),
-                              child: Icon(
-                                _pages[_currentPage].icon,
-                                size: 56,
-                                color: NearoTheme.primary,
-                              ),
-                            ),
-                            const SizedBox(height: 32),
-                            Text(
-                              _pages[_currentPage].title,
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.headlineLarge,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              _pages[_currentPage].description,
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.bodyLarge,
-                            ),
-                          ],
-                        ),
                       ),
                     ),
                   );
@@ -180,7 +195,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(
-                  _pages.length,
+                  _totalPages,
                   (index) => AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
                     margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -199,7 +214,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 28),
               child: PrimaryButton(
-                label: _currentPage == _pages.length - 1 ? '시작하기' : '이해했어요',
+                label: _currentPage == _totalPages - 1 ? '시작하기' : '이해했어요',
                 onPressed: () {
                   if (!_isTransitioning) _onUnderstandTap();
                 },
@@ -208,6 +223,94 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildRankingPage(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          '대학별 가입자 수',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '지금 함께하는 캠퍼스를 확인해 보세요.',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+        ),
+        const SizedBox(height: 24),
+        if (_ranking.isEmpty)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: CircularProgressIndicator(),
+            ),
+          )
+        else
+          Expanded(
+            child: ListView.builder(
+              itemCount: _ranking.length,
+              itemBuilder: (context, index) {
+                final item = _ranking[index];
+                final rank = item['rank'] ?? (index + 1);
+                final name = item['name']?.toString() ?? '-';
+                final count = item['count'] is int ? item['count'] as int : int.tryParse(item['count']?.toString() ?? '0') ?? 0;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: rank <= 3
+                              ? NearoTheme.primary.withOpacity(0.2)
+                              : Colors.grey.shade200,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          '$rank',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: rank <= 3 ? NearoTheme.primary : Colors.grey.shade700,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          name,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '${count}명',
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+      ],
     );
   }
 }

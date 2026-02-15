@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:app_links/app_links.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
@@ -44,11 +45,40 @@ class _NearoAppState extends State<NearoApp> {
   final _authRepository = AuthRepository();
   final _environmentStatusRepository = EnvironmentStatusRepository();
   StreamSubscription<Uri>? _linkSub;
+  Map<String, dynamic>? _pendingNotificationData;
 
   @override
   void initState() {
     super.initState();
     _initDeepLinks();
+    _initFcmOpenHandler();
+  }
+
+  Future<void> _initFcmOpenHandler() async {
+    final initial = await FirebaseMessaging.instance.getInitialMessage();
+    if (initial?.data != null && initial!.data.isNotEmpty) {
+      _pendingNotificationData = Map<String, dynamic>.from(initial.data);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _pendingNotificationData != null) {
+          _handleNotificationData(_pendingNotificationData!);
+          _pendingNotificationData = null;
+        }
+      });
+    }
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage msg) {
+      if (msg.data.isNotEmpty) {
+        _handleNotificationData(Map<String, dynamic>.from(msg.data));
+      }
+    });
+  }
+
+  void _handleNotificationData(Map<String, dynamic> data) {
+    final roomId = data['roomId']?.toString();
+    if (roomId == null || roomId.isEmpty) return;
+    _navigatorKey.currentState?.pushNamed(
+      AppRoutes.chatRoom,
+      arguments: {'roomId': roomId, 'partnerNickname': '대화'},
+    );
   }
 
   Future<void> _initDeepLinks() async {
