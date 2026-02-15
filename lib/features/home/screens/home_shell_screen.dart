@@ -1,14 +1,13 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
-import 'package:nearo_app/features/home/screens/game_placeholder_screen.dart';
 import 'package:nearo_app/features/home/screens/university_ranking_screen.dart';
+import 'package:nearo_app/features/matching_board/screens/matching_board_screen.dart';
 import 'package:nearo_app/features/messages/screens/messages_screen.dart';
+import 'package:nearo_app/features/notifications/screens/notifications_screen.dart';
 import 'package:nearo_app/features/profile/screens/my_profile_screen.dart';
 import 'package:nearo_app/features/ratings/screens/ratings_screen.dart';
 import 'package:nearo_app/features/settings/screens/settings_screen.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
-import 'package:nearo_app/features/matching_board/screens/matching_board_screen.dart';
 
 class HomeShellScreen extends StatefulWidget {
   const HomeShellScreen({super.key});
@@ -18,7 +17,7 @@ class HomeShellScreen extends StatefulWidget {
 }
 
 class _HomeShellScreenState extends State<HomeShellScreen> {
-  /// 대학교 랭킹(0) / 게임(1) / 게시판(2) / 상점(3) / 프로필(4) — 스와이프 가능한 5개
+  /// 대학교 랭킹(0) / 메시지함(1) / 게시판(2) / 프로필(3) / 상점(4) — 스와이프 가능한 5개
   int _currentIndex = 2;
   final PageController _pageController = PageController(initialPage: 2);
   final _authRepository = AuthRepository();
@@ -26,10 +25,10 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
   bool _profileLoading = true;
   final List<Widget> _pages = [
     const UniversityRankingScreen(),
-    const GamePlaceholderScreen(),
+    const MessagesScreen(),
     MatchingBoardScreen(),
-    RatingsScreen(),
     const MyProfileScreen(),
+    RatingsScreen(),
   ];
 
   @override
@@ -78,86 +77,88 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
             ? affiliation.substring(0, affiliation.length - 2)
             : affiliation)
         : '';
-    final primary = Theme.of(context).colorScheme.primary;
-    final background = Theme.of(context).colorScheme.background;
+    final universityColor = Theme.of(context).colorScheme.primary;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
           height: 75,
           decoration: BoxDecoration(
-            color: primary,
-          ),
-          child: SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  // 왼쪽: MeetZi + 소속대학(작게)
-                  Text(
-                    'MeetZi',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
-                  shadows: const [Shadow(color: Colors.black26, blurRadius: 2)],
-                ),
-              ),
-              if (affiliationShort.isNotEmpty) ...[
-                const SizedBox(width: 6),
-                Text(
-                  affiliationShort,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.9),
-                    fontSize: 13,
-                    shadows: const [Shadow(color: Colors.black26, blurRadius: 2)],
-                  ),
-                ),
-              ],
-              const Spacer(),
-              // 오른쪽: 종이비행기 → 메시지함(라우트), 톱니바퀴 → 설정(라우트)
-              IconButton(
-                style: IconButton.styleFrom(shape: const CircleBorder()),
-                icon: Transform.rotate(
-                  angle: -math.pi / 4,
-                  child: const Icon(Icons.send_outlined, color: Colors.white),
-                ),
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const MessagesScreen(),
-                    ),
-                  );
-                },
-                tooltip: '메시지함',
-              ),
-              IconButton(
-                style: IconButton.styleFrom(shape: const CircleBorder()),
-                icon: const Icon(Icons.settings, color: Colors.white),
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const SettingsScreen(),
-                    ),
-                  );
-                },
-                tooltip: '설정',
-              ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        // 상단바 아래 8px 그라데이션 (primary → background)
-        Container(
-          height: 50,
-          decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [primary, background],
+              colors: [
+                universityColor,
+                universityColor.withOpacity(0.85),
+              ],
             ),
+          ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Opacity(
+                opacity: 0.12,
+                child: Image.asset(
+                  'assets/noise.png',
+                  fit: BoxFit.cover,
+                ),
+              ),
+              SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      Text(
+                        'MeetZi',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                          shadows: const [Shadow(color: Colors.black26, blurRadius: 2)],
+                        ),
+                      ),
+                      if (affiliationShort.isNotEmpty) ...[
+                        const SizedBox(width: 6),
+                        Text(
+                          affiliationShort,
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: 13,
+                            shadows: const [Shadow(color: Colors.black26, blurRadius: 2)],
+                          ),
+                        ),
+                      ],
+                      const Spacer(),
+                      IconButton(
+                        style: IconButton.styleFrom(shape: const CircleBorder()),
+                        icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const NotificationsScreen(),
+                            ),
+                          );
+                        },
+                        tooltip: '알림',
+                      ),
+                      IconButton(
+                        style: IconButton.styleFrom(shape: const CircleBorder()),
+                        icon: const Icon(Icons.settings, color: Colors.white),
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const SettingsScreen(),
+                            ),
+                          );
+                        },
+                        tooltip: '설정',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -171,32 +172,13 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildTopBar(),
+          if (_currentIndex != 1) _buildTopBar(),
           Expanded(
             child: PageView.builder(
               controller: _pageController,
               itemCount: _pages.length,
               onPageChanged: (index) => setState(() => _currentIndex = index),
-              itemBuilder: (context, index) {
-                if (index == 1) {
-                  // 게임 탭: GestureDetector 없이 단순 위젯만 사용해
-                  // PageView의 스크롤 제스처가 경쟁에서 이기도록 함
-                  return ColoredBox(
-                    color: Theme.of(context).colorScheme.background,
-                    child: Center(
-                      child: Text(
-                        '게임',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w500,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                    ),
-                  );
-                }
-                return _pages[index];
-              },
+              itemBuilder: (context, index) => _pages[index],
             ),
           ),
         ],
@@ -218,20 +200,20 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
             label: '대학교 랭킹',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.sports_esports_outlined),
-            label: '게임',
+            icon: Icon(Icons.chat_bubble_outline),
+            label: '메시지함',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard_outlined),
             label: '게시판',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.shopping_bag_outlined),
-            label: '상점',
-          ),
-          BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
             label: '프로필',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.shopping_bag_outlined),
+            label: '상점',
           ),
         ],
       ),

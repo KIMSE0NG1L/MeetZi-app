@@ -3,8 +3,19 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:nearo_app/app/app.dart';
+import 'package:nearo_app/features/notifications/data/notification_history_store.dart';
 import 'package:nearo_app/shared/api/api_client.dart';
 import 'package:app_badge_plus/app_badge_plus.dart';
+
+void _saveNotificationToHistory(RemoteMessage message) {
+  final id = message.messageId ?? '${message.hashCode}_${DateTime.now().millisecondsSinceEpoch}';
+  NotificationHistoryStore.instance.add(
+    id: id,
+    title: message.notification?.title,
+    body: message.notification?.body,
+    data: Map<String, dynamic>.from(message.data),
+  );
+}
 
 // 1. 백그라운드 메시지 핸들러 (최상위 함수)
 @pragma('vm:entry-point')
@@ -76,8 +87,17 @@ void main() async {
 
 
 
+  // 알림 히스토리 저장 (알람 확인 화면에서 조회용)
+  final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+  if (initialMessage != null && initialMessage.data.isNotEmpty) {
+    _saveNotificationToHistory(initialMessage);
+  }
+
   // 3. 포그라운드(앱이 켜져있을 때) 알림 처리
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    if (message.data.isNotEmpty || message.notification != null) {
+      _saveNotificationToHistory(message);
+    }
     // 앱이 포그라운드일 때는 FCM 푸시를 무시(로컬 알림만 표시)
     // (아래 코드를 주석 처리하거나, 조건문으로 분기 가능)
     // RemoteNotification? notification = message.notification;
@@ -106,6 +126,9 @@ void main() async {
   // 4. 알림 클릭 시 앱 오픈 핸들러
   FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
     print('알림 클릭으로 앱 오픈: ${message.data}');
+    if (message.data.isNotEmpty || message.notification != null) {
+      _saveNotificationToHistory(message);
+    }
   });
 
   runApp(const NearoApp());

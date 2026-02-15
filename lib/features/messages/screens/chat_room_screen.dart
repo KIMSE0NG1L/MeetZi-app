@@ -5,7 +5,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:nearo_app/features/matching/data/matching_repository.dart';
 import 'package:nearo_app/features/messages/data/chat_repository.dart';
-import 'package:nearo_app/features/consent/data/consent_repository.dart';
 import 'package:nearo_app/features/messages/data/partner_profile_repository.dart';
 import 'package:nearo_app/shared/notification_utils.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
@@ -40,7 +39,6 @@ class ChatRoomScreen extends StatefulWidget {
 class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObserver {
   IO.Socket? _socket;
   String? _myUserId;
-  final _consentRepository = ConsentRepository();
   final _partnerProfileRepository = PartnerProfileRepository();
   final _repository = ChatRepository();
   final _matchingRepository = MatchingRepository();
@@ -318,7 +316,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
       _matchId = room['matchId']?.toString();
       final list = room['messageReadAts'];
       if (list is List) _applyMessageReadAts(list);
-      if (_isProfileRevealed && _matchId != null) {
+      // 동의 여부와 관계없이 상대 프로필 로드 (아바타 탭 시 바로 정보 보기)
+      if (_matchId != null) {
         try {
           final profile = await _partnerProfileRepository.getPartnerProfile(matchId: _matchId!);
           if (mounted) setState(() => _partnerProfile = profile);
@@ -441,95 +440,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
       body: SafeArea(
         child: Column(
           children: [
-            // 프로필 공개/동의 UI
-            if (_isActive)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                child: Column(
-                  children: [
-                    if (_isProfileRevealed)
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              _partnerPhotoStorageKey != null
-                                  ? CircleAvatar(
-                                      radius: 28,
-                                      backgroundImage: NetworkImage('https://nearo-image.s3.ap-northeast-2.amazonaws.com/${_partnerPhotoStorageKey!}'),
-                                    )
-                                  : const CircleAvatar(radius: 28, child: Icon(Icons.person)),
-                              const SizedBox(width: 16),
-                              Text(_partnerNickname ?? '상대', style: Theme.of(context).textTheme.titleMedium),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          ElevatedButton(
-                            onPressed: _partnerProfile == null ? null : () {
-                              Navigator.of(context).pushNamed(
-                                '/chat/partner-profile',
-                                arguments: _partnerProfile,
-                              );
-                            },
-                            child: const Text('정보보기'),
-                          ),
-                          if (_partnerProfile != null && _partnerProfile!['bio'] != null && _partnerProfile!['bio'].toString().trim().isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 10),
-                              child: Text(
-                                '자기소개: ${_partnerProfile!['bio']}',
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                            ),
-                        ],
-                      )
-                    else ...[
-                      if (_partnerConsentStatus == 'yes')
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.6),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary, size: 24),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  '상대방이 프로필 공개에 동의했어요. 아래 버튼을 눌러 동의하면 서로의 프로필이 공개됩니다.',
-                                  style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      const Text(
-                        '상호 동의 시에만 프로필 사진이 공개됩니다.',
-                        style: TextStyle(fontSize: 15, color: Colors.grey),
-                      ),
-                      const SizedBox(height: 8),
-                      ElevatedButton(
-                        onPressed: () async {
-                          if (_matchId == null) return;
-                          // 동의 API 호출
-                          try {
-                            await _consentRepository.giveConsent(matchId: _matchId!, decision: true);
-                            await _loadRoomState();
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('동의가 완료되었습니다.')));
-                          } catch (_) {
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('동의 처리에 실패했습니다.')));
-                          }
-                        },
-                        child: const Text('프로필 공개 동의하기'),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
             Expanded(
               child: Column(
                 children: [
@@ -704,15 +614,38 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
       }
     }
     return InkWell(
-      onTap: () {
-        if (_isProfileRevealed && _partnerProfile != null) {
+      onTap: () async {
+        if (_partnerProfile != null) {
           Navigator.of(context).pushNamed(
             AppRoutes.partnerProfile,
             arguments: _partnerProfile,
           );
+          return;
+        }
+        if (_matchId != null) {
+          try {
+            final profile = await _partnerProfileRepository.getPartnerProfile(matchId: _matchId!);
+            if (!mounted) return;
+            setState(() => _partnerProfile = profile);
+            if (profile != null) {
+              Navigator.of(context).pushNamed(
+                AppRoutes.partnerProfile,
+                arguments: profile,
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('프로필을 불러올 수 없습니다.')),
+              );
+            }
+          } catch (_) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('프로필을 불러올 수 없습니다.')),
+            );
+          }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('상호 동의 후 프로필을 볼 수 있어요.')),
+            const SnackBar(content: Text('프로필을 불러올 수 없습니다.')),
           );
         }
       },

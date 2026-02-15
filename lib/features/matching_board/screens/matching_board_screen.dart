@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:nearo_app/features/matching_board/data/matching_board_repository.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
@@ -172,10 +173,26 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       builder: (context, snapshot) {
         final myUserId = snapshot.data?['id'];
         return Scaffold(
-          backgroundColor: Theme.of(context).colorScheme.background,
-          body: Container(
-            color: Theme.of(context).colorScheme.background,
-            child: _loading
+          backgroundColor: const Color(0xFFC4A574),
+          body: FutureBuilder<BoxDecoration>(
+            future: _corkBoardDecoration(),
+            builder: (context, snapshot) {
+              final decoration = snapshot.data ?? BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    const Color(0xFFD4B896),
+                    const Color(0xFFC4A574),
+                    const Color(0xFFB8956A),
+                  ],
+                ),
+              );
+              return Container(
+                width: double.infinity,
+                height: double.infinity,
+                decoration: decoration,
+                child: _loading
                 ? const Center(child: CircularProgressIndicator())
                 : Column(
                     children: [
@@ -193,37 +210,70 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                             itemBuilder: (context, index) {
                               final profile = _profiles[index];
                               final isMe = myUserId != null && profile['userId'] == myUserId;
-                              return Card(
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                elevation: 4,
-                                color: Theme.of(context).colorScheme.primary,
+                              return Material(
+                                color: Colors.transparent,
                                 child: InkWell(
-                                  borderRadius: BorderRadius.circular(16),
                                   onTap: isMe ? null : () => _openNoteSheet(context, index, myUserId),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(16),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment: CrossAxisAlignment.center,
-                                      children: [
-                                        _buildBoardAvatar(context, profile),
-                                        const SizedBox(height: 12),
-                                        Text(
-                                          isMe ? '나' : (profile['nickname'] ?? ''),
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
-                                          textAlign: TextAlign.center,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Text(
-                                          isMe ? '' : ((profile['idealType'] ?? (profile['user'] as Map<String, dynamic>?)?['idealType'])?.toString() ?? '-'),
-                                          style: const TextStyle(fontSize: 13, color: Colors.white70),
-                                          textAlign: TextAlign.center,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(16),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.2),
+                                          blurRadius: 6,
+                                          offset: const Offset(0, 2),
                                         ),
                                       ],
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: Stack(
+                                        fit: StackFit.expand,
+                                        children: [
+                                          Transform.scale(
+                                            scale: 1.08,
+                                            child: Image.asset(
+                                              'assets/images/board_card_bg.png',
+                                              fit: BoxFit.cover,
+                                            ),
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.all(16),
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              crossAxisAlignment: CrossAxisAlignment.center,
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                _buildBoardAvatar(context, profile),
+                                                const SizedBox(height: 12),
+                                                Text(
+                                                  isMe ? '나' : (profile['nickname'] ?? ''),
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 18,
+                                                    color: Color(0xFF4A3728),
+                                                  ),
+                                                  textAlign: TextAlign.center,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                                const SizedBox(height: 6),
+                                                Text(
+                                                  isMe ? '' : ((profile['idealType'] ?? (profile['user'] as Map<String, dynamic>?)?['idealType'])?.toString() ?? '-'),
+                                                  style: const TextStyle(
+                                                    fontSize: 13,
+                                                    color: Color(0xFF6B5344),
+                                                  ),
+                                                  textAlign: TextAlign.center,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -258,10 +308,36 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                       ),
                     ],
                   ),
+              );
+            },
           ),
         );
       },
     );
+  }
+
+  static Future<BoxDecoration> _corkBoardDecoration() async {
+    try {
+      await rootBundle.load('assets/images/cork_board.png');
+      return BoxDecoration(
+        image: DecorationImage(
+          image: AssetImage('assets/images/cork_board.png'),
+          fit: BoxFit.cover,
+        ),
+      );
+    } catch (_) {
+      return BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFFD4B896),
+            const Color(0xFFC4A574),
+            const Color(0xFFB8956A),
+          ],
+        ),
+      );
+    }
   }
 }
 
@@ -321,6 +397,76 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
 
   static String _str(dynamic v) => v?.toString() ?? '-';
 
+  /// 프로필 수정 입력란과 동일한 한국어 라벨로 표시
+  static String _toLabel(String? field, dynamic v) {
+    final s = v?.toString().trim();
+    if (s == null || s.isEmpty) return '-';
+    switch (field) {
+      case 'gender':
+        switch (s.toLowerCase()) {
+          case 'male': return '남성';
+          case 'female': return '여성';
+          default: return s;
+        }
+      case 'gradeYear':
+        switch (s.toLowerCase()) {
+          case 'one': return '1';
+          case 'two': return '2';
+          case 'three': return '3';
+          case 'four': return '4';
+          case 'five': return '5';
+          case 'graduation_deferred': return '졸업유예';
+          default: return s;
+        }
+      case 'smoking':
+        switch (s.toLowerCase()) {
+          case 'none': return '비흡연';
+          case 'sometimes': return '가끔';
+          case 'often': return '자주';
+          default: return s;
+        }
+      case 'drinking':
+        switch (s.toLowerCase()) {
+          case 'none': return '안 함';
+          case 'sometimes': return '가끔';
+          case 'often': return '자주';
+          default: return s;
+        }
+      case 'fashionStyle':
+        switch (s.toLowerCase()) {
+          case 'hood_casual': return '후드/캐주얼';
+          case 'shirt_neat': return '셔츠/단정';
+          case 'street': return '스트릿';
+          case 'knit': return '니트/감성';
+          case 'sporty': return '체육복/스포티';
+          case 'minimal': return '미니멀';
+          case 'hip': return '힙한';
+          default: return s;
+        }
+      case 'preferredDateType':
+        switch (s.toLowerCase()) {
+          case 'cafe': return '카페 탐방';
+          case 'walk': return '산책';
+          case 'movie': return '영화';
+          case 'drink': return '술 한잔';
+          case 'exercise': return '운동';
+          case 'food_tour': return '맛집 투어';
+          case 'drive': return '드라이브';
+          default: return s;
+        }
+      case 'activityTime':
+        switch (s.toLowerCase()) {
+          case 'morning': return '아침형';
+          case 'daytime': return '낮 활동형';
+          case 'evening': return '저녁형';
+          case 'night_owl': return '야행성';
+          default: return s;
+        }
+      default:
+        return s;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -360,19 +506,19 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                     Text(_str(profile['nickname']), style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 20),
                     _row(theme, '학과', _str(profile['department'] ?? user?['department'])),
-                    _row(theme, '성별', _str(profile['gender'] ?? user?['gender'])),
+                    _row(theme, '성별', _toLabel('gender', profile['gender'] ?? user?['gender'])),
                     _row(theme, '소속', _str(user?['affiliationText'])),
                     _row(theme, '키', user?['heightCm'] != null ? '${user!['heightCm']} cm' : '-'),
-                    _row(theme, '학년', _str(user?['gradeYear'])),
+                    _row(theme, '학년', _toLabel('gradeYear', user?['gradeYear'])),
                     _row(theme, 'MBTI', _str(user?['mbti'])),
-                    _row(theme, '흡연', _str(user?['smoking'])),
-                    _row(theme, '음주', _str(user?['drinking'])),
+                    _row(theme, '흡연', _toLabel('smoking', user?['smoking'])),
+                    _row(theme, '음주', _toLabel('drinking', user?['drinking'])),
                     _row(theme, '한 줄 소개', _str(user?['introOneLine'])),
                     _row(theme, '요즘 빠진 것', _str(user?['intoLately'])),
                     _row(theme, '이상형', _str(user?['idealType'])),
-                    _row(theme, '패션 스타일', _str(user?['fashionStyle'])),
-                    _row(theme, '선호 데이트', _str(user?['preferredDateType'])),
-                    _row(theme, '활동 시간대', _str(user?['activityTime'])),
+                    _row(theme, '패션 스타일', _toLabel('fashionStyle', user?['fashionStyle'])),
+                    _row(theme, '선호 데이트', _toLabel('preferredDateType', user?['preferredDateType'])),
+                    _row(theme, '활동 시간대', _toLabel('activityTime', user?['activityTime'])),
                     if (user?['idealTypeKeywords'] is List)
                       _row(theme, '나를 소개하는 키워드', (user!['idealTypeKeywords'] as List).join(', ')),
                   ],
