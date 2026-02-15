@@ -118,41 +118,6 @@ class SettingsScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  // ... 추가 설정 항목 ...
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-                    trailing: ValueListenableBuilder<ThemeMode>(
-                      valueListenable: ThemeController.themeMode,
-                      builder: (context, mode, _) => Radio<ThemeMode>(
-                        value: ThemeMode.light,
-                        groupValue: mode,
-                        onChanged: (val) {
-                          ThemeController.setThemeMode(ThemeMode.light);
-                          ThemeController.setSecretMode(false);
-                        },
-                      ),
-                    ),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.dark_mode),
-                    title: const Text('다크 모드'),
-                    trailing: ValueListenableBuilder<ThemeMode>(
-                      valueListenable: ThemeController.themeMode,
-                      builder: (context, mode, _) => Radio<ThemeMode>(
-                        value: ThemeMode.dark,
-                        groupValue: mode,
-                        onChanged: (val) {
-                          ThemeController.setThemeMode(ThemeMode.dark);
-                          ThemeController.setSecretMode(false);
-                        },
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),

@@ -23,12 +23,12 @@ class _MessagesScreenState extends State<MessagesScreen> {
 
   String? _resolvePhotoUrl(String? photoKey) {
     if (photoKey == null || photoKey.isEmpty) return null;
-    return AppConfig.getPhotoUrl(photoKey);
+    return '${AppConfig.baseUrl}/files/$photoKey';
   }
 
   Future<void> _loadRooms() async {
     setState(() => _loading = true);
-    final rooms = await _repository.getRooms();
+    final rooms = await _repository.listRooms();
     setState(() {
       _rooms = rooms;
       _loading = false;
@@ -36,7 +36,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   Future<void> _deleteRoom(String roomId) async {
-    await _repository.deleteRoom(roomId);
+    await _repository.deleteRoom(roomId: roomId);
     _loadRooms();
   }
 

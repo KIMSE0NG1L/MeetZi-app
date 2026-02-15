@@ -60,7 +60,6 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
 
   Future<void> _registerProfile() async {
     try {
-      // 내 프로필 정보 가져오기
       final authRepo = AuthRepository();
       final profile = await authRepo.getProfile();
       final nickname = profile['nickname'];
@@ -68,9 +67,29 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       String school = profile['school'] ?? profile['affiliationText'] ?? '세종대';
       final department = profile['department']?.toString();
       final userEnvs = profile['userEnvironments'];
-      // TODO: 프로필 등록 로직 구현
-    } catch (e) {
-      // TODO: 에러 처리
+      if (school.isEmpty && userEnvs != null && userEnvs is List && userEnvs.isNotEmpty) {
+        final env = userEnvs[0]['environment'];
+        if (env != null && env['name'] != null) school = env['name'];
+      }
+      if (school.isEmpty) school = '세종대';
+      if (nickname == null || gender == null || school == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('프로필 정보가 없습니다.')));
+        return;
+      }
+      final payload = <String, dynamic>{
+        'nickname': nickname,
+        'gender': gender,
+        'school': school,
+      };
+      if (department != null && department.isNotEmpty) payload['department'] = department;
+      await _repository.registerProfile(payload);
+      await _fetchProfiles();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('프로필 등록 완료')));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('프로필 등록 실패')));
     }
   }
 
@@ -264,95 +283,43 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                   ),
                 );
               },
-                                          crossAxisAlignment: CrossAxisAlignment.center,
-                                          children: [
-                                            _buildBoardAvatar(context, profile),
-                                            const SizedBox(height: 14),
-                                            Text(
-                                              isMe ? '나' : (profile['nickname'] ?? ''),
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 18,
-                                                color: Colors.black87,
-                                              ),
-                                              textAlign: TextAlign.center,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            const SizedBox(height: 6),
-                                            Text(
-                                              isMe ? '' : ((profile['idealType'] ?? (profile['user'] as Map<String, dynamic>?)?['idealType'])?.toString() ?? '-'),
-                                              style: TextStyle(
-                                                fontSize: 13,
-                                                color: Colors.grey[700],
-                                              ),
-                                              textAlign: TextAlign.center,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                back: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(
-                                      color: Colors.grey.withOpacity(0.18),
-                                      width: 1.2,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.10),
-                                        blurRadius: 18,
-                                        spreadRadius: 2,
-                                        offset: const Offset(0, 8),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Center(
-                                    child: Icon(Icons.info_outline, size: 40, color: Colors.grey[400]),
-                                  ),
-                                ),
-                                onFlipBack: () => setState(() => _flippedIndex = null)
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Align(
-                        alignment: Alignment.bottomCenter,
-                        child: Padding(
-                          padding: const EdgeInsets.only(bottom: 32),
-                          child: SizedBox(
-                            width: 180,
-                            height: 48,
-                            child: ElevatedButton.icon(
-                              onPressed: _registerProfile,
-                              icon: const Icon(Icons.add),
-                              label: const Text('등록'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context).colorScheme.primary,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(24),
-                                ),
-                                textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            );
+    );
   }
+
+  void _openNoteSheet(BuildContext context, int startIndex, String? myUserId) {
+    final others = myUserId != null
+        ? _profiles.where((p) => p['userId'] != myUserId).toList()
+        : List<Map<String, dynamic>>.from(_profiles);
+    final tappedProfile = startIndex < _profiles.length ? _profiles[startIndex] : null;
+    final startInOthers = tappedProfile != null ? others.indexWhere((p) => p['id'] == tappedProfile['id']) : 0;
+    final initialIndex = startInOthers >= 0 ? startInOthers : 0;
+    if (others.isEmpty) return;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _BoardNoteSheetContent(
+        profiles: others,
+        startIndex: initialIndex,
+        buildAvatar: _buildBoardAvatar,
+        onTakeNote: _takeNote,
+        onPop: _fetchProfiles,
+      ),
+    );
+  }
+
+  Future<void> _takeNote(String profileId) async {
+    try {
+      await _repository.takeNote(profileId);
+      await _fetchProfiles();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('가져가기 완료! 매칭이 성사되었어요.')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+    }
+  }
+}
 
 Future<BoxDecoration> _corkBoardDecoration() async {
   try {
