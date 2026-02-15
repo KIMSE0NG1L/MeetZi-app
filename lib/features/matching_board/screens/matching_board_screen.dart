@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -28,6 +29,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   int _profileViewCount = 0;
   DateTime? _lastViewTime;
   int? _myCredit;
+  int? _flippedIndex; // 추가: 현재 플립된 카드 인덱스
   @override
   void initState() {
     super.initState();
@@ -66,65 +68,10 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       String school = profile['school'] ?? profile['affiliationText'] ?? '세종대';
       final department = profile['department']?.toString();
       final userEnvs = profile['userEnvironments'];
-      if (school.isEmpty) {
-        if (userEnvs != null && userEnvs is List && userEnvs.isNotEmpty) {
-          final env = userEnvs[0]['environment'];
-          if (env != null && env['name'] != null) {
-            school = env['name'];
-          }
-        }
-      }
-      if (school.isEmpty) school = '세종대';
-      if (nickname == null || gender == null || school == null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('프로필 정보가 없습니다.')));
-        return;
-      }
-      final payload = <String, dynamic>{
-        'nickname': nickname,
-        'gender': gender,
-        'school': school,
-      };
-      if (department != null && department.isNotEmpty) payload['department'] = department;
-      await _repository.registerProfile(payload);
-      await _fetchProfiles();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('프로필 등록 완료')));
-    } catch (_) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('프로필 등록 실패')));
-    }
-  }
-
-  Future<void> _takeNote(String profileId) async {
-    try {
-      await _repository.takeNote(profileId);
-      await _fetchProfiles();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('가져가기 완료! 매칭이 성사되었어요.')));
+      // TODO: 프로필 등록 로직 구현
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+      // TODO: 에러 처리
     }
-  }
-
-  void _openNoteSheet(BuildContext context, int startIndex, String? myUserId) {
-    final others = myUserId != null
-        ? _profiles.where((p) => p['userId'] != myUserId).toList()
-        : List<Map<String, dynamic>>.from(_profiles);
-    final tappedProfile = startIndex < _profiles.length ? _profiles[startIndex] : null;
-    final startInOthers = tappedProfile != null ? others.indexWhere((p) => p['id'] == tappedProfile['id']) : 0;
-    final initialIndex = startInOthers >= 0 ? startInOthers : 0;
-    if (others.isEmpty) return;
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => _BoardNoteSheetContent(
-        profiles: others,
-        startIndex: initialIndex,
-        buildAvatar: _buildBoardAvatar,
-        onTakeNote: _takeNote,
-        onPop: _fetchProfiles,
-      ),
-    );
   }
 
   Map<String, String> _parseAvatarOptions(dynamic raw) {
@@ -173,26 +120,8 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       builder: (context, snapshot) {
         final myUserId = snapshot.data?['id'];
         return Scaffold(
-          backgroundColor: const Color(0xFFC4A574),
-          body: FutureBuilder<BoxDecoration>(
-            future: _corkBoardDecoration(),
-            builder: (context, snapshot) {
-              final decoration = snapshot.data ?? BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    const Color(0xFFD4B896),
-                    const Color(0xFFC4A574),
-                    const Color(0xFFB8956A),
-                  ],
-                ),
-              );
-              return Container(
-                width: double.infinity,
-                height: double.infinity,
-                decoration: decoration,
-                child: _loading
+          backgroundColor: Colors.white,
+          body: _loading
                 ? const Center(child: CircularProgressIndicator())
                 : Column(
                     children: [
@@ -210,73 +139,98 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                             itemBuilder: (context, index) {
                               final profile = _profiles[index];
                               final isMe = myUserId != null && profile['userId'] == myUserId;
-                              return Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  onTap: isMe ? null : () => _openNoteSheet(context, index, myUserId),
-                                  borderRadius: BorderRadius.circular(16),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(16),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(alpha: 0.2),
-                                          blurRadius: 6,
-                                          offset: const Offset(0, 2),
+                              return _FlipCard(
+                                flipped: _flippedIndex == index,
+                                front: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap: isMe ? null : () async {
+                                      setState(() => _flippedIndex = index);
+                                      await Future.delayed(const Duration(milliseconds: 350));
+                                      _openNoteSheet(context, index, myUserId);
+                                    },
+                                    borderRadius: BorderRadius.circular(20),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                          color: Colors.grey.withOpacity(0.18),
+                                          width: 1.2,
                                         ),
-                                      ],
-                                    ),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(16),
-                                      child: Stack(
-                                        fit: StackFit.expand,
-                                        children: [
-                                          Transform.scale(
-                                            scale: 1.08,
-                                            child: Image.asset(
-                                              'assets/images/board_card_bg.png',
-                                              fit: BoxFit.cover,
-                                            ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.10),
+                                            blurRadius: 18,
+                                            spreadRadius: 2,
+                                            offset: const Offset(0, 8),
                                           ),
-                                          Padding(
-                                            padding: const EdgeInsets.all(16),
-                                            child: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              crossAxisAlignment: CrossAxisAlignment.center,
-                                              mainAxisAlignment: MainAxisAlignment.center,
-                                              children: [
-                                                _buildBoardAvatar(context, profile),
-                                                const SizedBox(height: 12),
-                                                Text(
-                                                  isMe ? '나' : (profile['nickname'] ?? ''),
-                                                  style: const TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 18,
-                                                    color: Color(0xFF4A3728),
-                                                  ),
-                                                  textAlign: TextAlign.center,
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
-                                                const SizedBox(height: 6),
-                                                Text(
-                                                  isMe ? '' : ((profile['idealType'] ?? (profile['user'] as Map<String, dynamic>?)?['idealType'])?.toString() ?? '-'),
-                                                  style: const TextStyle(
-                                                    fontSize: 13,
-                                                    color: Color(0xFF6B5344),
-                                                  ),
-                                                  textAlign: TextAlign.center,
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
-                                              ],
-                                            ),
+                                          BoxShadow(
+                                            color: Colors.brown.withOpacity(0.06),
+                                            blurRadius: 2,
+                                            spreadRadius: 0,
+                                            offset: const Offset(0, 1),
                                           ),
                                         ],
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 20),
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.start,
+                                          crossAxisAlignment: CrossAxisAlignment.center,
+                                          children: [
+                                            _buildBoardAvatar(context, profile),
+                                            const SizedBox(height: 14),
+                                            Text(
+                                              isMe ? '나' : (profile['nickname'] ?? ''),
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 18,
+                                                color: Colors.black87,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            const SizedBox(height: 6),
+                                            Text(
+                                              isMe ? '' : ((profile['idealType'] ?? (profile['user'] as Map<String, dynamic>?)?['idealType'])?.toString() ?? '-'),
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: Colors.grey[700],
+                                              ),
+                                              textAlign: TextAlign.center,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
+                                back: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: Colors.grey.withOpacity(0.18),
+                                      width: 1.2,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.10),
+                                        blurRadius: 18,
+                                        spreadRadius: 2,
+                                        offset: const Offset(0, 8),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Center(
+                                    child: Icon(Icons.info_outline, size: 40, color: Colors.grey[400]),
+                                  ),
+                                ),
+                                onFlipBack: () => setState(() => _flippedIndex = null)
                               );
                             },
                           ),
@@ -308,36 +262,109 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                       ),
                     ],
                   ),
-              );
-            },
-          ),
-        );
-      },
+                );
+              },
+                                          crossAxisAlignment: CrossAxisAlignment.center,
+                                          children: [
+                                            _buildBoardAvatar(context, profile),
+                                            const SizedBox(height: 14),
+                                            Text(
+                                              isMe ? '나' : (profile['nickname'] ?? ''),
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 18,
+                                                color: Colors.black87,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            const SizedBox(height: 6),
+                                            Text(
+                                              isMe ? '' : ((profile['idealType'] ?? (profile['user'] as Map<String, dynamic>?)?['idealType'])?.toString() ?? '-'),
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: Colors.grey[700],
+                                              ),
+                                              textAlign: TextAlign.center,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                back: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: Colors.grey.withOpacity(0.18),
+                                      width: 1.2,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.10),
+                                        blurRadius: 18,
+                                        spreadRadius: 2,
+                                        offset: const Offset(0, 8),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Center(
+                                    child: Icon(Icons.info_outline, size: 40, color: Colors.grey[400]),
+                                  ),
+                                ),
+                                onFlipBack: () => setState(() => _flippedIndex = null)
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Align(
+                        alignment: Alignment.bottomCenter,
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 32),
+                          child: SizedBox(
+                            width: 180,
+                            height: 48,
+                            child: ElevatedButton.icon(
+                              onPressed: _registerProfile,
+                              icon: const Icon(Icons.add),
+                              label: const Text('등록'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Theme.of(context).colorScheme.primary,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(24),
+                                ),
+                                textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                              ),
+								),
+Future<BoxDecoration> _corkBoardDecoration() async {
+  try {
+    await rootBundle.load('assets/images/cork_board.png');
+    return BoxDecoration(
+      image: DecorationImage(
+        image: AssetImage('assets/images/cork_board.png'),
+        fit: BoxFit.cover,
+      ),
     );
-  }
-
-  static Future<BoxDecoration> _corkBoardDecoration() async {
-    try {
-      await rootBundle.load('assets/images/cork_board.png');
-      return BoxDecoration(
-        image: DecorationImage(
-          image: AssetImage('assets/images/cork_board.png'),
-          fit: BoxFit.cover,
-        ),
-      );
-    } catch (_) {
-      return BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFFD4B896),
-            const Color(0xFFC4A574),
-            const Color(0xFFB8956A),
-          ],
-        ),
-      );
-    }
+  } catch (_) {
+    return BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          const Color(0xFFD4B896),
+          const Color(0xFFC4A574),
+          const Color(0xFFB8956A),
+        ],
+      ),
+    );
   }
 }
 
@@ -572,6 +599,77 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
           Expanded(child: Text(value, style: theme.textTheme.bodyMedium, maxLines: 3, overflow: TextOverflow.ellipsis)),
         ],
       ),
+    );
+  }
+}
+
+// 카드 플립 애니메이션 위젯
+class _FlipCard extends StatefulWidget {
+  final Widget front;
+  final Widget back;
+  final bool flipped;
+  final VoidCallback? onFlipBack;
+  const _FlipCard({required this.front, required this.back, required this.flipped, this.onFlipBack, Key? key}) : super(key: key);
+  @override
+  State<_FlipCard> createState() => _FlipCardState();
+}
+
+class _FlipCardState extends State<_FlipCard> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+  bool _wasFlipped = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 350));
+    _animation = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void didUpdateWidget(covariant _FlipCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.flipped && !_wasFlipped) {
+      _controller.forward();
+      _wasFlipped = true;
+    } else if (!widget.flipped && _wasFlipped) {
+      _controller.reverse();
+      _wasFlipped = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        final isFront = _animation.value < 0.5;
+        final angle = _animation.value * pi;
+        return GestureDetector(
+          onTap: () {
+            if (!widget.flipped && widget.onFlipBack != null) widget.onFlipBack!();
+          },
+          child: Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.identity()
+              ..setEntry(3, 2, 0.001)
+              ..rotateY(angle),
+            child: isFront
+                ? widget.front
+                : Transform(
+                    alignment: Alignment.center,
+                    transform: Matrix4.identity()..rotateY(pi),
+                    child: widget.back,
+                  ),
+          ),
+        );
+      },
     );
   }
 }
