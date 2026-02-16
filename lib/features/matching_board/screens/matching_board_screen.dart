@@ -367,6 +367,10 @@ class _BoardNoteSheetContent extends StatefulWidget {
 class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
   late int _currentIndex;
   bool _taking = false;
+  bool _animating = false;
+  double _cardScale = 1.0;
+  Offset _cardOffset = Offset.zero;
+  final GlobalKey _cardKey = GlobalKey();
 
   @override
   void initState() {
@@ -387,16 +391,45 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
   }
 
   Future<void> _take() async {
-    if (_taking) return;
+    if (_taking || _animating) return;
     setState(() => _taking = true);
-    try {
-      await widget.onTakeNote(_profile['id'] as String);
-      if (!mounted) return;
-      Navigator.of(context).pop();
-      widget.onPop();
-    } finally {
-      if (mounted) setState(() => _taking = false);
+    // 1. 카드 shrink/move 애니메이션 시작
+    setState(() => _animating = true);
+    // 메시지함 위치(예시: 화면 우측 하단) 계산
+    final RenderBox? cardBox = _cardKey.currentContext?.findRenderObject() as RenderBox?;
+    final RenderBox? overlay = Overlay.of(context)?.context.findRenderObject() as RenderBox?;
+    Offset target = Offset.zero;
+    if (cardBox != null && overlay != null) {
+      final cardPos = cardBox.localToGlobal(Offset.zero, ancestor: overlay);
+      final cardSize = cardBox.size;
+      // 메시지함 위치: 우측 하단 32, 32 기준
+      final screenSize = overlay.size;
+      target = Offset(screenSize.width - cardPos.dx - cardSize.width / 2 - 32, screenSize.height - cardPos.dy - cardSize.height / 2 - 32);
     }
+    // 애니메이션 실행
+    await Future.wait([
+      Future.delayed(const Duration(milliseconds: 10)),
+      Future(() async {
+        for (int i = 0; i < 20; i++) {
+          await Future.delayed(const Duration(milliseconds: 10));
+          setState(() {
+            _cardScale = 1.0 - 0.03 * i;
+            _cardOffset = Offset(target.dx * (i + 1) / 20, target.dy * (i + 1) / 20);
+          });
+        }
+      })
+    ]);
+    // 2. 실제 데이터 처리
+    await widget.onTakeNote(_profile['id'] as String);
+    if (!mounted) return;
+    Navigator.of(context).pop();
+    widget.onPop();
+    setState(() {
+      _animating = false;
+      _cardScale = 1.0;
+      _cardOffset = Offset.zero;
+    });
+    setState(() => _taking = false);
   }
 
   static String _str(dynamic v) => v?.toString() ?? '-';
@@ -505,7 +538,15 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    widget.buildAvatar(context, profile),
+                    AnimatedContainer(
+                      key: _cardKey,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                      transform: Matrix4.identity()
+                        ..translate(_cardOffset.dx, _cardOffset.dy)
+                        ..scale(_cardScale),
+                      child: widget.buildAvatar(context, profile),
+                    ),
                     const SizedBox(height: 16),
                     Text(_str(profile['nickname']), style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 20),
@@ -537,7 +578,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: _taking ? null : _skip,
+                      onPressed: _taking || _animating ? null : _skip,
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -548,12 +589,12 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: FilledButton(
-                      onPressed: _taking ? null : _take,
+                      onPressed: _taking || _animating ? null : _take,
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                      child: _taking ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('가져가기'),
+                      child: _taking || _animating ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('가져가기'),
                     ),
                   ),
                 ],
