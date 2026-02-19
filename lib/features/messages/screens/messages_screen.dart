@@ -24,10 +24,6 @@ class _MessagesScreenState extends State<MessagesScreen> {
     _loadRooms();
   }
 
-  String? _resolvePhotoUrl(String? photoKey) {
-    if (photoKey == null || photoKey.isEmpty) return null;
-    return '${AppConfig.baseUrl}/files/$photoKey';
-  }
 
   Widget _buildAvatar(String? photoUrl, String? avatarSeed, Map<String, String> avatarOptions, String partner) {
     const double avatarRadius = 28; // 더 큰 크기로 변경 (기본 ListTile leading 크기에 맞춤)
@@ -94,175 +90,109 @@ class _MessagesScreenState extends State<MessagesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-<<<<<<< Updated upstream
       appBar: AppBar(
         title: const Text('메시지함'),
         centerTitle: true,
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _rooms.isEmpty
-              ? const Center(child: Text('아직 대화가 없습니다.'))
-              : ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _rooms.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) {
-                    final room = _rooms[index];
-                    final partner = room['partnerNickname']?.toString() ?? '대화';
-                    final last = room['lastMessage']?.toString() ?? '';
-                    final photoKey = room['partnerPhotoStorageKey']?.toString();
-                    final photoUrl = _resolvePhotoUrl(photoKey);
-                    final roomId = room['roomId']?.toString() ?? '';
-                    final isActive = room['isActive'] == true;
-                    return Dismissible(
-                      key: ValueKey(roomId),
-                      direction: DismissDirection.endToStart,
-                      confirmDismiss: (_) async {
-                        return await showDialog<bool>(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('대화방 삭제'),
-                            content: const Text('이 대화방을 삭제할까요?'),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.of(context).pop(false),
-                                child: const Text('취소'),
-                              ),
-                              TextButton(
-                                onPressed: () => Navigator.of(context).pop(true),
-                                child: const Text('삭제'),
-=======
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _buildTopBar(),
-          Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : _rooms.isEmpty
-                    ? const Center(child: Text('아직 대화가 없습니다.'))
-                    : ListView.separated(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _rooms.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
-                        itemBuilder: (context, index) {
-                          final room = _rooms[index];
-                          final partner = room['partnerNickname']?.toString() ?? '대화';
-                          final last = room['lastMessage']?.toString() ?? '';
-                          final photoKey = room['partnerPhotoStorageKey']?.toString();
-                          final photoUrl = _resolvePhotoUrl(photoKey);
-                          final roomId = room['roomId']?.toString() ?? '';
-                          final isActive = room['isActive'] == true;
-                          
-                          // 아바타 정보 가져오기 (chat_room_screen과 동일한 방식)
-                          // 1. partnerAvatarSeed가 있으면 사용
-                          // 2. 없으면 partnerUserId 또는 다른 ID 필드를 시드로 사용
-                          final avatarSeed = room['partnerAvatarSeed']?.toString() ?? 
-                                           room['partnerUserId']?.toString() ??
-                                           room['partnerId']?.toString() ??
-                                           room['userId']?.toString();
-                          final avatarOptionsRaw = room['partnerAvatarOptions']?.toString();
-                          Map<String, String> avatarOptions = {};
-                          if (avatarOptionsRaw != null && avatarOptionsRaw.isNotEmpty) {
-                            try {
-                              final decoded = jsonDecode(avatarOptionsRaw);
-                              if (decoded is Map<String, dynamic>) {
-                                avatarOptions = decoded.map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
-                              }
-                            } catch (_) {}
-                          }
-                          
-                          // 디버깅용: room 데이터 출력 (나중에 제거 가능)
-                          // print('Room data: ${room.keys.toList()}');
-                          // print('Avatar seed: $avatarSeed');
-                          
-                          return Dismissible(
-                            key: ValueKey(roomId),
-                            direction: DismissDirection.endToStart,
-                            confirmDismiss: (_) async {
-                              return await showDialog<bool>(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('대화방 삭제'),
-                                  content: const Text('이 대화방을 삭제할까요?'),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(context).pop(false),
-                                      child: const Text('취소'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () => Navigator.of(context).pop(true),
-                                      child: const Text('삭제'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                            onDismissed: (_) => _deleteRoom(roomId),
-                            background: Container(
-                              alignment: Alignment.centerRight,
-                              padding: const EdgeInsets.symmetric(horizontal: 20),
-                              color: Colors.red.shade400,
-                              child: const Icon(Icons.delete, color: Colors.white),
-                            ),
-                            child: ListTile(
-                              leading: _buildAvatar(photoUrl, avatarSeed, avatarOptions, partner),
-                              title: Text(partner),
-                              subtitle: Text(
-                                isActive
-                                    ? last
-                                    : '매칭이 취소된 대화입니다.',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
->>>>>>> Stashed changes
-                              ),
-                            ],
+      body: Builder(
+        builder: (context) {
+          if (_loading) {
+            return Center(child: CircularProgressIndicator());
+          } else if (_rooms.isEmpty) {
+            return Center(child: Text('아직 대화가 없습니다.'));
+          } else {
+            return ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: _rooms.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final room = _rooms[index];
+                final partner = room['partnerNickname']?.toString() ?? '대화';
+                final last = room['lastMessage']?.toString() ?? '';
+                final photoKey = room['partnerPhotoStorageKey']?.toString();
+                String? photoUrl = (photoKey != null && photoKey.isNotEmpty)
+                    ? AppConfig.baseUrl + '/files/' + photoKey
+                    : null;
+                final roomId = room['roomId']?.toString() ?? '';
+                final isActive = room['isActive'] == true;
+                // 아바타 정보 채팅방과 동일하게 추출
+                final avatarSeed = room['avatarSeed']?.toString()
+                  ?? room['userId']?.toString()
+                  ?? room['partnerAvatarSeed']?.toString();
+                String? avatarOptionsRaw = room['avatarOptions']?.toString() ?? room['partnerAvatarOptions']?.toString();
+                Map<String, String> avatarOptions = {};
+                if (avatarOptionsRaw != null && avatarOptionsRaw.isNotEmpty) {
+                  try {
+                    final decoded = jsonDecode(avatarOptionsRaw);
+                    if (decoded is Map<String, dynamic>) {
+                      avatarOptions = decoded.map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
+                    }
+                  } catch (_) {}
+                }
+                return Dismissible(
+                  key: ValueKey(roomId),
+                  direction: DismissDirection.endToStart,
+                  confirmDismiss: (_) async {
+                    return await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('대화방 삭제'),
+                        content: const Text('이 대화방을 삭제할까요?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(false),
+                            child: const Text('취소'),
                           ),
-                        );
-                      },
-                      onDismissed: (_) => _deleteRoom(roomId),
-                      background: Container(
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        color: Colors.red.shade400,
-                        child: const Icon(Icons.delete, color: Colors.white),
-                      ),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: Theme.of(context).colorScheme.primary,
-                          backgroundImage: photoUrl == null ? null : NetworkImage(photoUrl),
-                          child: photoUrl == null ? Text(partner.substring(0, 1)) : null,
-                        ),
-                        title: Text(partner),
-                        subtitle: Text(
-                          isActive
-                              ? last
-                              : '매칭이 취소된 대화입니다.',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () {
-                          Navigator.of(context)
-                              .pushNamed(
-                                AppRoutes.chatRoom,
-                                arguments: {
-                                  'roomId': roomId,
-                                  'partnerNickname': partner,
-                                  'isActive': isActive,
-                                },
-                              )
-                              .then((value) {
-                            if (value == true) {
-                              _loadRooms();
-                            }
-                          });
-                        },
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(true),
+                            child: const Text('삭제'),
+                          ),
+                        ],
                       ),
                     );
                   },
-                ),
+                  onDismissed: (_) => _deleteRoom(roomId),
+                  background: Container(
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    color: Colors.red.shade400,
+                    child: const Icon(Icons.delete, color: Colors.white),
+                  ),
+                  child: ListTile(
+                    leading: _buildAvatar(photoUrl, avatarSeed, avatarOptions, partner),
+                    title: Text(partner),
+                    subtitle: Text(
+                      isActive
+                          ? last
+                          : '매칭이 취소된 대화입니다.',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.of(context)
+                          .pushNamed(
+                            AppRoutes.chatRoom,
+                            arguments: {
+                              'roomId': roomId,
+                              'partnerNickname': partner,
+                              'isActive': isActive,
+                            },
+                          )
+                          .then((value) {
+                        if (value == true) {
+                          _loadRooms();
+                        }
+                      });
+                    },
+                  ),
+                );
+              },
+            );
+          }
+        },
+      ),
     );
   }
-}
+    // ...existing code...
+  }

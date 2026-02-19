@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/shared/widgets/primary_button.dart';
@@ -133,7 +135,12 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                             width: 96,
                                             height: 96,
                                             child: SvgPicture.network(
-                                              diceBearAvatarUrl(_profile!['avatarSeed'], options: _profile?['avatarOptions'] is Map<String, dynamic> ? (_profile!['avatarOptions'] as Map<String, dynamic>) : null),
+                                              diceBearAvatarUrl(
+                                                _profile!['avatarSeed'],
+                                                options: _profile?['avatarOptions'] is Map<String, dynamic>
+                                                  ? (_profile!['avatarOptions'] as Map<String, dynamic>).map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''))
+                                                  : null,
+                                              ),
                                               fit: BoxFit.cover,
                                               placeholderBuilder: (context) => Icon(Icons.person, size: 64, color: Theme.of(context).colorScheme.primary),
                                             ),

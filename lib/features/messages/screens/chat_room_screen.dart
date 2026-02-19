@@ -37,6 +37,11 @@ class ChatRoomScreen extends StatefulWidget {
 }
 
 class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObserver {
+
+  String _formatMessageTime(DateTime? dateTime) {
+    final dt = dateTime ?? DateTime.now();
+    return "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
+  }
   IO.Socket? _socket;
   String? _myUserId;
   final _partnerProfileRepository = PartnerProfileRepository();
@@ -507,13 +512,28 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                                         _buildPartnerAvatar(context),
                                         const SizedBox(width: 8),
                                       ],
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                        decoration: BoxDecoration(
-                                          color: color,
-                                          borderRadius: BorderRadius.circular(16),
-                                        ),
-                                        child: Text(message.text, style: TextStyle(color: textColor)),
+                                      Column(
+                                        crossAxisAlignment: message.isMine
+                                            ? CrossAxisAlignment.end
+                                            : CrossAxisAlignment.start,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                            decoration: BoxDecoration(
+                                              color: color,
+                                              borderRadius: BorderRadius.circular(16),
+                                            ),
+                                            child: Text(message.text, style: TextStyle(color: textColor)),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            _formatMessageTime(message.readAt),
+                                            style: TextStyle(
+                                              color: Colors.grey.shade500,
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                       if (!_isActive && !message.isMine && message.readAt == null)
                                         Padding(
