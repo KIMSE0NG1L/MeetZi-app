@@ -304,14 +304,26 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
         buildAvatar: _buildBoardAvatar,
         onTakeNote: _takeNote,
         onPop: _fetchProfiles,
+        myCredit: _myCredit,
+        onRefreshCredit: _fetchMyCredit,
       ),
     );
   }
 
   Future<void> _takeNote(String profileId) async {
+    // 코인 체크
+    if (_myCredit == null || _myCredit! <= 0) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('코인이 부족합니다. 코인을 충전해주세요.')),
+      );
+      return;
+    }
+    
     try {
       await _repository.takeNote(profileId);
       await _fetchProfiles();
+      await _fetchMyCredit(); // 코인 갱신
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('가져가기 완료! 매칭이 성사되었어요.')));
     } catch (e) {
@@ -352,6 +364,8 @@ class _BoardNoteSheetContent extends StatefulWidget {
     required this.buildAvatar,
     required this.onTakeNote,
     required this.onPop,
+    this.myCredit,
+    this.onRefreshCredit,
   });
 
   final List<Map<String, dynamic>> profiles;
@@ -359,6 +373,8 @@ class _BoardNoteSheetContent extends StatefulWidget {
   final Widget Function(BuildContext context, Map<String, dynamic> profile) buildAvatar;
   final Future<void> Function(String profileId) onTakeNote;
   final VoidCallback onPop;
+  final int? myCredit;
+  final Future<void> Function()? onRefreshCredit;
 
   @override
   State<_BoardNoteSheetContent> createState() => _BoardNoteSheetContentState();
@@ -392,6 +408,23 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
 
   Future<void> _take() async {
     if (_taking || _animating) return;
+    
+    // 코인 체크
+    if (widget.myCredit == null || widget.myCredit! <= 0) {
+      if (!mounted) return;
+      // ModalBottomSheet 위에 표시되도록 root navigator의 context 사용
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('코인이 부족합니다. 코인을 충전해주세요.'),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+    
     setState(() => _taking = true);
     // 1. 카드 shrink/move 애니메이션 시작
     setState(() => _animating = true);
@@ -421,6 +454,10 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
     ]);
     // 2. 실제 데이터 처리
     await widget.onTakeNote(_profile['id'] as String);
+    // 코인 갱신
+    if (widget.onRefreshCredit != null) {
+      await widget.onRefreshCredit!();
+    }
     if (!mounted) return;
     Navigator.of(context).pop();
     widget.onPop();
