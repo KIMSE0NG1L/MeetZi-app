@@ -60,28 +60,26 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5E3D0),
+      // backgroundColor를 지정하지 않고, ThemeData의 scaffoldBackgroundColor를 따름
       body: SafeArea(
         child: Column(
           children: [
-            // 커스텀 헤더
-            Container(
-              height: 80,
-              decoration: const BoxDecoration(
-                color: Color(0xFFD08C7F),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(24),
-                  bottomRight: Radius.circular(24),
+            // AppBar를 PreferredSize로 감싸서 높이 조정
+            PreferredSize(
+              preferredSize: const Size.fromHeight(120), // 기존보다 더 크게
+              child: AppBar(
+                title: const Text('설정'),
+                centerTitle: true,
+                elevation: 0,
+                backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+                foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(24),
+                    bottomRight: Radius.circular(24),
+                  ),
                 ),
-              ),
-              alignment: Alignment.center,
-              child: const Text(
-                '설정',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+                toolbarHeight: 120, // 내부 컨텐츠 높이도 맞춤
               ),
             ),
             Expanded(

@@ -82,7 +82,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          height: 75,
+          height: 120, // 기존 75에서 120으로 크게
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
@@ -107,54 +107,58 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
                 bottom: false,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: [
-                      Text(
-                        'MeetZi',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 20,
-                          shadows: const [Shadow(color: Colors.black26, blurRadius: 2)],
-                        ),
-                      ),
-                      if (affiliationShort.isNotEmpty) ...[
-                        const SizedBox(width: 6),
+                  child: Align(
+                    alignment: Alignment.bottomLeft,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
                         Text(
-                          affiliationShort,
+                          'MeetZi',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: 13,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
                             shadows: const [Shadow(color: Colors.black26, blurRadius: 2)],
                           ),
                         ),
+                        if (affiliationShort.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          Text(
+                            affiliationShort,
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.9),
+                              fontSize: 13,
+                              shadows: const [Shadow(color: Colors.black26, blurRadius: 2)],
+                            ),
+                          ),
+                        ],
+                        const Spacer(),
+                        IconButton(
+                          style: IconButton.styleFrom(shape: const CircleBorder()),
+                          icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const NotificationsScreen(),
+                              ),
+                            );
+                          },
+                          tooltip: '알림',
+                        ),
+                        IconButton(
+                          style: IconButton.styleFrom(shape: const CircleBorder()),
+                          icon: const Icon(Icons.settings, color: Colors.white),
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const SettingsScreen(),
+                              ),
+                            );
+                          },
+                          tooltip: '설정',
+                        ),
                       ],
-                      const Spacer(),
-                      IconButton(
-                        style: IconButton.styleFrom(shape: const CircleBorder()),
-                        icon: const Icon(Icons.notifications_outlined, color: Colors.white),
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const NotificationsScreen(),
-                            ),
-                          );
-                        },
-                        tooltip: '알림',
-                      ),
-                      IconButton(
-                        style: IconButton.styleFrom(shape: const CircleBorder()),
-                        icon: const Icon(Icons.settings, color: Colors.white),
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const SettingsScreen(),
-                            ),
-                          );
-                        },
-                        tooltip: '설정',
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),
