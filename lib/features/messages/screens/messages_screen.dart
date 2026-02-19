@@ -17,11 +17,37 @@ class _MessagesScreenState extends State<MessagesScreen> {
   final _repository = ChatRepository();
   bool _loading = true;
   List<Map<String, dynamic>> _rooms = [];
+  Map<String, int> _unreadCounts = {}; // roomId -> unread count
+
 
   @override
   void initState() {
     super.initState();
     _loadRooms();
+  }
+
+  Future<void> _loadUnreadCounts() async {
+    // 각 방의 안읽은 메시지 개수 계산
+    Map<String, int> unreadCounts = {};
+    for (final room in _rooms) {
+      final roomId = room['roomId']?.toString() ?? '';
+      if (roomId.isEmpty) continue;
+      try {
+        final messages = await _repository.listMessages(roomId: roomId);
+        int count = 0;
+        for (final m in messages) {
+          // 내 메시지가 아니고, readAt이 null이면 안읽음
+          final isMine = m['senderId']?.toString() == room['userId']?.toString();
+          if (!isMine && m['readAt'] == null) count++;
+        }
+        unreadCounts[roomId] = count;
+      } catch (_) {
+        unreadCounts[roomId] = 0;
+      }
+    }
+    setState(() {
+      _unreadCounts = unreadCounts;
+    });
   }
 
 
@@ -80,6 +106,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
       _rooms = rooms;
       _loading = false;
     });
+    await _loadUnreadCounts();
   }
 
   Future<void> _deleteRoom(String roomId) async {
@@ -129,6 +156,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                     }
                   } catch (_) {}
                 }
+                int unread = _unreadCounts[roomId] ?? 0;
                 return Dismissible(
                   key: ValueKey(roomId),
                   direction: DismissDirection.endToStart,
@@ -168,7 +196,25 @@ class _MessagesScreenState extends State<MessagesScreen> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    trailing: const Icon(Icons.chevron_right),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (unread > 0)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              unread.toString(),
+                              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.chevron_right),
+                      ],
+                    ),
                     onTap: () {
                       Navigator.of(context)
                           .pushNamed(
