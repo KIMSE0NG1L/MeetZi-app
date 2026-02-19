@@ -40,93 +40,157 @@ class _MessagesScreenState extends State<MessagesScreen> {
     _loadRooms();
   }
 
+  Widget _buildTopBar() {
+    final universityColor = Theme.of(context).colorScheme.primary;
+    // 홈과 동일한 스타일의 배너
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          height: 120,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                universityColor,
+                universityColor.withOpacity(0.85),
+              ],
+            ),
+          ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Opacity(
+                opacity: 0.12,
+                child: Image.asset(
+                  'assets/noise.png',
+                  fit: BoxFit.cover,
+                ),
+              ),
+              SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Align(
+                    alignment: Alignment.bottomLeft,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        const Text(
+                          '메시지함',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
+                            shadows: [Shadow(color: Colors.black26, blurRadius: 2)],
+                          ),
+                        ),
+                        const Spacer(),
+                        // 필요시 알림/설정 아이콘 추가 가능
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('메시지함'),
-        centerTitle: true,
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _rooms.isEmpty
-              ? const Center(child: Text('아직 대화가 없습니다.'))
-              : ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _rooms.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) {
-                    final room = _rooms[index];
-                    final partner = room['partnerNickname']?.toString() ?? '대화';
-                    final last = room['lastMessage']?.toString() ?? '';
-                    final photoKey = room['partnerPhotoStorageKey']?.toString();
-                    final photoUrl = _resolvePhotoUrl(photoKey);
-                    final roomId = room['roomId']?.toString() ?? '';
-                    final isActive = room['isActive'] == true;
-                    return Dismissible(
-                      key: ValueKey(roomId),
-                      direction: DismissDirection.endToStart,
-                      confirmDismiss: (_) async {
-                        return await showDialog<bool>(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('대화방 삭제'),
-                            content: const Text('이 대화방을 삭제할까요?'),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.of(context).pop(false),
-                                child: const Text('취소'),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildTopBar(),
+          Expanded(
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : _rooms.isEmpty
+                    ? const Center(child: Text('아직 대화가 없습니다.'))
+                    : ListView.separated(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: _rooms.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (context, index) {
+                          final room = _rooms[index];
+                          final partner = room['partnerNickname']?.toString() ?? '대화';
+                          final last = room['lastMessage']?.toString() ?? '';
+                          final photoKey = room['partnerPhotoStorageKey']?.toString();
+                          final photoUrl = _resolvePhotoUrl(photoKey);
+                          final roomId = room['roomId']?.toString() ?? '';
+                          final isActive = room['isActive'] == true;
+                          return Dismissible(
+                            key: ValueKey(roomId),
+                            direction: DismissDirection.endToStart,
+                            confirmDismiss: (_) async {
+                              return await showDialog<bool>(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('대화방 삭제'),
+                                  content: const Text('이 대화방을 삭제할까요?'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(false),
+                                      child: const Text('취소'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(true),
+                                      child: const Text('삭제'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            onDismissed: (_) => _deleteRoom(roomId),
+                            background: Container(
+                              alignment: Alignment.centerRight,
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              color: Colors.red.shade400,
+                              child: const Icon(Icons.delete, color: Colors.white),
+                            ),
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: Theme.of(context).colorScheme.primary,
+                                backgroundImage: photoUrl == null ? null : NetworkImage(photoUrl),
+                                child: photoUrl == null ? Text(partner.substring(0, 1)) : null,
                               ),
-                              TextButton(
-                                onPressed: () => Navigator.of(context).pop(true),
-                                child: const Text('삭제'),
+                              title: Text(partner),
+                              subtitle: Text(
+                                isActive
+                                    ? last
+                                    : '매칭이 취소된 대화입니다.',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ],
-                          ),
-                        );
-                      },
-                      onDismissed: (_) => _deleteRoom(roomId),
-                      background: Container(
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        color: Colors.red.shade400,
-                        child: const Icon(Icons.delete, color: Colors.white),
-                      ),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: Theme.of(context).colorScheme.primary,
-                          backgroundImage: photoUrl == null ? null : NetworkImage(photoUrl),
-                          child: photoUrl == null ? Text(partner.substring(0, 1)) : null,
-                        ),
-                        title: Text(partner),
-                        subtitle: Text(
-                          isActive
-                              ? last
-                              : '매칭이 취소된 대화입니다.',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () {
-                          Navigator.of(context)
-                              .pushNamed(
-                                AppRoutes.chatRoom,
-                                arguments: {
-                                  'roomId': roomId,
-                                  'partnerNickname': partner,
-                                  'isActive': isActive,
-                                },
-                              )
-                              .then((value) {
-                            if (value == true) {
-                              _loadRooms();
-                            }
-                          });
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: () {
+                                Navigator.of(context)
+                                    .pushNamed(
+                                      AppRoutes.chatRoom,
+                                      arguments: {
+                                        'roomId': roomId,
+                                        'partnerNickname': partner,
+                                        'isActive': isActive,
+                                      },
+                                    )
+                                    .then((value) {
+                                  if (value == true) {
+                                    _loadRooms();
+                                  }
+                                });
+                              },
+                            ),
+                          );
                         },
                       ),
-                    );
-                  },
-                ),
+          ),
+        ],
+      ),
     );
   }
 }
