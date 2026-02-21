@@ -501,76 +501,118 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                                 separatorBuilder: (_, __) => const SizedBox(height: 8),
                                 itemBuilder: (context, index) {
                                   final message = _messages[_messages.length - 1 - index];
-                                  if (message.isSystem) {
-                                    return Center(
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 8,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey.shade200,
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: Text(
-                                          message.text,
-                                          style: TextStyle(color: Colors.grey.shade700),
+                                  DateTime? messageDate = message.readAt ?? DateTime.now();
+                                  if (messageDate == null && message is _ChatMessage) {
+                                    // fallback to createdAt if available
+                                    // (createdAt이 없으면 현재 시간 사용)
+                                    messageDate = DateTime.now();
+                                  }
+                                  DateTime? prevDate;
+                                  if (index < _messages.length - 1) {
+                                    final prevMessage = _messages[_messages.length - 1 - (index + 1)];
+                                    prevDate = prevMessage.readAt ?? DateTime.now();
+                                  }
+                                  bool isNewDate = false;
+                                  if (messageDate != null) {
+                                    if (prevDate == null ||
+                                        messageDate.year != prevDate.year ||
+                                        messageDate.month != prevDate.month ||
+                                        messageDate.day != prevDate.day) {
+                                      isNewDate = true;
+                                    }
+                                  }
+                                  List<Widget> children = [];
+                                  if (isNewDate) {
+                                    children.add(
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 8),
+                                        child: Center(
+                                          child: Text(
+                                            "${messageDate.year}.${messageDate.month.toString().padLeft(2, '0')}.${messageDate.day.toString().padLeft(2, '0')}",
+                                            style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+                                          ),
                                         ),
                                       ),
                                     );
                                   }
-
-                                  final color = message.isMine
-                                      ? Theme.of(context).colorScheme.primary
-                                      : Colors.grey.shade200;
-                                  final textColor = message.isMine
-                                      ? Colors.white
-                                      : Colors.black87;
-                                  return Row(
-                                    key: ValueKey('${message.id}_${message.readAt?.millisecondsSinceEpoch ?? 0}'),
-                                    mainAxisAlignment: message.isMine
-                                        ? MainAxisAlignment.end
-                                        : MainAxisAlignment.start,
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      if (message.isMine && message.readAt == null)
-                                        Padding(
-                                          padding: const EdgeInsets.only(right: 4),
-                                          child: Text('1', style: TextStyle(color: Colors.red, fontSize: 14, fontWeight: FontWeight.bold)),
+                                  if (message.isSystem) {
+                                    children.add(
+                                      Center(
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 8,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey.shade200,
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Text(
+                                            message.text,
+                                            style: TextStyle(color: Colors.grey.shade700),
+                                          ),
                                         ),
-                                      if (!message.isMine) ...[
-                                        _buildPartnerAvatar(context),
-                                        const SizedBox(width: 8),
-                                      ],
-                                      Column(
-                                        crossAxisAlignment: message.isMine
-                                            ? CrossAxisAlignment.end
-                                            : CrossAxisAlignment.start,
+                                      ),
+                                    );
+                                  } else {
+                                    final color = message.isMine
+                                        ? Theme.of(context).colorScheme.primary
+                                        : Colors.grey.shade200;
+                                    final textColor = message.isMine
+                                        ? Colors.white
+                                        : Colors.black87;
+                                    children.add(
+                                      Row(
+                                        key: ValueKey('${message.id}_${message.readAt?.millisecondsSinceEpoch ?? 0}'),
+                                        mainAxisAlignment: message.isMine
+                                            ? MainAxisAlignment.end
+                                            : MainAxisAlignment.start,
+                                        crossAxisAlignment: CrossAxisAlignment.end,
                                         children: [
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                            decoration: BoxDecoration(
-                                              color: color,
-                                              borderRadius: BorderRadius.circular(16),
+                                          if (message.isMine && message.readAt == null)
+                                            Padding(
+                                              padding: const EdgeInsets.only(right: 4),
+                                              child: Text('1', style: TextStyle(color: Colors.red, fontSize: 14, fontWeight: FontWeight.bold)),
                                             ),
-                                            child: Text(message.text, style: TextStyle(color: textColor)),
+                                          if (!message.isMine) ...[
+                                            _buildPartnerAvatar(context),
+                                            const SizedBox(width: 8),
+                                          ],
+                                          Column(
+                                            crossAxisAlignment: message.isMine
+                                                ? CrossAxisAlignment.end
+                                                : CrossAxisAlignment.start,
+                                            children: [
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                                decoration: BoxDecoration(
+                                                  color: color,
+                                                  borderRadius: BorderRadius.circular(16),
+                                                ),
+                                                child: Text(message.text, style: TextStyle(color: textColor)),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                _formatMessageTime(message.readAt),
+                                                style: TextStyle(
+                                                  color: Colors.grey.shade500,
+                                                  fontSize: 11,
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            _formatMessageTime(message.readAt),
-                                            style: TextStyle(
-                                              color: Colors.grey.shade500,
-                                              fontSize: 11,
+                                          if (!_isActive && !message.isMine && message.readAt == null)
+                                            Padding(
+                                              padding: const EdgeInsets.only(left: 4),
+                                              child: Text('1', style: TextStyle(color: Colors.red, fontSize: 14, fontWeight: FontWeight.bold)),
                                             ),
-                                          ),
                                         ],
                                       ),
-                                      if (!_isActive && !message.isMine && message.readAt == null)
-                                        Padding(
-                                          padding: const EdgeInsets.only(left: 4),
-                                          child: Text('1', style: TextStyle(color: Colors.red, fontSize: 14, fontWeight: FontWeight.bold)),
-                                        ),
-                                    ],
+                                    );
+                                  }
+                                  return Column(
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: children,
                                   );
                                 },
                               ),
