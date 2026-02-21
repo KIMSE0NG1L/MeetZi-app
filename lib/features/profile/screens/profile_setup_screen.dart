@@ -340,95 +340,175 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     }
   }
 
+  /// AppDesign ProfileEditScreen: 흰색 헤더 (뒤로가기, 프로필 수정), bg-gray-50 본문
+  Widget _buildAppDesignHeader(BuildContext context) {
+    final topInset = MediaQuery.of(context).padding.top;
+    final pt = topInset > 0 ? topInset : 56.0;
+    return Container(
+      color: Colors.white,
+      padding: EdgeInsets.only(left: 20, right: 20, top: pt, bottom: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          IconButton(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.arrow_back_ios_new, size: 22, color: Color(0xFF374151)),
+            padding: const EdgeInsets.all(8),
+          ),
+          Text(
+            _isEditing ? '프로필 수정' : '프로필 등록',
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF111827)),
+          ),
+          const SizedBox(width: 40),
+        ],
+      ),
+    );
+  }
+
+  static const _inputBorder = OutlineInputBorder(
+    borderRadius: BorderRadius.all(Radius.circular(12)),
+    borderSide: BorderSide(color: Color(0xFFE5E7EB)),
+  );
+  static const _labelStyle = TextStyle(fontSize: 14, color: Color(0xFF6B7280));
+  static const _sectionLabelStyle = TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF111827));
+
   @override
   Widget build(BuildContext context) {
+    const bgGray50 = Color(0xFFF9FAFB);
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEditing ? '프로필 수정' : '프로필 등록'),
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: ListView(
-            children: [
-              Text('아바타', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              Row(
+      backgroundColor: bgGray50,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Material(
+            elevation: 1,
+            shadowColor: Colors.black.withOpacity(0.06),
+            color: Colors.white,
+            child: _buildAppDesignHeader(context),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              child: ListView(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
                 children: [
-                  SizedBox(
-                    width: 80,
-                    height: 80,
-                    child: _avatarSeed != null && _avatarSeed!.isNotEmpty
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(40),
-                            child: SvgPicture.network(
-                              diceBearAvatarUrl(_avatarSeed!, options: _avatarOptions.isNotEmpty ? _avatarOptions : null),
-                              fit: BoxFit.cover,
-                              placeholderBuilder: (context) => const Center(child: CircularProgressIndicator()),
-                            ),
-                          )
-                        : Container(
-                            width: 80,
-                            height: 80,
+                  const Text('아바타', style: _sectionLabelStyle),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      SizedBox(
+                        width: 80,
+                        height: 80,
+                        child: _avatarSeed != null && _avatarSeed!.isNotEmpty
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(40),
+                                child: SvgPicture.network(
+                                  diceBearAvatarUrl(_avatarSeed!, options: _avatarOptions.isNotEmpty ? _avatarOptions : null),
+                                  fit: BoxFit.cover,
+                                  placeholderBuilder: (context) => const Center(child: CircularProgressIndicator()),
+                                ),
+                              )
+                            : Container(
+                                width: 80,
+                                height: 80,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade200,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(Icons.person, size: 40, color: Colors.grey.shade600),
+                              ),
+                      ),
+                      const SizedBox(width: 16),
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () async {
+                            await Navigator.of(context).pushNamed(AppRoutes.avatarSetup);
+                            if (!mounted) return;
+                            _loadProfileIfExists();
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                             decoration: BoxDecoration(
-                              color: Colors.grey.shade200,
-                              shape: BoxShape.circle,
+                              border: Border.all(color: const Color(0xFFD1D5DB), width: 2),
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Icon(Icons.person, size: 40, color: Colors.grey.shade600),
+                            child: const Text('아바타 편집', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF374151))),
                           ),
-                  ),
-                  const SizedBox(width: 16),
-                  OutlinedButton.icon(
-                    onPressed: () async {
-                      await Navigator.of(context).pushNamed(AppRoutes.avatarSetup);
-                      if (!mounted) return;
-                      _loadProfileIfExists();
-                    },
-                    icon: const Icon(Icons.edit, size: 18),
-                    label: const Text('아바타 편집'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Text('프로필 사진', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: _selectedPhoto == null
-                        ? const Icon(Icons.photo, size: 40, color: Colors.grey)
-                        : Image.file(
-                            File(_selectedPhoto!.path),
-                            fit: BoxFit.cover,
-                          ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        OutlinedButton(
-                          onPressed: _pickPhoto,
-                          child: const Text('사진 선택'),
                         ),
-                        const SizedBox(height: 8),
-                        PrimaryButton(
-                          label: '사진 업로드',
-                          isLoading: _isUploadingPhoto,
-                          onPressed: _uploadSelectedPhoto,
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                  const SizedBox(height: 24),
+                  const Text('프로필 사진', style: _sectionLabelStyle),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: _selectedPhoto == null
+                            ? const Icon(Icons.upload_file, size: 32, color: Color(0xFF9CA3AF))
+                            : Image.file(
+                                File(_selectedPhoto!.path),
+                                fit: BoxFit.cover,
+                              ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: _pickPhoto,
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(color: const Color(0xFFD1D5DB), width: 2),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Text('사진 선택', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF374151))),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: _isUploadingPhoto ? null : _uploadSelectedPhoto,
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      begin: Alignment.centerLeft,
+                                      end: Alignment.centerRight,
+                                      colors: [Color(0xFFF43F5E), Color(0xFFEC4899)],
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [BoxShadow(color: const Color(0xFFF43F5E).withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 2))],
+                                  ),
+                                  child: _isUploadingPhoto
+                                      ? const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)))
+                                      : const Text('사진 업로드', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white)),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
               if (_photoError != null) ...[
                 const SizedBox(height: 8),
                 Text(
@@ -500,6 +580,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 ),
               ],
               const SizedBox(height: 16),
+              const Text('닉네임 (2~8자, 한글/영문/숫자)', style: _labelStyle),
+              const SizedBox(height: 8),
               TextField(
                 controller: _nicknameController,
                 keyboardType: TextInputType.name,
@@ -509,17 +591,29 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 autocorrect: true,
                 maxLength: 8,
                 decoration: const InputDecoration(
-                  labelText: '닉네임 (2~8자, 한글/영문/숫자)',
-                  border: OutlineInputBorder(),
+                  hintText: '닉네임을 입력하세요',
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: _inputBorder,
+                  enabledBorder: _inputBorder,
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide(color: Color(0xFFF43F5E), width: 2),
+                  ),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   counterText: '',
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+              const Text('성별', style: _labelStyle),
+              const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _gender,
                 decoration: const InputDecoration(
-                  labelText: '성별',
-                  border: OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: _inputBorder,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 items: const [
                   DropdownMenuItem(value: 'male', child: Text('남성')),
@@ -530,12 +624,16 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   setState(() => _gender = value);
                 },
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+              const Text('선호 성별', style: _labelStyle),
+              const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _preferredGender,
                 decoration: const InputDecoration(
-                  labelText: '선호 성별',
-                  border: OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: _inputBorder,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 items: const [
                   DropdownMenuItem(value: 'opposite', child: Text('이성 선호')),
@@ -548,7 +646,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   setState(() => _preferredGender = value);
                 },
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+              const Text('소속 대학교', style: _labelStyle),
+              const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _affiliation,
                 onChanged: _isEditing
@@ -558,8 +658,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                         setState(() => _affiliation = value);
                       },
                 decoration: const InputDecoration(
-                  labelText: '소속 대학교',
-                  border: OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: _inputBorder,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 items: const [
                   DropdownMenuItem(value: '세종대학교', child: Text('세종대학교')),
@@ -567,7 +669,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   DropdownMenuItem(value: '한양대학교', child: Text('한양대학교')),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+              const Text('키 (150~195cm)', style: _labelStyle),
+              const SizedBox(height: 8),
               InkWell(
                 onTap: () async {
                   final v = await showModalBottomSheet<int>(
@@ -578,29 +682,41 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 },
                 child: InputDecorator(
                   decoration: const InputDecoration(
-                    labelText: '키 (150~195cm)',
-                    border: OutlineInputBorder(),
+                    hintText: '탭하여 선택',
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: _inputBorder,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                   child: Text(_heightCm != null ? '$_heightCm cm' : '탭하여 선택'),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+              const Text('한 줄 소개 (최대 40자)', style: _labelStyle),
+              const SizedBox(height: 8),
               TextField(
                 controller: _introOneLineController,
                 maxLength: 40,
                 maxLines: 1,
                 decoration: const InputDecoration(
-                  labelText: '한 줄 소개 (최대 40자)',
-                  border: OutlineInputBorder(),
+                  hintText: '자신을 소개해주세요',
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: _inputBorder,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   counterText: '',
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+              const Text('학번', style: _labelStyle),
+              const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _gradeYear,
                 decoration: const InputDecoration(
-                  labelText: '학년',
-                  border: OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: _inputBorder,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 items: List.generate(6, (i) => DropdownMenuItem(
                   value: _gradeYearValues[i],
@@ -608,27 +724,36 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 )),
                 onChanged: (v) => setState(() => _gradeYear = v),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+              const Text('MBTI', style: _labelStyle),
+              const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _mbtiOptions.contains(_mbtiController.text.trim()) ? _mbtiController.text.trim() : null,
                 decoration: const InputDecoration(
-                  labelText: 'MBTI',
-                  border: OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: _inputBorder,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 items: _mbtiOptions.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
                 onChanged: (v) { if (v != null) setState(() => _mbtiController.text = v); },
               ),
-              const SizedBox(height: 8),
-              Text('나를 소개하는 키워드 (3개 선택)', style: Theme.of(context).textTheme.bodyMedium),
+              const SizedBox(height: 16),
+              const Text('나를 소개하는 태그', style: _labelStyle),
+              const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
-                runSpacing: 4,
+                runSpacing: 8,
                 children: _idealKeywordOptions.map((label) {
                   final selected = _idealTypeKeywords.contains(label);
                   final canSelect = selected || _idealTypeKeywords.length < 3;
                   return FilterChip(
-                    label: Text(label),
+                    label: Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: selected ? Colors.white : const Color(0xFF374151))),
                     selected: selected,
+                    selectedColor: const Color(0xFFF43F5E),
+                    checkmarkColor: Colors.white,
+                    side: BorderSide(color: selected ? const Color(0xFFF43F5E) : const Color(0xFFE5E7EB)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
                     onSelected: canSelect
                         ? (v) {
                             setState(() {
@@ -643,53 +768,74 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   );
                 }).toList(),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+              const Text('평소 패션 스타일', style: _labelStyle),
+              const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _fashionStyle,
                 decoration: const InputDecoration(
-                  labelText: '평소 패션 스타일',
-                  border: OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: _inputBorder,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 items: _fashionOptions.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
                 onChanged: (v) => setState(() => _fashionStyle = v),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+              const Text('선호 데이트 유형', style: _labelStyle),
+              const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _preferredDateType,
                 decoration: const InputDecoration(
-                  labelText: '선호 데이트 유형',
-                  border: OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: _inputBorder,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 items: _dateTypeOptions.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
                 onChanged: (v) => setState(() => _preferredDateType = v),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+              const Text('활동 시간대', style: _labelStyle),
+              const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _activityTime,
                 decoration: const InputDecoration(
-                  labelText: '활동 시간대',
-                  border: OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: _inputBorder,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 items: _activityTimeOptions.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
                 onChanged: (v) => setState(() => _activityTime = v),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+              const Text('요즘 빠진 것 (최대 20자)', style: _labelStyle),
+              const SizedBox(height: 8),
               TextField(
                 controller: _intoLatelyController,
                 maxLength: 20,
                 maxLines: 1,
                 decoration: const InputDecoration(
-                  labelText: '요즘 빠진 것 (최대 20자)',
-                  border: OutlineInputBorder(),
+                  hintText: '요즘 관심사를 알려주세요',
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: _inputBorder,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   counterText: '',
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+              const Text('흡연 여부', style: _labelStyle),
+              const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _smoking,
                 decoration: const InputDecoration(
-                  labelText: '흡연 여부',
-                  border: OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: _inputBorder,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 items: const [
                   DropdownMenuItem(value: 'none', child: Text('비흡연')),
@@ -698,12 +844,16 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 ],
                 onChanged: (value) => setState(() => _smoking = value),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+              const Text('음주 여부', style: _labelStyle),
+              const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _drinking,
                 decoration: const InputDecoration(
-                  labelText: '음주 여부',
-                  border: OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: _inputBorder,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 items: const [
                   DropdownMenuItem(value: 'none', child: Text('안 함')),
@@ -712,35 +862,71 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 ],
                 onChanged: (value) => setState(() => _drinking = value),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+              const Text('이상형', style: _labelStyle),
+              const SizedBox(height: 8),
               TextField(
                 controller: _idealTypeController,
                 textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
-                  labelText: '이상형',
-                  border: OutlineInputBorder(),
+                  hintText: '이상형을 입력하세요',
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: _inputBorder,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+              const Text('학과', style: _labelStyle),
+              const SizedBox(height: 8),
               TextField(
                 controller: _departmentController,
                 textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
-                  labelText: '학과',
-                  border: OutlineInputBorder(),
+                  hintText: '학과를 입력하세요',
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: _inputBorder,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
               ),
-              const SizedBox(height: 12),
-              PrimaryButton(
-                label: _isEditing ? '프로필 수정' : '프로필 저장',
-                isLoading: _isLoading,
-                onPressed: _submit,
+              const SizedBox(height: 24),
+              Material(
+                elevation: 4,
+                shadowColor: Colors.black.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(16),
+                child: InkWell(
+                  onTap: _isLoading ? null : _submit,
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                        colors: [Color(0xFFF43F5E), Color(0xFFEC4899)],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [BoxShadow(color: const Color(0xFFF43F5E).withOpacity(0.35), blurRadius: 12, offset: const Offset(0, 4))],
+                    ),
+                    child: _isLoading
+                        ? const Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)))
+                        : Text(
+                            _isEditing ? '프로필 수정' : '프로필 저장',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                  ),
+                ),
               ),
-              const SizedBox(height: 16),
-              Text(_result, style: Theme.of(context).textTheme.bodyMedium),
+              const SizedBox(height: 24),
+              if (_result.isNotEmpty) Text(_result, style: Theme.of(context).textTheme.bodyMedium),
             ],
           ),
         ),
+      ),
+        ],
       ),
     );
   }

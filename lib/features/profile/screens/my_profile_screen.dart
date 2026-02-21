@@ -3,7 +3,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
-import 'package:nearo_app/shared/widgets/primary_button.dart';
 
 class MyProfileScreen extends StatefulWidget {
   const MyProfileScreen({super.key});
@@ -82,118 +81,181 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final surface = dark ? const Color(0xFF1F2937) : Colors.white;
+    final onSurface = dark ? Colors.white : const Color(0xFF111827);
+    final onSurfaceVariant = dark ? Colors.grey.shade400 : Colors.grey.shade600;
+    const rose = Color(0xFFF43F5E);
+
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
-      body: SafeArea(
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : _error != null
-                ? Center(child: Text(_error!))
-                : _profile == null
-                    ? const Center(child: Text('프로필 정보가 없습니다.'))
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(
-                            child: Center(
-                              child: Container(
-                                width: 340,
-                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(28),
-                                  border: Border.all(
-                                    color: Colors.grey.withOpacity(0.18),
-                                    width: 1.2,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.10),
-                                      blurRadius: 18,
-                                      spreadRadius: 2,
-                                      offset: const Offset(0, 8),
-                                    ),
-                                    BoxShadow(
-                                      color: Colors.brown.withOpacity(0.06),
-                                      blurRadius: 2,
-                                      spreadRadius: 0,
-                                      offset: const Offset(0, 1),
-                                    ),
-                                  ],
-                                ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
+      backgroundColor: dark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(child: Text(_error!, style: TextStyle(color: onSurfaceVariant)))
+              : _profile == null
+                  ? Center(child: Text('프로필 정보가 없습니다.', style: TextStyle(color: onSurfaceVariant)))
+                  : ListView(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
+                      children: [
+                        Material(
+                          color: surface,
+                          borderRadius: BorderRadius.circular(24),
+                          elevation: 2,
+                          shadowColor: Colors.black.withOpacity(0.06),
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              children: [
+                                Stack(
+                                  alignment: Alignment.bottomRight,
                                   children: [
-                                    // 아바타 표시 (dicebear)
-                                    if (_profile?['avatarSeed'] != null && (_profile?['avatarSeed'] as String).isNotEmpty)
-                                      CircleAvatar(
-                                        radius: 48,
-                                        backgroundColor: Colors.white,
-                                        child: ClipOval(
-                                          child: SizedBox(
-                                            width: 96,
-                                            height: 96,
-                                            child: SvgPicture.network(
-                                              diceBearAvatarUrl(
-                                                _profile!['avatarSeed'] as String,
-                                                options: _profile?['avatarOptions'] is Map<String, dynamic>
-                                                    ? (_profile!['avatarOptions'] as Map<String, dynamic>).map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''))
-                                                    : null,
-                                              ),
-                                              fit: BoxFit.cover,
-                                              placeholderBuilder: (context) => Icon(Icons.person, size: 64, color: Theme.of(context).colorScheme.primary),
-                                            ),
-                                          ),
-                                        ),
-                                      )
-                                    else
-                                      CircleAvatar(
-                                        radius: 48,
-                                        backgroundColor: Colors.white,
-                                        child: Icon(Icons.person, size: 64, color: Theme.of(context).colorScheme.primary),
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: const Color(0xFFFECDD3), width: 4),
+                                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 12)],
                                       ),
-                                    const SizedBox(height: 18),
-                                    Text(
-                                      _profile?['nickname']?.toString() ?? '',
-                                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                                      child: _profile?['avatarSeed'] != null && (_profile!['avatarSeed'] as String).isNotEmpty
+                                          ? CircleAvatar(
+                                              radius: 48,
+                                              backgroundColor: Colors.white,
+                                              child: ClipOval(
+                                                child: SizedBox(
+                                                  width: 96,
+                                                  height: 96,
+                                                  child: SvgPicture.network(
+                                                    diceBearAvatarUrl(
+                                                      _profile!['avatarSeed'] as String,
+                                                      options: _profile?['avatarOptions'] is Map<String, dynamic>
+                                                          ? (_profile!['avatarOptions'] as Map<String, dynamic>).map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''))
+                                                          : null,
+                                                    ),
+                                                    fit: BoxFit.cover,
+                                                    placeholderBuilder: (context) => Icon(Icons.person, size: 64, color: Theme.of(context).colorScheme.primary),
+                                                  ),
+                                                ),
+                                              ),
+                                            )
+                                          : CircleAvatar(
+                                              radius: 48,
+                                              backgroundColor: Colors.white,
+                                              child: Icon(Icons.person, size: 64, color: Theme.of(context).colorScheme.primary),
+                                            ),
                                     ),
-                                    const SizedBox(height: 10),
-                                    if (_profile?['heightCm'] != null)
-                                      Text('키: ${_profile?['heightCm']} cm', style: TextStyle(fontSize: 16, color: Colors.grey[800])),
-                                    if (_profile?['introOneLine'] != null && (_profile?['introOneLine'] as String).isNotEmpty)
-                                      Text('한줄소개: ${_profile?['introOneLine']}', style: TextStyle(fontSize: 16, color: Colors.grey[800])),
-                                    if (_profile?['gradeYear'] != null)
-                                      Text('학년: ${_toLabel('gradeYear', _profile?['gradeYear'])}', style: TextStyle(fontSize: 16, color: Colors.grey[800])),
-                                    if (_profile?['idealTypeKeywords'] is List && (_profile?['idealTypeKeywords'] as List).isNotEmpty)
-                                      Text('나를 소개하는 키워드: ${(_profile?['idealTypeKeywords'] as List).join(", ")}', style: TextStyle(fontSize: 16, color: Colors.grey[800])),
-                                    if (_profile?['fashionStyle'] != null && (_profile?['fashionStyle'] as String).isNotEmpty)
-                                      Text('패션스타일: ${_toLabel('fashionStyle', _profile?['fashionStyle'])}', style: TextStyle(fontSize: 16, color: Colors.grey[800])),
-                                    if (_profile?['activityTime'] != null && (_profile?['activityTime'] as String).isNotEmpty)
-                                      Text('활동시간대: ${_toLabel('activityTime', _profile?['activityTime'])}', style: TextStyle(fontSize: 16, color: Colors.grey[800])),
-                                    if (_profile?['idealType'] != null && (_profile?['idealType'] as String).isNotEmpty)
-                                      Text('이상형: ${_profile?['idealType']}', style: TextStyle(fontSize: 16, color: Colors.grey[800])),
-                                    if (_profile?['department'] != null && (_profile?['department'] as String).isNotEmpty)
-                                      Text('학과: ${_profile?['department']}', style: TextStyle(fontSize: 16, color: Colors.grey[800])),
+                                    Container(
+                                      width: 32,
+                                      height: 32,
+                                      decoration: BoxDecoration(color: rose, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 4)]),
+                                      child: const Icon(Icons.camera_alt, color: Colors.white, size: 18),
+                                    ),
                                   ],
                                 ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  _profile?['nickname']?.toString() ?? '',
+                                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: onSurface),
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.location_on, size: 16, color: onSurfaceVariant),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      _profile?['affiliationText']?.toString() ?? _profile?['school']?.toString() ?? '-',
+                                      style: TextStyle(fontSize: 14, color: onSurfaceVariant),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 24),
+                                Divider(height: 1, color: dark ? Colors.grey.shade700 : Colors.grey.shade200),
+                                const SizedBox(height: 16),
+                                _InfoRow(label: '소속', value: _profile?['affiliationText']?.toString() ?? _profile?['school']?.toString() ?? '-', onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
+                                _InfoRow(label: '성별', value: _profile?['gender']?.toString() == 'male' ? '남성' : '여성', onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
+                                _InfoRow(label: '학과', value: _profile?['department']?.toString() ?? '-', onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
+                                _InfoRow(label: '키', value: _profile?['heightCm'] != null ? '${_profile!['heightCm']}cm' : '-', onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
+                                _InfoRow(label: '학년', value: _toLabel('gradeYear', _profile?['gradeYear']), onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
+                                _InfoRow(label: 'MBTI', value: _profile?['mbti']?.toString() ?? '-', onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
+                                _InfoRow(label: '한줄소개', value: _profile?['introOneLine']?.toString() ?? '-', onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
+                                if (_profile?['idealTypeKeywords'] is List && (_profile!['idealTypeKeywords'] as List).isNotEmpty) ...[
+                                  const SizedBox(height: 16),
+                                  Divider(height: 1, color: dark ? Colors.grey.shade700 : Colors.grey.shade200),
+                                  const SizedBox(height: 12),
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text('관심사', style: TextStyle(fontSize: 14, color: onSurfaceVariant)),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: ((_profile!['idealTypeKeywords'] as List).map((e) => e?.toString() ?? '')).where((s) => s.isNotEmpty).map((tag) => Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: dark ? rose.withOpacity(0.3) : const Color(0xFFFFF1F2),
+                                        borderRadius: BorderRadius.circular(999),
+                                      ),
+                                      child: Text('#$tag', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: dark ? const Color(0xFFFDA4AF) : rose)),
+                                    )).toList(),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => Navigator.of(context).pushNamed(AppRoutes.profileSetup, arguments: true),
+                            borderRadius: BorderRadius.circular(16),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
+                                  colors: [Color(0xFFF43F5E), Color(0xFFEC4899)],
+                                ),
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [BoxShadow(color: rose.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4))],
+                              ),
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.edit, color: Colors.white, size: 20),
+                                  SizedBox(width: 8),
+                                  Text('내 프로필 수정', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                                ],
                               ),
                             ),
                           ),
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-                            child: PrimaryButton(
-                              label: '내 프로필 수정',
-                              onPressed: () {
-                                Navigator.of(context).pushNamed(
-                                  AppRoutes.profileSetup,
-                                  arguments: true,
-                                );
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
+                    ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({required this.label, required this.value, required this.onSurface, required this.onSurfaceVariant});
+  final String label;
+  final String value;
+  final Color onSurface;
+  final Color onSurfaceVariant;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(fontSize: 14, color: onSurfaceVariant)),
+          Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: onSurface)),
+        ],
       ),
     );
   }

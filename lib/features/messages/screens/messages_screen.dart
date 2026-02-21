@@ -23,23 +23,19 @@ class _MessagesScreenState extends State<MessagesScreen> {
   String? _myUserId;
 
   @override
-  @override
   void initState() {
     super.initState();
     _initAndLoad();
   }
 
   Future<void> _initAndLoad() async {
-    // 내 userId 가져오기
     try {
-      final profile = await AuthRepository().getProfile();
-      setState(() {
-        _myUserId = profile['id']?.toString();
-      });
+      final res = await AuthRepository().getProfile();
+      final user = res['user'] as Map<String, dynamic>?;
+      final id = user?['id']?.toString() ?? res['id']?.toString();
+      if (mounted) setState(() => _myUserId = id);
     } catch (_) {
-      setState(() {
-        _myUserId = null;
-      });
+      if (mounted) setState(() => _myUserId = null);
     }
     await _loadRooms();
   }
@@ -137,12 +133,21 @@ class _MessagesScreenState extends State<MessagesScreen> {
 
   Future<void> _loadRooms() async {
     setState(() => _loading = true);
-    final rooms = await _repository.listRooms();
-    setState(() {
-      _rooms = rooms;
-      _loading = false;
-    });
-    await _loadUnreadCountsAndTimes();
+    try {
+      final rooms = await _repository.listRooms();
+      if (!mounted) return;
+      setState(() {
+        _rooms = rooms;
+        _loading = false;
+      });
+      await _loadUnreadCountsAndTimes();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _rooms = [];
+        _loading = false;
+      });
+    }
   }
   String _formatTimeAgo(DateTime? time) {
     if (time == null) return '';
@@ -160,203 +165,175 @@ class _MessagesScreenState extends State<MessagesScreen> {
     _loadRooms();
   }
 
-  Widget _buildTopBar() {
-    final universityColor = Theme.of(context).colorScheme.primary;
-    // 홈과 동일한 스타일의 배너
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          height: 120,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                universityColor,
-                universityColor.withOpacity(0.85),
-              ],
-            ),
-          ),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Opacity(
-                opacity: 0.12,
-                child: Image.asset(
-                  'assets/noise.png',
-                  fit: BoxFit.cover,
-                ),
-              ),
-              SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Align(
-                    alignment: Alignment.bottomLeft,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = dark ? Colors.white : const Color(0xFF111827);
+    final onSurfaceVariant = dark ? Colors.grey.shade400 : Colors.grey.shade600;
+    const rose = Color(0xFFF43F5E);
+
+    return Scaffold(
+      backgroundColor: dark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _rooms.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text(
-                          '메시지함',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 20,
-                            shadows: [Shadow(color: Colors.black26, blurRadius: 2)],
-                          ),
+                        Icon(Icons.chat_bubble_outline, size: 64, color: onSurfaceVariant),
+                        const SizedBox(height: 16),
+                        Text(
+                          '아직 메시지가 없어요',
+                          style: TextStyle(fontSize: 16, color: onSurfaceVariant),
+                          textAlign: TextAlign.center,
                         ),
-                        const Spacer(),
-                        // 필요시 알림/설정 아이콘 추가 가능
+                        const SizedBox(height: 8),
+                        Text(
+                          '게시판에서 마음에 드는 프로필을 찾아보세요!',
+                          style: TextStyle(fontSize: 14, color: onSurfaceVariant),
+                          textAlign: TextAlign.center,
+                        ),
                       ],
                     ),
                   ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  itemCount: _rooms.length,
+                  separatorBuilder: (_, __) => Divider(height: 1, color: dark ? Colors.grey.shade800 : Colors.grey.shade200),
+                  itemBuilder: (context, index) {
+                    final room = _rooms[index];
+                    final partner = room['partnerNickname']?.toString() ?? '대화';
+                    final last = room['lastMessage']?.toString() ?? '';
+                    final photoKey = room['partnerPhotoStorageKey']?.toString();
+                    final photoUrl = _resolvePhotoUrl(photoKey);
+                    final roomId = room['roomId']?.toString() ?? '';
+                    final isActive = room['isActive'] == true;
+                    final avatarSeed = room['partnerAvatarSeed']?.toString() ?? room['partnerUserId']?.toString();
+                    final avatarOptionsRaw = room['partnerAvatarOptions']?.toString();
+                    Map<String, String> avatarOptions = {};
+                    if (avatarOptionsRaw != null && avatarOptionsRaw.isNotEmpty) {
+                      try {
+                        final decoded = jsonDecode(avatarOptionsRaw);
+                        if (decoded is Map<String, dynamic>) {
+                          avatarOptions = decoded.map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
+                        }
+                      } catch (_) {}
+                    }
+                    int unread = _unreadCounts[roomId] ?? 0;
+                    DateTime? lastTime = _lastMessageTimes[roomId];
+                    String timeAgo = _formatTimeAgo(lastTime);
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _buildTopBar(),
-          Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : _rooms.isEmpty
-                    ? const Center(child: Text('아직 대화가 없습니다.'))
-                    : ListView.separated(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _rooms.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
-                        itemBuilder: (context, index) {
-                          final room = _rooms[index];
-                          final partner = room['partnerNickname']?.toString() ?? '대화';
-                          final last = room['lastMessage']?.toString() ?? '';
-                          final photoKey = room['partnerPhotoStorageKey']?.toString();
-                          final photoUrl = _resolvePhotoUrl(photoKey);
-                          final roomId = room['roomId']?.toString() ?? '';
-                          final isActive = room['isActive'] == true;
-                          
-                          // 아바타 정보 가져오기 (chat_room_screen과 동일한 방식)
-                          // room 데이터에서 partnerAvatarSeed와 partnerAvatarOptions를 우선 사용
-                          // 없으면 partnerUserId를 시드로 사용
-                          final avatarSeed = room['partnerAvatarSeed']?.toString() ?? 
-                                           room['partnerUserId']?.toString();
-                          final avatarOptionsRaw = room['partnerAvatarOptions']?.toString();
-                          Map<String, String> avatarOptions = {};
-                          if (avatarOptionsRaw != null && avatarOptionsRaw.isNotEmpty) {
-                            try {
-                              final decoded = jsonDecode(avatarOptionsRaw);
-                              if (decoded is Map<String, dynamic>) {
-                                avatarOptions = decoded.map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
-                              }
-                            } catch (_) {}
-                          }
-                          
-                          int unread = _unreadCounts[roomId] ?? 0;
-                          DateTime? lastTime = _lastMessageTimes[roomId];
-                          String timeAgo = _formatTimeAgo(lastTime);
-                          return Dismissible(
-                            key: ValueKey(roomId),
-                            direction: DismissDirection.endToStart,
-                            confirmDismiss: (_) async {
-                              return await showDialog<bool>(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('대화방 삭제'),
-                                  content: const Text('이 대화방을 삭제할까요?'),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(context).pop(false),
-                                      child: const Text('취소'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () => Navigator.of(context).pop(true),
-                                      child: const Text('삭제'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                            onDismissed: (_) => _deleteRoom(roomId),
-                            background: Container(
-                              alignment: Alignment.centerRight,
-                              padding: const EdgeInsets.symmetric(horizontal: 20),
-                              color: Colors.red.shade400,
-                              child: const Icon(Icons.delete, color: Colors.white),
-                            ),
-                            child: ListTile(
-                              leading: _buildAvatar(photoUrl, avatarSeed, avatarOptions, partner),
-                              title: Text(partner),
-                              subtitle: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      isActive ? last : '매칭이 취소된 대화입니다.',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  if (timeAgo.isNotEmpty)
-                                    Padding(
-                                      padding: const EdgeInsets.only(left: 8.0),
-                                      child: Text(
-                                        timeAgo,
-                                        style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (unread > 0)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: Colors.red,
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        unread.toString(),
-                                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
-                                  const SizedBox(width: 8),
-                                  const Icon(Icons.chevron_right),
-                                ],
-                              ),
-                              onTap: () {
-                                Navigator.of(context)
-                                    .pushNamed(
-                                      AppRoutes.chatRoom,
-                                      arguments: {
-                                        'roomId': roomId,
-                                        'partnerNickname': partner,
-                                        'isActive': isActive,
-                                      },
-                                    )
-                                    .then((value) {
-                                  if (value == true) {
-                                    _loadRooms();
-                                  }
-                                });
-                              },
-                            ),
-                          );
-                        },
+                    return Dismissible(
+                      key: ValueKey(roomId),
+                      direction: DismissDirection.endToStart,
+                      confirmDismiss: (_) async {
+                        return await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('대화방 삭제'),
+                            content: const Text('이 대화방을 삭제할까요?'),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('취소')),
+                              TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('삭제')),
+                            ],
+                          ),
+                        );
+                      },
+                      onDismissed: (_) => _deleteRoom(roomId),
+                      background: Container(
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        color: Colors.red.shade400,
+                        child: const Icon(Icons.delete, color: Colors.white),
                       ),
-          ),
-        ],
-      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            Navigator.of(context)
+                                .pushNamed(AppRoutes.chatRoom, arguments: {
+                                  'roomId': roomId,
+                                  'partnerNickname': partner,
+                                  'isActive': isActive,
+                                })
+                                .then((value) {
+                              if (value == true) _loadRooms();
+                            });
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            child: Row(
+                              children: [
+                                Container(
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.white, width: 2),
+                                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 4)],
+                                  ),
+                                  child: _buildAvatar(photoUrl, avatarSeed, avatarOptions, partner),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              partner,
+                                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: onSurface),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          if (timeAgo.isNotEmpty)
+                                            Text(
+                                              timeAgo,
+                                              style: TextStyle(fontSize: 12, color: onSurfaceVariant),
+                                            ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              isActive ? last : '매칭이 취소된 대화입니다.',
+                                              style: TextStyle(fontSize: 14, color: onSurfaceVariant),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          if (unread > 0)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: rose,
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                              child: Text(
+                                                unread.toString(),
+                                                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Icon(Icons.chevron_right, color: onSurfaceVariant, size: 24),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
     );
   }
 }
