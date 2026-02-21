@@ -17,7 +17,6 @@ class _ChatMessage {
   final bool isMine;
   final bool isSystem;
   final DateTime? readAt;
-  final DateTime? sentAt;
   final String senderId;
 
   _ChatMessage({
@@ -27,7 +26,6 @@ class _ChatMessage {
     required this.senderId,
     this.isSystem = false,
     this.readAt,
-    this.sentAt,
   });
 }
 
@@ -198,7 +196,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
               senderId: senderId ?? '',
               isSystem: m['isSystem'] == true,
               readAt: m['readAt'] != null ? DateTime.tryParse(m['readAt'].toString()) : null,
-              sentAt: m['createdAt'] != null ? DateTime.tryParse(m['createdAt'].toString()) : null,
             );
           }));
         _loading = false;
@@ -218,7 +215,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
               senderId: msg.senderId,
               isSystem: msg.isSystem,
               readAt: now,
-              sentAt: msg.sentAt,
             );
           });
           // 소켓으로 읽음 이벤트도 같이 전송
@@ -272,7 +268,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
           senderId: data['senderId']?.toString() ?? '',
           isSystem: false,
           readAt: data['readAt'] != null ? DateTime.tryParse(data['readAt'].toString()) : null,
-          sentAt: data['createdAt'] != null ? DateTime.tryParse(data['createdAt'].toString()) : null,
         ));
       });
       _scrollToBottom();
@@ -300,7 +295,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
               senderId: msg.senderId,
               isSystem: msg.isSystem,
               readAt: now,
-              sentAt: msg.sentAt,
             );
           }
         });
@@ -327,7 +321,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
               senderId: msg.senderId,
               isSystem: msg.isSystem,
               readAt: readAt,
-              sentAt: msg.sentAt,
             ));
           } else {
             newList.add(msg);
@@ -390,7 +383,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
           text: text,
           isMine: true,
           senderId: _myUserId ?? '',
-          sentAt: DateTime.now(),
         ));
       });
       try {
@@ -403,7 +395,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
             text: '메시지 전송 실패',
             isMine: false,
             senderId: _myUserId ?? '',
-            sentAt: DateTime.now(),
           ));
         });
       }
@@ -469,238 +460,185 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
     super.dispose();
   }
 
-  static const _roseGradient = LinearGradient(
-    begin: Alignment.centerLeft,
-    end: Alignment.centerRight,
-    colors: [Color(0xFFFB7185), Color(0xFFF43F5E)],
-  );
-  static const _rose500 = Color(0xFFF43F5E);
-
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final bgMessages = dark ? const Color(0xFF111827) : const Color(0xFFF9FAFB);
-    final bgBubbleOther = dark ? const Color(0xFF1F2937) : Colors.white;
-    final bgInput = dark ? const Color(0xFF1F2937) : const Color(0xFFF3F4F6);
-    final borderInput = dark ? const Color(0xFF374151) : const Color(0xFFE5E7EB);
-    final topInset = MediaQuery.of(context).padding.top;
-
     return Scaffold(
-      backgroundColor: bgMessages,
+      appBar: AppBar(
+        title: Text(_title),
+        actions: [
+          TextButton(
+            onPressed: _cancelMatch,
+            child: const Text('매칭 취소'),
+          ),
+        ],
+      ),
       body: SafeArea(
-        top: false,
         child: Column(
           children: [
-            // AppDesign 헤더: 로즈 그라데이션, 뒤로가기, 아바타+이름+온라인, 매칭 취소(점 3개 대신)
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.only(left: 12, right: 12, top: topInset > 0 ? topInset : 56, bottom: 16),
-              decoration: const BoxDecoration(
-                gradient: _roseGradient,
-                boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2))],
-              ),
-              child: Row(
+            Expanded(
+              child: Column(
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 22),
-                    onPressed: () => Navigator.of(context).pop(),
-                    padding: const EdgeInsets.all(8),
-                  ),
-                  Expanded(
-                    child: Row(
-                      children: [
-                        _buildPartnerAvatar(context, radius: 20),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                _title,
-                                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const Text('온라인', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: _isActive ? _cancelMatch : null,
-                      borderRadius: BorderRadius.circular(8),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        child: Text(
-                          '매칭 취소',
-                          style: TextStyle(
-                            color: _isActive ? Colors.white : Colors.white70,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
+                  if (!_isActive)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      color: Colors.grey.shade200,
+                      child: Text(
+                        '매칭이 취소되어 메시지를 보낼 수 없습니다.',
+                        style: TextStyle(color: Colors.grey.shade700),
                       ),
                     ),
+                  Expanded(
+                    child: _loading
+                        ? const Center(child: CircularProgressIndicator())
+                        : _messages.isEmpty
+                            ? const Center(child: Text('첫 메시지를 보내 보세요.'))
+                            : ListView.separated(
+                                controller: _scrollController,
+                                reverse: true,
+                                padding: const EdgeInsets.all(16),
+                                itemCount: _messages.length,
+                                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                                itemBuilder: (context, index) {
+                                  final message = _messages[_messages.length - 1 - index];
+                                  DateTime? messageDate = message.readAt ?? DateTime.now();
+                                  if (messageDate == null && message is _ChatMessage) {
+                                    // fallback to createdAt if available
+                                    // (createdAt이 없으면 현재 시간 사용)
+                                    messageDate = DateTime.now();
+                                  }
+                                  DateTime? prevDate;
+                                  if (index < _messages.length - 1) {
+                                    final prevMessage = _messages[_messages.length - 1 - (index + 1)];
+                                    prevDate = prevMessage.readAt ?? DateTime.now();
+                                  }
+                                  bool isNewDate = false;
+                                  if (messageDate != null) {
+                                    if (prevDate == null ||
+                                        messageDate.year != prevDate.year ||
+                                        messageDate.month != prevDate.month ||
+                                        messageDate.day != prevDate.day) {
+                                      isNewDate = true;
+                                    }
+                                  }
+                                  List<Widget> children = [];
+                                  if (isNewDate) {
+                                    children.add(
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 8),
+                                        child: Center(
+                                          child: Text(
+                                            "${messageDate.year}.${messageDate.month.toString().padLeft(2, '0')}.${messageDate.day.toString().padLeft(2, '0')}",
+                                            style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  if (message.isSystem) {
+                                    children.add(
+                                      Center(
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 8,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey.shade200,
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Text(
+                                            message.text,
+                                            style: TextStyle(color: Colors.grey.shade700),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  } else {
+                                    final color = message.isMine
+                                        ? Theme.of(context).colorScheme.primary
+                                        : Colors.grey.shade200;
+                                    final textColor = message.isMine
+                                        ? Colors.white
+                                        : Colors.black87;
+                                    children.add(
+                                      Row(
+                                        key: ValueKey('${message.id}_${message.readAt?.millisecondsSinceEpoch ?? 0}'),
+                                        mainAxisAlignment: message.isMine
+                                            ? MainAxisAlignment.end
+                                            : MainAxisAlignment.start,
+                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                        children: [
+                                          if (message.isMine && message.readAt == null)
+                                            Padding(
+                                              padding: const EdgeInsets.only(right: 4),
+                                              child: Text('1', style: TextStyle(color: Colors.red, fontSize: 14, fontWeight: FontWeight.bold)),
+                                            ),
+                                          if (!message.isMine) ...[
+                                            _buildPartnerAvatar(context),
+                                            const SizedBox(width: 8),
+                                          ],
+                                          Column(
+                                            crossAxisAlignment: message.isMine
+                                                ? CrossAxisAlignment.end
+                                                : CrossAxisAlignment.start,
+                                            children: [
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                                decoration: BoxDecoration(
+                                                  color: color,
+                                                  borderRadius: BorderRadius.circular(16),
+                                                ),
+                                                child: Text(message.text, style: TextStyle(color: textColor)),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                _formatMessageTime(message.readAt),
+                                                style: TextStyle(
+                                                  color: Colors.grey.shade500,
+                                                  fontSize: 11,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          if (!_isActive && !message.isMine && message.readAt == null)
+                                            Padding(
+                                              padding: const EdgeInsets.only(left: 4),
+                                              child: Text('1', style: TextStyle(color: Colors.red, fontSize: 14, fontWeight: FontWeight.bold)),
+                                            ),
+                                        ],
+                                      ),
+                                    );
+                                  }
+                                  return Column(
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: children,
+                                  );
+                                },
+                              ),
                   ),
                 ],
               ),
             ),
-            if (!_isActive)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                color: dark ? const Color(0xFF1F2937) : Colors.grey.shade200,
-                child: Text(
-                  '매칭이 취소되어 메시지를 보낼 수 없습니다.',
-                  style: TextStyle(color: dark ? Colors.grey.shade400 : Colors.grey.shade700, fontSize: 13),
-                ),
-              ),
-            Expanded(
-              child: _loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _messages.isEmpty
-                      ? Center(
-                          child: Text(
-                            '첫 메시지를 보내 보세요.',
-                            style: TextStyle(color: dark ? Colors.grey.shade500 : Colors.grey.shade600),
-                          ),
-                        )
-                      : ListView.separated(
-                          controller: _scrollController,
-                          reverse: true,
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                          itemCount: _messages.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 12),
-                          itemBuilder: (context, index) {
-                            final message = _messages[_messages.length - 1 - index];
-                            if (message.isSystem) {
-                              return Center(
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: dark ? const Color(0xFF1F2937) : Colors.grey.shade200,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    message.text,
-                                    style: TextStyle(color: dark ? Colors.grey.shade400 : Colors.grey.shade700, fontSize: 13),
-                                  ),
-                                ),
-                              );
-                            }
-                            final timeStr = _formatMessageTime(message.sentAt ?? message.readAt);
-                            return Row(
-                              key: ValueKey('${message.id}_${message.readAt?.millisecondsSinceEpoch ?? 0}'),
-                              mainAxisAlignment: message.isMine ? MainAxisAlignment.end : MainAxisAlignment.start,
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                if (message.isMine && message.readAt == null)
-                                  Padding(
-                                    padding: const EdgeInsets.only(right: 4),
-                                    child: Text('1', style: TextStyle(color: Colors.red, fontSize: 14, fontWeight: FontWeight.bold)),
-                                  ),
-                                if (!message.isMine) ...[
-                                  _buildPartnerAvatar(context, radius: 16),
-                                  const SizedBox(width: 8),
-                                ],
-                                Flexible(
-                                  child: Column(
-                                    crossAxisAlignment: message.isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                        decoration: BoxDecoration(
-                                          color: message.isMine ? _rose500 : bgBubbleOther,
-                                          borderRadius: BorderRadius.only(
-                                            topLeft: const Radius.circular(16),
-                                            topRight: const Radius.circular(16),
-                                            bottomLeft: Radius.circular(message.isMine ? 16 : 4),
-                                            bottomRight: Radius.circular(message.isMine ? 4 : 16),
-                                          ),
-                                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 4, offset: const Offset(0, 1))],
-                                        ),
-                                        child: Text(
-                                          message.text,
-                                          style: TextStyle(
-                                            color: message.isMine ? Colors.white : (dark ? Colors.white : Colors.black87),
-                                            fontSize: 14,
-                                            height: 1.4,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        timeStr,
-                                        style: TextStyle(color: dark ? Colors.grey.shade500 : Colors.grey.shade500, fontSize: 11),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                if (!message.isMine && message.readAt == null)
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 4),
-                                    child: Text('1', style: TextStyle(color: Colors.red, fontSize: 14, fontWeight: FontWeight.bold)),
-                                  ),
-                              ],
-                            );
-                          },
-                        ),
-            ),
             if (_isActive)
-              Container(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-                decoration: BoxDecoration(
-                  color: dark ? const Color(0xFF1F2937) : Colors.white,
-                  border: Border(top: BorderSide(color: borderInput)),
-                ),
+              Padding(
+                padding: const EdgeInsets.all(12),
                 child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Expanded(
-                      child: Container(
-                        constraints: const BoxConstraints(maxHeight: 80),
-                        decoration: BoxDecoration(
-                          color: bgInput,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: TextField(
-                          controller: _controller,
-                          onSubmitted: (_) => _sendMessage(),
-                          maxLines: null,
-                          decoration: InputDecoration(
-                            hintText: '메시지를 입력하세요...',
-                            hintStyle: TextStyle(color: dark ? Colors.grey.shade500 : Colors.grey.shade600, fontSize: 14),
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          ),
-                          style: TextStyle(color: dark ? Colors.white : Colors.black87, fontSize: 14),
+                      child: TextField(
+                        controller: _controller,
+                        onSubmitted: (_) => _sendMessage(),
+                        decoration: const InputDecoration(
+                          hintText: '메시지를 입력하세요',
+                          border: OutlineInputBorder(),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    ValueListenableBuilder<TextEditingValue>(
-                      valueListenable: _controller,
-                      builder: (context, value, _) {
-                        final hasText = value.text.trim().isNotEmpty;
-                        return Material(
-                          color: hasText ? _rose500 : (dark ? const Color(0xFF374151) : Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(999),
-                          elevation: 2,
-                          shadowColor: _rose500.withOpacity(0.3),
-                          child: InkWell(
-                            onTap: _sendMessage,
-                            borderRadius: BorderRadius.circular(999),
-                            child: const Padding(
-                              padding: EdgeInsets.all(12),
-                              child: Icon(Icons.send_rounded, color: Colors.white, size: 22),
-                            ),
-                          ),
-                        );
-                      },
+                    const SizedBox(width: 8),
+                    IconButton(
+                      onPressed: _sendMessage,
+                      icon: const Icon(Icons.send),
                     ),
                   ],
                 ),
@@ -721,11 +659,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
     }
   }
 
-  Widget _buildPartnerAvatar(BuildContext context, {double radius = 18}) {
+  static const double _partnerAvatarRadius = 18;
+
+  Widget _buildPartnerAvatar(BuildContext context) {
     Widget avatar;
     if (_partnerPhotoStorageKey != null && _partnerPhotoStorageKey!.isNotEmpty) {
       avatar = CircleAvatar(
-        radius: radius,
+        radius: _partnerAvatarRadius,
         backgroundImage: NetworkImage(
           'https://nearo-image.s3.ap-northeast-2.amazonaws.com/$_partnerPhotoStorageKey',
         ),
@@ -745,23 +685,23 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
         }
         final url = diceBearAvatarUrl(seed, options: opts.isNotEmpty ? opts : null);
         avatar = CircleAvatar(
-          radius: radius,
+          radius: _partnerAvatarRadius,
           backgroundColor: Colors.grey.shade300,
           child: ClipOval(
             child: SvgPicture.network(
               url,
               fit: BoxFit.cover,
-              width: radius * 2,
-              height: radius * 2,
-              placeholderBuilder: (_) => Icon(Icons.person, size: radius, color: Colors.grey.shade600),
+              width: _partnerAvatarRadius * 2,
+              height: _partnerAvatarRadius * 2,
+              placeholderBuilder: (_) => Icon(Icons.person, size: _partnerAvatarRadius, color: Colors.grey.shade600),
             ),
           ),
         );
       } else {
         avatar = CircleAvatar(
-          radius: radius,
+          radius: _partnerAvatarRadius,
           backgroundColor: Colors.grey.shade300,
-          child: Icon(Icons.person, size: radius, color: Colors.grey.shade600),
+          child: Icon(Icons.person, size: _partnerAvatarRadius, color: Colors.grey.shade600),
         );
       }
     }
@@ -801,7 +741,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
           );
         }
       },
-      borderRadius: BorderRadius.circular(radius),
+      borderRadius: BorderRadius.circular(_partnerAvatarRadius),
       child: avatar,
     );
   }

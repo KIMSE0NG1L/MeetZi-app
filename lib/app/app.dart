@@ -1,4 +1,3 @@
-import 'dart:async';
 
 import 'package:app_links/app_links.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -28,7 +27,10 @@ import 'package:nearo_app/features/users/screens/users_screen.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/auth/data/environment_status_repository.dart';
 import 'package:nearo_app/features/home/screens/home_shell_screen.dart';
+import 'dart:async';
 import 'package:nearo_app/features/profile/screens/avatar_setup_screen.dart';
+
+final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
 
 class NearoApp extends StatefulWidget {
   const NearoApp({super.key});
@@ -200,6 +202,7 @@ class _NearoAppState extends State<NearoApp> {
                     AppRoutes.partnerProfile: (_) => const PartnerProfileScreen(),
                     AppRoutes.home: (_) => const HomeShellScreen(),
                   },
+                  navigatorObservers: [routeObserver],
                 );
               },
             );
