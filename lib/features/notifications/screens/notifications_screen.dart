@@ -80,97 +80,144 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     _load();
   }
 
+  static const _roseGradient = LinearGradient(
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [Color(0xFFFB7185), Color(0xFFF43F5E)],
+  );
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_selectionMode ? '${_selectedIds.length}개 선택' : '알림'),
-        backgroundColor: theme.colorScheme.primary,
-        foregroundColor: Colors.white,
-        actions: [
-          if (!_selectionMode) ...[
-            IconButton(
-              icon: const Icon(Icons.checklist),
-              onPressed: () => setState(() => _selectionMode = true),
-              tooltip: '선택 삭제',
+      backgroundColor: theme.brightness == Brightness.dark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
+      body: Column(
+        children: [
+          // AppDesign 헤더: 로즈 그라데이션 + 뒤로가기 + 알림 + 액션
+          Container(
+            height: 80,
+            decoration: const BoxDecoration(
+              gradient: _roseGradient,
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(32),
+                bottomRight: Radius.circular(32),
+              ),
+              boxShadow: [
+                BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2)),
+              ],
             ),
-            IconButton(
-              icon: const Icon(Icons.delete_sweep),
-              onPressed: _items.isEmpty ? null : _deleteAll,
-              tooltip: '전체 삭제',
-            ),
-          ] else ...[
-            IconButton(
-              icon: const Icon(Icons.close),
-              onPressed: () => setState(() {
-                _selectionMode = false;
-                _selectedIds.clear();
-              }),
-              tooltip: '취소',
-            ),
-            IconButton(
-              icon: const Icon(Icons.delete_outline),
-              onPressed: _selectedIds.isEmpty ? null : _deleteSelected,
-              tooltip: '선택 삭제',
-            ),
-          ],
-        ],
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _items.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.notifications_none, size: 64, color: theme.colorScheme.outline),
-                      const SizedBox(height: 16),
-                      Text(
-                        '도착한 알림이 없습니다',
-                        style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.outline),
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 22),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                    Expanded(
+                      child: Text(
+                        _selectionMode ? '${_selectedIds.length}개 선택' : '알림',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    if (!_selectionMode) ...[
+                      IconButton(
+                        icon: const Icon(Icons.checklist, color: Colors.white, size: 24),
+                        onPressed: () => setState(() => _selectionMode = true),
+                        tooltip: '선택 삭제',
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.delete_sweep, color: _items.isEmpty ? Colors.white54 : Colors.white, size: 24),
+                        onPressed: _items.isEmpty ? null : _deleteAll,
+                        tooltip: '전체 삭제',
+                      ),
+                    ] else ...[
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white, size: 24),
+                        onPressed: () => setState(() {
+                          _selectionMode = false;
+                          _selectedIds.clear();
+                        }),
+                        tooltip: '취소',
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.delete_outline, color: _selectedIds.isEmpty ? Colors.white54 : Colors.white, size: 24),
+                        onPressed: _selectedIds.isEmpty ? null : _deleteSelected,
+                        tooltip: '선택 삭제',
                       ),
                     ],
-                  ),
-                )
-              : ListView.builder(
-                  itemCount: _items.length,
-                  itemBuilder: (context, index) {
-                    final item = _items[index];
-                    final selected = _selectedIds.contains(item.id);
-                    return ListTile(
-                      leading: _selectionMode
-                          ? Checkbox(
-                              value: selected,
-                              onChanged: (_) => _toggleSelection(item.id),
-                              activeColor: theme.colorScheme.primary,
-                            )
-                          : Icon(Icons.notifications_outlined, color: theme.colorScheme.primary),
-                      title: Text(
-                        item.title,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      subtitle: item.body.isNotEmpty
-                          ? Text(
-                              item.body,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            )
-                          : null,
-                      trailing: _selectionMode ? null : Text(
-                        _formatDate(item.createdAt),
-                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
-                      ),
-                      onTap: () {
-                        if (_selectionMode) {
-                          _toggleSelection(item.id);
-                        }
-                      },
-                    );
-                  },
+                  ],
                 ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : _items.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.notifications_none, size: 64, color: theme.colorScheme.outline),
+                            const SizedBox(height: 16),
+                            Text(
+                              '도착한 알림이 없습니다',
+                              style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.outline),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: _items.length,
+                        itemBuilder: (context, index) {
+                          final item = _items[index];
+                          final selected = _selectedIds.contains(item.id);
+                          return ListTile(
+                            leading: _selectionMode
+                                ? Checkbox(
+                                    value: selected,
+                                    onChanged: (_) => _toggleSelection(item.id),
+                                    activeColor: theme.colorScheme.primary,
+                                  )
+                                : Icon(Icons.notifications_outlined, color: theme.colorScheme.primary),
+                            title: Text(
+                              item.title,
+                              style: const TextStyle(fontWeight: FontWeight.w600),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            subtitle: item.body.isNotEmpty
+                                ? Text(
+                                    item.body,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  )
+                                : null,
+                            trailing: _selectionMode
+                                ? null
+                                : Text(
+                                    _formatDate(item.createdAt),
+                                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+                                  ),
+                            onTap: () {
+                              if (_selectionMode) {
+                                _toggleSelection(item.id);
+                              }
+                            },
+                          );
+                        },
+                      ),
+          ),
+        ],
+      ),
     );
   }
 

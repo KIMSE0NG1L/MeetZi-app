@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -29,7 +28,6 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   int _profileViewCount = 0;
   DateTime? _lastViewTime;
   int? _myCredit;
-  int? _flippedIndex; // 추가: 현재 플립된 카드 인덱스
   @override
   void initState() {
     super.initState();
@@ -132,157 +130,218 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     );
   }
 
+  static const _rose = Color(0xFFF43F5E);
+  static const _blueGradient = LinearGradient(
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [Color(0xFF3B82F6), Color(0xFF6366F1)],
+  );
+
   @override
   Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final surface = dark ? const Color(0xFF1F2937) : Colors.white;
+    final onSurface = dark ? Colors.white : const Color(0xFF111827);
+    final onSurfaceVariant = dark ? Colors.grey.shade400 : Colors.grey.shade600;
+
     return FutureBuilder<Map<String, dynamic>>(
       future: AuthRepository().getProfile(),
       builder: (context, snapshot) {
-        final myUserId = snapshot.data?['id'];
+        final raw = snapshot.data;
+        final Map<String, dynamic>? profileData = raw != null && raw is Map<String, dynamic>
+            ? (raw['user'] as Map<String, dynamic>?) ?? raw
+            : null;
+        final myUserId = profileData?['id']?.toString() ?? raw?['id']?.toString();
+        final myNickname = profileData?['nickname']?.toString() ?? raw?['nickname']?.toString() ?? '나';
+        final meProfile = profileData != null
+            ? {'user': profileData, 'userId': myUserId, 'nickname': myNickname}
+            : null;
+
         return Scaffold(
-          backgroundColor: Colors.white,
+          backgroundColor: dark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
           body: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : Column(
-                    children: [
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: GridView.builder(
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 3,
-                              childAspectRatio: 0.57,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 16,
+              ? const Center(child: CircularProgressIndicator())
+              : Stack(
+                  children: [
+                    Column(
+                      children: [
+                        // AppDesign 스탯 바: 내 아바타 + 닉네임 + 남자 게시판 버튼
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                          child: Material(
+                            color: surface,
+                            borderRadius: BorderRadius.circular(16),
+                            elevation: 2,
+                            shadowColor: Colors.black.withOpacity(0.06),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                children: [
+                                  if (meProfile != null)
+                                    Container(
+                                      width: 48,
+                                      height: 48,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: const Color(0xFFFECDD3), width: 2),
+                                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 4)],
+                                      ),
+                                      child: ClipOval(
+                                        child: FittedBox(
+                                          fit: BoxFit.cover,
+                                          child: SizedBox(
+                                            width: 64,
+                                            height: 64,
+                                            child: _buildBoardAvatar(context, meProfile),
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                  else
+                                    CircleAvatar(radius: 24, backgroundColor: Colors.grey.shade300, child: Icon(Icons.person, color: Colors.grey.shade600)),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      myNickname,
+                                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: onSurface),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: () {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('남자 게시판은 준비 중이에요')),
+                                        );
+                                      },
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                        decoration: BoxDecoration(
+                                          gradient: _blueGradient,
+                                          borderRadius: BorderRadius.circular(12),
+                                          boxShadow: [BoxShadow(color: Colors.blue.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 2))],
+                                        ),
+                                        child: const Text('남자 게시판 →', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                            itemCount: _profiles.length,
-                            itemBuilder: (context, index) {
-                              final profile = _profiles[index];
-                              final isMe = myUserId != null && profile['userId'] == myUserId;
-                              return _FlipCard(
-                                flipped: _flippedIndex == index,
-                                front: Material(
+                          ),
+                        ),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            child: GridView.builder(
+                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 3,
+                                childAspectRatio: 0.62,
+                                crossAxisSpacing: 16,
+                                mainAxisSpacing: 16,
+                              ),
+                              itemCount: _profiles.length,
+                              itemBuilder: (context, index) {
+                                final profile = _profiles[index];
+                                final isMe = myUserId != null && profile['userId'] == myUserId;
+                                final tag = isMe ? '' : ((profile['idealType'] ?? (profile['user'] as Map<String, dynamic>?)?['idealType'])?.toString() ?? '-');
+                                // AppDesign 스타일: 단순 카드, 탭 시 프로필 상세(노트 시트)만 열기
+                                return Material(
                                   color: Colors.transparent,
                                   child: InkWell(
-                                    onTap: isMe ? null : () async {
-                                      setState(() => _flippedIndex = index);
-                                      await Future.delayed(const Duration(milliseconds: 350));
-                                      _openNoteSheet(context, index, myUserId);
-                                    },
-                                    borderRadius: BorderRadius.circular(20),
+                                    onTap: isMe ? null : () => _openNoteSheet(context, index, myUserId),
+                                    borderRadius: BorderRadius.circular(16),
                                     child: Container(
                                       decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(
-                                          color: Colors.grey.withOpacity(0.18),
-                                          width: 1.2,
-                                        ),
+                                        color: surface,
+                                        borderRadius: BorderRadius.circular(16),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: Colors.black.withOpacity(0.10),
-                                            blurRadius: 18,
-                                            spreadRadius: 2,
-                                            offset: const Offset(0, 8),
-                                          ),
-                                          BoxShadow(
-                                            color: Colors.brown.withOpacity(0.06),
-                                            blurRadius: 2,
-                                            spreadRadius: 0,
-                                            offset: const Offset(0, 1),
+                                            color: Colors.black.withOpacity(0.08),
+                                            blurRadius: 12,
+                                            offset: const Offset(0, 4),
                                           ),
                                         ],
                                       ),
                                       child: Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 20),
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
                                         child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.start,
-                                          crossAxisAlignment: CrossAxisAlignment.center,
+                                          mainAxisAlignment: MainAxisAlignment.center,
                                           children: [
-                                            _buildBoardAvatar(context, profile),
-                                            const SizedBox(height: 14),
+                                            Container(
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                border: Border.all(color: dark ? Colors.grey.shade700 : const Color(0xFFF3F4F6), width: 2),
+                                                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 4)],
+                                              ),
+                                              child: _buildBoardAvatar(context, profile),
+                                            ),
+                                            const SizedBox(height: 10),
                                             Text(
                                               isMe ? '나' : (profile['nickname'] ?? ''),
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 18,
-                                                color: Colors.black87,
-                                              ),
+                                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: onSurface),
                                               textAlign: TextAlign.center,
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                             ),
-                                            const SizedBox(height: 6),
-                                            Text(
-                                              isMe ? '' : ((profile['idealType'] ?? (profile['user'] as Map<String, dynamic>?)?['idealType'])?.toString() ?? '-'),
-                                              style: TextStyle(
-                                                fontSize: 13,
-                                                color: Colors.grey[700],
+                                            if (tag.isNotEmpty) ...[
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                tag,
+                                                style: TextStyle(fontSize: 11, color: onSurfaceVariant),
+                                                textAlign: TextAlign.center,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
                                               ),
-                                              textAlign: TextAlign.center,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
+                                            ],
                                           ],
                                         ),
                                       ),
                                     ),
                                   ),
-                                ),
-                                back: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(
-                                      color: Colors.grey.withOpacity(0.18),
-                                      width: 1.2,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.10),
-                                        blurRadius: 18,
-                                        spreadRadius: 2,
-                                        offset: const Offset(0, 8),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Center(
-                                    child: Icon(Icons.info_outline, size: 40, color: Colors.grey[400]),
-                                  ),
-                                ),
-                                onFlipBack: () => setState(() => _flippedIndex = null)
-                              );
-                            },
+                                );
+                              },
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      Align(
-                        alignment: Alignment.bottomCenter,
-                        child: Padding(
-                          padding: const EdgeInsets.only(bottom: 32),
-                          child: SizedBox(
-                            width: 180,
-                            height: 48,
-                            child: ElevatedButton.icon(
-                              onPressed: _registerProfile,
-                              icon: const Icon(Icons.add),
-                              label: const Text('등록'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context).colorScheme.primary,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(24),
-                                ),
-                                textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        const SizedBox(height: 100),
+                      ],
+                    ),
+                    // AppDesign FAB 등록
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 24,
+                      child: Center(
+                        child: Material(
+                          color: const Color(0xFFFB7185),
+                          borderRadius: BorderRadius.circular(999),
+                          elevation: 8,
+                          shadowColor: Colors.black.withOpacity(0.25),
+                          child: InkWell(
+                            onTap: _registerProfile,
+                            borderRadius: BorderRadius.circular(999),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.add, color: Colors.white, size: 22),
+                                  const SizedBox(width: 8),
+                                  const Text('등록', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                                ],
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ],
-                  ),
-                );
-              },
+                    ),
+                  ],
+                ),
+        );
+      },
     );
   }
 
@@ -658,73 +717,3 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
   }
 }
 
-// 카드 플립 애니메이션 위젯
-class _FlipCard extends StatefulWidget {
-  final Widget front;
-  final Widget back;
-  final bool flipped;
-  final VoidCallback? onFlipBack;
-  const _FlipCard({required this.front, required this.back, required this.flipped, this.onFlipBack, Key? key}) : super(key: key);
-  @override
-  State<_FlipCard> createState() => _FlipCardState();
-}
-
-class _FlipCardState extends State<_FlipCard> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-  bool _wasFlipped = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 350));
-    _animation = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-  }
-
-  @override
-  void didUpdateWidget(covariant _FlipCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.flipped && !_wasFlipped) {
-      _controller.forward();
-      _wasFlipped = true;
-    } else if (!widget.flipped && _wasFlipped) {
-      _controller.reverse();
-      _wasFlipped = false;
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _animation,
-      builder: (context, child) {
-        final isFront = _animation.value < 0.5;
-        final angle = _animation.value * pi;
-        return GestureDetector(
-          onTap: () {
-            if (!widget.flipped && widget.onFlipBack != null) widget.onFlipBack!();
-          },
-          child: Transform(
-            alignment: Alignment.center,
-            transform: Matrix4.identity()
-              ..setEntry(3, 2, 0.001)
-              ..rotateY(angle),
-            child: isFront
-                ? widget.front
-                : Transform(
-                    alignment: Alignment.center,
-                    transform: Matrix4.identity()..rotateY(pi),
-                    child: widget.back,
-                  ),
-          ),
-        );
-      },
-    );
-  }
-}
