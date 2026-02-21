@@ -258,17 +258,47 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
     _socket!.on('newMessage', (data) {
       print('[소켓 newMessage 핸들러 등록됨] data=$data');
       if (!mounted) return;
+      final messageId = data['id']?.toString() ?? '';
+      final isMine = data['senderId']?.toString() == _myUserId;
       setState(() {
         _messages.add(_ChatMessage(
-          id: data['id']?.toString() ?? '',
+          id: messageId,
           text: data['content'] ?? '',
-          isMine: data['senderId']?.toString() == _myUserId,
+          isMine: isMine,
           senderId: data['senderId']?.toString() ?? '',
           isSystem: false,
           readAt: data['readAt'] != null ? DateTime.tryParse(data['readAt'].toString()) : null,
         ));
       });
       _scrollToBottom();
+      // 상대가 보낸 메시지면 읽음 처리 + 소켓 읽음 전송 → 보낸 사람 화면에서 "1" 사라짐
+      if (!isMine && messageId.isNotEmpty && _roomId != null && _myUserId != null) {
+        final now = DateTime.now();
+        _repository.readMessage(roomId: _roomId!, messageId: messageId);
+        if (_socket != null && _socket!.connected) {
+          _socket!.emit('read', {
+            'roomId': _roomId,
+            'messageId': messageId,
+            'userId': _myUserId,
+            'readAt': now.toIso8601String(),
+          });
+        }
+        if (!mounted) return;
+        setState(() {
+          final idx = _messages.indexWhere((m) => m.id == messageId);
+          if (idx >= 0) {
+            final msg = _messages[idx];
+            _messages[idx] = _ChatMessage(
+              id: msg.id,
+              text: msg.text,
+              isMine: msg.isMine,
+              senderId: msg.senderId,
+              isSystem: msg.isSystem,
+              readAt: now,
+            );
+          }
+        });
+      }
     });
     print('[소켓 read 핸들러 등록됨]');
     // 읽음 이벤트 처리: 해당 메시지의 readAt 갱신
