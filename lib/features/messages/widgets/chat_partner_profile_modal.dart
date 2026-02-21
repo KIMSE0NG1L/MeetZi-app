@@ -1,0 +1,561 @@
+import 'dart:convert';
+import 'dart:math' as math;
+import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
+
+/// AppDesign ProfileDetailModal 스타일: 3D 플립·스프링·스테거드 효과 + 그라데이션 헤더·InfoRow·태그·닫기만 (채팅용)
+class ChatPartnerProfileModal {
+  static const _headerGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFFB7185), Color(0xFFEC4899), Color(0xFFF43F5E)],
+  );
+
+  static Future<void> show(
+    BuildContext context, {
+    required Map<String, dynamic> profile,
+    String? partnerPhotoStorageKey,
+  }) {
+    return showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: '닫기',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 450),
+      pageBuilder: (_, __, ___) => const SizedBox.shrink(),
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return _ProfileModalContent(
+          profile: profile,
+          partnerPhotoStorageKey: partnerPhotoStorageKey,
+          animation: animation,
+          onClose: () => Navigator.of(context).pop(),
+        );
+      },
+    );
+  }
+}
+
+class _ProfileModalContent extends StatefulWidget {
+  const _ProfileModalContent({
+    required this.profile,
+    this.partnerPhotoStorageKey,
+    required this.animation,
+    required this.onClose,
+  });
+
+  final Map<String, dynamic> profile;
+  final String? partnerPhotoStorageKey;
+  final Animation<double> animation;
+  final VoidCallback onClose;
+
+  @override
+  State<_ProfileModalContent> createState() => _ProfileModalContentState();
+}
+
+class _ProfileModalContentState extends State<_ProfileModalContent>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _contentController;
+  late Animation<double> _contentFade;
+  late Animation<Offset> _contentSlide;
+
+  @override
+  void initState() {
+    super.initState();
+    _contentController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _contentFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(
+        parent: _contentController,
+        curve: const Interval(0.25, 0.7, curve: Curves.easeOut),
+      ),
+    );
+    _contentSlide = Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero).animate(
+      CurvedAnimation(
+        parent: _contentController,
+        curve: const Interval(0.25, 0.7, curve: Curves.easeOutCubic),
+      ),
+    );
+    widget.animation.addStatusListener((status) {
+      if (status == AnimationStatus.completed) _contentController.forward();
+    });
+    widget.animation.addListener(() {
+      if (widget.animation.value >= 0.35 && !_contentController.isAnimating && _contentController.value == 0) {
+        _contentController.forward();
+      }
+    });
+    if (widget.animation.status == AnimationStatus.completed || widget.animation.value >= 0.35) {
+      _contentController.forward();
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _contentController.value == 0 && !_contentController.isAnimating) {
+          _contentController.forward();
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _contentController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    // AppDesign: backdrop
+    return AnimatedBuilder(
+      animation: widget.animation,
+      builder: (context, _) {
+        final t = widget.animation.value;
+        final opacity = Curves.easeOut.transform(t);
+        final scale = 0.5 + 0.5 * Curves.elasticOut.transform(
+          Curves.easeOut.transform((t - 0.15) / 0.85).clamp(0.0, 1.0),
+        );
+        const double perspective = 0.001;
+        final angle = -math.pi * (1 - t);
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            GestureDetector(
+              onTap: widget.onClose,
+              child: Container(
+                color: Colors.black.withOpacity(0.6 * opacity),
+              ),
+            ),
+            Transform(
+              alignment: Alignment.center,
+              transform: Matrix4.identity()
+                ..setEntry(3, 2, perspective)
+                ..rotateY(angle),
+              child: Opacity(
+                opacity: opacity,
+                child: Transform.scale(
+                  scale: scale,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: _ModalCard(
+                      profile: widget.profile,
+                      partnerPhotoStorageKey: widget.partnerPhotoStorageKey,
+                      dark: dark,
+                      onClose: widget.onClose,
+                      contentFade: _contentFade,
+                      contentSlide: _contentSlide,
+                      contentController: _contentController,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ModalCard extends StatelessWidget {
+  const _ModalCard({
+    required this.profile,
+    this.partnerPhotoStorageKey,
+    required this.dark,
+    required this.onClose,
+    required this.contentFade,
+    required this.contentSlide,
+    required this.contentController,
+  });
+
+  final Map<String, dynamic> profile;
+  final String? partnerPhotoStorageKey;
+  final bool dark;
+  final VoidCallback onClose;
+  final Animation<double> contentFade;
+  final Animation<Offset> contentSlide;
+  final AnimationController contentController;
+
+  static String _str(dynamic v) => v?.toString() ?? '-';
+
+  static String _toLabel(String? field, dynamic v) {
+    final s = v?.toString().trim();
+    if (s == null || s.isEmpty) return '-';
+    switch (field) {
+      case 'gender':
+        switch (s.toLowerCase()) {
+          case 'male': return '남성';
+          case 'female': return '여성';
+          default: return s;
+        }
+      case 'gradeYear':
+        switch (s.toLowerCase()) {
+          case 'one': return '1';
+          case 'two': return '2';
+          case 'three': return '3';
+          case 'four': return '4';
+          case 'five': return '5';
+          case 'graduation_deferred': return '졸업유예';
+          default: return s;
+        }
+      case 'smoking':
+        switch (s.toLowerCase()) {
+          case 'none': return '비흡연';
+          case 'sometimes': return '가끔';
+          case 'often': return '자주';
+          default: return s;
+        }
+      case 'drinking':
+        switch (s.toLowerCase()) {
+          case 'none': return '안 함';
+          case 'sometimes': return '가끔';
+          case 'often': return '자주';
+          default: return s;
+        }
+      case 'fashionStyle':
+        switch (s.toLowerCase()) {
+          case 'hood_casual': return '후드/캐주얼';
+          case 'shirt_neat': return '셔츠/단정';
+          case 'street': return '스트릿';
+          case 'knit': return '니트/감성';
+          case 'sporty': return '체육복/스포티';
+          case 'minimal': return '미니멀';
+          case 'hip': return '힙한';
+          default: return s;
+        }
+      case 'preferredDateType':
+        switch (s.toLowerCase()) {
+          case 'cafe': return '카페 탐방';
+          case 'walk': return '산책';
+          case 'movie': return '영화';
+          case 'drink': return '술 한잔';
+          case 'exercise': return '운동';
+          case 'food_tour': return '맛집 투어';
+          case 'drive': return '드라이브';
+          default: return s;
+        }
+      case 'activityTime':
+        switch (s.toLowerCase()) {
+          case 'morning': return '아침형';
+          case 'daytime': return '낮 활동형';
+          case 'evening': return '저녁형';
+          case 'night_owl': return '야행성';
+          default: return s;
+        }
+      default:
+        return s;
+    }
+  }
+
+  Map<String, dynamic>? get _user =>
+      profile['user'] is Map<String, dynamic> ? profile['user'] as Map<String, dynamic>? : null;
+
+  Widget _buildAvatar(BuildContext context) {
+    const double size = 96;
+    final u = _user;
+    if (partnerPhotoStorageKey != null && partnerPhotoStorageKey!.isNotEmpty) {
+      return SizedBox(
+        width: size,
+        height: size,
+        child: ClipOval(
+          child: Image.network(
+            'https://nearo-image.s3.ap-northeast-2.amazonaws.com/$partnerPhotoStorageKey',
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            loadingBuilder: (_, child, progress) =>
+                progress == null ? child : const Center(child: CircularProgressIndicator()),
+            errorBuilder: (_, __, ___) => Icon(LucideIcons.user, size: size * 0.6, color: Colors.grey),
+          ),
+        ),
+      );
+    }
+    final seed = profile['avatarSeed']?.toString() ??
+        profile['userId']?.toString() ??
+        u?['avatarSeed']?.toString() ??
+        u?['userId']?.toString();
+    if (seed != null && seed.isNotEmpty) {
+      Map<String, String> opts = {};
+      final raw = profile['avatarOptions']?.toString() ?? u?['avatarOptions']?.toString();
+      if (raw != null && raw.isNotEmpty) {
+        try {
+          final decoded = jsonDecode(raw);
+          if (decoded is Map<String, dynamic>) {
+            opts = decoded.map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
+          }
+        } catch (_) {}
+      }
+      final url = diceBearAvatarUrl(seed, options: opts.isNotEmpty ? opts : null);
+      return SizedBox(
+        width: size,
+        height: size,
+        child: ClipOval(
+          child: SvgPicture.network(
+            url,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            placeholderBuilder: (_) => Icon(LucideIcons.user, size: size * 0.5, color: Colors.grey),
+            theme: const SvgTheme(currentColor: Colors.black),
+          ),
+        ),
+      );
+    }
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Icon(LucideIcons.user, size: size * 0.6, color: Colors.grey),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final surface = dark ? const Color(0xFF1F2937) : Colors.white;
+    final onSurface = dark ? Colors.white : const Color(0xFF111827);
+    final onSurfaceVariant = dark ? Colors.grey.shade400 : const Color(0xFF6B7280);
+    final borderColor = dark ? Colors.grey.shade700 : const Color(0xFFF3F4F6);
+    final p = profile;
+    final u = _user;
+
+    final maxH = MediaQuery.of(context).size.height * 0.9;
+    final cardHeight = (700.0).clamp(400.0, maxH);
+
+    return Container(
+      width: double.infinity,
+      constraints: BoxConstraints(maxWidth: 390, maxHeight: cardHeight),
+      height: cardHeight,
+      decoration: BoxDecoration(
+        color: surface,
+        borderRadius: BorderRadius.circular(32),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.25),
+            blurRadius: 32,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header with gradient (AppDesign)
+            Container(
+              height: 160,
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                gradient: ChatPartnerProfileModal._headerGradient,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(32),
+                  topRight: Radius.circular(32),
+                ),
+              ),
+              child: Stack(
+                children: [
+                  // Drag handle
+                  Positioned(
+                    top: 12,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: Container(
+                        width: 48,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Close button
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Material(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                      child: InkWell(
+                        onTap: onClose,
+                        borderRadius: BorderRadius.circular(20),
+                        child: const Padding(
+                          padding: EdgeInsets.all(8),
+                          child: Icon(LucideIcons.x, color: Colors.white, size: 22),
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Avatar + nickname (scale-in effect via contentController)
+                  Center(
+                    child: AnimatedBuilder(
+                      animation: contentController,
+                      builder: (context, _) {
+                        final v = contentController.value;
+                        final scale = (v < 0.01 ? 0.0 : v).clamp(0.3, 1.0);
+                        return Transform.scale(
+                          scale: scale,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white, width: 4),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: ClipOval(
+                                  child: SizedBox(
+                                    width: 96,
+                                    height: 96,
+                                    child: _buildAvatar(context),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                _str(p['nickname']),
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Scrollable content
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                child: AnimatedBuilder(
+                  animation: contentController,
+                  builder: (context, _) {
+                    return FadeTransition(
+                      opacity: contentFade,
+                      child: SlideTransition(
+                        position: contentSlide,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _infoRow('학과', _str(p['department'] ?? u?['department']), onSurfaceVariant, onSurface, borderColor),
+                            _infoRow('성별', _toLabel('gender', p['gender'] ?? u?['gender']), onSurfaceVariant, onSurface, borderColor),
+                            _infoRow('소속', _str(p['affiliationText'] ?? u?['affiliationText'] ?? p['school']), onSurfaceVariant, onSurface, borderColor),
+                            _infoRow('키', p['heightCm'] != null ? '${p['heightCm']} cm' : (u?['heightCm'] != null ? '${u!['heightCm']} cm' : '-'), onSurfaceVariant, onSurface, borderColor),
+                            _infoRow('학번', _toLabel('gradeYear', p['gradeYear'] ?? u?['gradeYear']), onSurfaceVariant, onSurface, borderColor),
+                            _infoRow('MBTI', _str(p['mbti'] ?? u?['mbti']), onSurfaceVariant, onSurface, borderColor),
+                            _infoRow('흡연', _toLabel('smoking', p['smoking'] ?? u?['smoking']), onSurfaceVariant, onSurface, borderColor),
+                            _infoRow('음주', _toLabel('drinking', p['drinking'] ?? u?['drinking']), onSurfaceVariant, onSurface, borderColor),
+                            _infoRow('한 줄 소개', _str(p['introOneLine'] ?? u?['introOneLine']), onSurfaceVariant, onSurface, borderColor),
+                            _infoRow('요즘 빠진 것', _str(p['intoLately'] ?? u?['intoLately']), onSurfaceVariant, onSurface, borderColor),
+                            _infoRow('이상형', _str(p['idealType'] ?? u?['idealType']), onSurfaceVariant, onSurface, borderColor),
+                            _infoRow('패션 스타일', _toLabel('fashionStyle', p['fashionStyle'] ?? u?['fashionStyle']), onSurfaceVariant, onSurface, borderColor),
+                            _infoRow('선호 데이트', _toLabel('preferredDateType', p['preferredDateType'] ?? u?['preferredDateType']), onSurfaceVariant, onSurface, borderColor),
+                            _infoRow('활동 시간대', _toLabel('activityTime', p['activityTime'] ?? u?['activityTime']), onSurfaceVariant, onSurface, borderColor),
+                            _tagsRow(borderColor, onSurfaceVariant, onSurface),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+            // Bottom: 닫기만 (채팅용)
+            AnimatedBuilder(
+              animation: contentController,
+              builder: (context, _) {
+                return FadeTransition(
+                  opacity: contentFade,
+                  child: SlideTransition(
+                    position: contentSlide,
+                    child: Container(
+                      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
+                      decoration: BoxDecoration(
+                        color: surface,
+                        border: Border(top: BorderSide(color: borderColor)),
+                      ),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          onPressed: onClose,
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            side: BorderSide(color: dark ? Colors.grey.shade600 : const Color(0xFFE5E7EB), width: 2),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            foregroundColor: onSurface,
+                          ),
+                          child: const Text('닫기', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _infoRow(String label, String value, Color labelColor, Color valueColor, Color borderColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: borderColor))),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(width: 112, child: Text(label, style: TextStyle(fontSize: 14, color: labelColor), maxLines: 1, overflow: TextOverflow.ellipsis)),
+          Expanded(child: Text(value, style: TextStyle(fontSize: 14, color: valueColor), maxLines: 3, overflow: TextOverflow.ellipsis)),
+        ],
+      ),
+    );
+  }
+
+  Widget _tagsRow(Color borderColor, Color labelColor, Color tagColor) {
+    final list = profile['idealTypeKeywords'] ?? _user?['idealTypeKeywords'];
+    final tags = list is List
+        ? (list as List).map((e) => e?.toString() ?? '').where((s) => s.isNotEmpty).toList()
+        : <String>[];
+    if (tags.isEmpty) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: borderColor))),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(width: 112, child: Text('나를 소개하는...', style: TextStyle(fontSize: 14, color: labelColor))),
+          Expanded(
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: tags.map((tag) => Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: dark ? Colors.grey.shade700 : const Color(0xFFF3F4F6),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(tag, style: TextStyle(fontSize: 13, color: tagColor)),
+              )).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

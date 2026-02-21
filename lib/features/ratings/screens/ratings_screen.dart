@@ -205,14 +205,6 @@ class _RatingsScreenState extends State<RatingsScreen> {
                                               ),
                                               const SizedBox(height: 4),
                                               Text('코인', style: TextStyle(fontSize: 14, color: onSurfaceVariant)),
-                                              if (badge != null) ...[
-                                                const SizedBox(height: 6),
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                                  decoration: BoxDecoration(color: rose, borderRadius: BorderRadius.circular(999)),
-                                                  child: Text(badge, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white)),
-                                                ),
-                                              ],
                                             ],
                                           ),
                                         ),
@@ -223,11 +215,6 @@ class _RatingsScreenState extends State<RatingsScreen> {
                                               '${price.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}원',
                                               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: onSurface),
                                             ),
-                                            if (bonus != null && coins > 0)
-                                              Text(
-                                                '${((bonus / coins) * 100).round()}% 보너스',
-                                                style: const TextStyle(fontSize: 12, color: Color(0xFFF43F5E), fontWeight: FontWeight.w500),
-                                              ),
                                           ],
                                         ),
                                       ],

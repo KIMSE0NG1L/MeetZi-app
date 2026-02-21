@@ -1,6 +1,104 @@
 import 'package:flutter/material.dart';
 import 'package:nearo_app/features/auth/data/environment_repository.dart';
 
+/// 실시간처럼 보이게: 0 → N 카운트업 + 깜빡이는 LIVE 점
+class _LiveCountText extends StatefulWidget {
+  const _LiveCountText({
+    required this.count,
+    required this.dark,
+  });
+
+  final int count;
+  final bool dark;
+
+  @override
+  State<_LiveCountText> createState() => _LiveCountTextState();
+}
+
+class _LiveCountTextState extends State<_LiveCountText> with SingleTickerProviderStateMixin {
+  late AnimationController _countController;
+  late Animation<double> _countAnimation;
+  late AnimationController _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    _countController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200));
+    _countAnimation = CurvedAnimation(parent: _countController, curve: Curves.easeOutCubic);
+    _countController.forward();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat();
+  }
+
+  @override
+  void didUpdateWidget(_LiveCountText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.count != widget.count) {
+      _countController.reset();
+      _countController.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _countController.dispose();
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  static String _format(int n) {
+    return n.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]},',
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = widget.dark ? Colors.grey.shade400 : Colors.grey.shade600;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AnimatedBuilder(
+          animation: _pulseController,
+          builder: (context, child) {
+            final t = _pulseController.value;
+            final glow = 4 + 3 * (0.5 + 0.5 * (t > 0.5 ? 1 - t : t) * 2);
+            return Container(
+              width: 8,
+              height: 8,
+              margin: const EdgeInsets.only(right: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF22C55E),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF22C55E).withOpacity(0.5 + 0.3 * (t > 0.5 ? 1 - t : t)),
+                    blurRadius: glow,
+                    spreadRadius: t > 0.5 ? (1 - t) : t,
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+        AnimatedBuilder(
+          animation: _countAnimation,
+          builder: (context, child) {
+            final value = (_countAnimation.value * widget.count).round().clamp(0, widget.count);
+            return Text(
+              '${_format(value)}명 활동중',
+              style: TextStyle(fontSize: 14, color: textColor),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
 /// AppDesign RankingScreen: 보라 테마, 트로피 섹션, 카드형 랭킹 리스트
 class UniversityRankingScreen extends StatefulWidget {
   const UniversityRankingScreen({super.key});
@@ -170,13 +268,7 @@ class _UniversityRankingScreenState extends State<UniversityRankingScreen> {
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                     const SizedBox(height: 4),
-                                    Text(
-                                      '${users.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}명 활동중',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
-                                      ),
-                                    ),
+                                    _LiveCountText(count: users, dark: dark),
                                   ],
                                 ),
                               ),
