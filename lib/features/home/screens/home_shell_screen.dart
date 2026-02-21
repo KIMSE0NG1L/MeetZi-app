@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/home/screens/university_ranking_screen.dart';
 import 'package:nearo_app/features/matching_board/screens/matching_board_screen.dart';
@@ -172,7 +173,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 26),
+                icon: const Icon(LucideIcons.bell, color: Colors.white, size: 26),
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const NotificationsScreen()),
@@ -181,7 +182,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
                 tooltip: '알림',
               ),
               IconButton(
-                icon: const Icon(Icons.settings, color: Colors.white, size: 26),
+                icon: const Icon(LucideIcons.settings, color: Colors.white, size: 26),
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const SettingsScreen()),
@@ -199,12 +200,13 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
     const activeColor = Color(0xFFF43F5E); // rose-500
     const inactiveColor = Color(0xFF9CA3AF); // gray-400
     final labels = ['대학교 랭킹', '메시지함', '게시판', '프로필', '상점'];
+    // AppDesign: Trophy, MessageCircle, LayoutGrid, User, ShoppingBag (Lucide)
     final icons = [
-      Icons.emoji_events_outlined,
-      Icons.chat_bubble_outline,
-      Icons.dashboard_outlined,
-      Icons.person_outline,
-      Icons.shopping_bag_outlined,
+      LucideIcons.trophy,
+      LucideIcons.messageCircle,
+      LucideIcons.layoutGrid,
+      LucideIcons.user,
+      LucideIcons.shoppingBag,
     ];
     return Container(
       width: double.infinity,

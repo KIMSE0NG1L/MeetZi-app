@@ -4,6 +4,7 @@ import 'package:nearo_app/shared/utils/app_config.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:convert';
 
@@ -110,7 +111,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
             fit: BoxFit.cover,
             width: avatarRadius * 2,
             height: avatarRadius * 2,
-            placeholderBuilder: (_) => Icon(Icons.person, size: avatarRadius, color: Colors.grey.shade600),
+            placeholderBuilder: (_) => Icon(LucideIcons.user, size: avatarRadius, color: Colors.grey.shade600),
           ),
         ),
       );
@@ -183,7 +184,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.chat_bubble_outline, size: 64, color: onSurfaceVariant),
+                        Icon(LucideIcons.messageCircle, size: 64, color: onSurfaceVariant),
                         const SizedBox(height: 16),
                         Text(
                           '아직 메시지가 없어요',
@@ -248,7 +249,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                         alignment: Alignment.centerRight,
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         color: Colors.red.shade400,
-                        child: const Icon(Icons.delete, color: Colors.white),
+                        child: const Icon(LucideIcons.trash2, color: Colors.white),
                       ),
                       child: Material(
                         color: Colors.transparent,
@@ -325,7 +326,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                     ],
                                   ),
                                 ),
-                                Icon(Icons.chevron_right, color: onSurfaceVariant, size: 24),
+                                Icon(LucideIcons.chevronRight, color: onSurfaceVariant, size: 24),
                               ],
                             ),
                           ),

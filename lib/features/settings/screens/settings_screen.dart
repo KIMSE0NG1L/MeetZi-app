@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/messages/data/chat_history_store.dart';
+import 'package:nearo_app/features/settings/screens/customer_support_screen.dart';
 import 'package:nearo_app/shared/utils/token_storage.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 
@@ -71,47 +73,47 @@ class SettingsScreen extends StatelessWidget {
     final onSurface = dark ? Colors.white : const Color(0xFF111827);
     final onSurfaceVariant = dark ? Colors.grey.shade400 : Colors.grey.shade600;
 
+    // 홈 상단과 동일: pt-14(56) + pb-5(20) + 콘텐츠, px-5(20)
+    final topInset = MediaQuery.of(context).padding.top;
+    final pt = topInset > 0 ? topInset : 56.0;
+    const pb = 20.0;
+    const titleHeight = 36.0;
+
     return Scaffold(
       backgroundColor: dark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
       body: Column(
         children: [
-          // AppDesign 헤더: 로즈 그라데이션 + 뒤로가기 + 설정
           Container(
-            height: 80,
+            height: pt + pb + titleHeight,
+            width: double.infinity,
             decoration: const BoxDecoration(
               gradient: _roseGradient,
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(32),
-                bottomRight: Radius.circular(32),
-              ),
               boxShadow: [
                 BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2)),
               ],
             ),
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 22),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                    const Expanded(
-                      child: Text(
-                        '설정',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
+            child: Padding(
+              padding: EdgeInsets.only(left: 20, right: 20, top: pt, bottom: pb),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(LucideIcons.arrowLeft, color: Colors.white, size: 24),
+                    onPressed: () => Navigator.of(context).pop(),
+                    padding: const EdgeInsets.all(8),
+                  ),
+                  const Expanded(
+                    child: Text(
+                      '설정',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(width: 48),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 48),
+                ],
               ),
             ),
           ),
@@ -128,7 +130,7 @@ class SettingsScreen extends StatelessWidget {
                         _ThemeModeRow(
                           surface: surface,
                           onSurface: onSurface,
-                          icon: Icons.wb_sunny,
+                          icon: LucideIcons.sun,
                           title: '일반 모드',
                           selected: mode == ThemeMode.light,
                           onTap: () {
@@ -140,7 +142,7 @@ class SettingsScreen extends StatelessWidget {
                         _ThemeModeRow(
                           surface: surface,
                           onSurface: onSurface,
-                          icon: Icons.nightlight_round,
+                          icon: LucideIcons.moon,
                           title: '다크 모드',
                           selected: mode == ThemeMode.dark,
                           onTap: () {
@@ -158,7 +160,7 @@ class SettingsScreen extends StatelessWidget {
                   surface: surface,
                   onSurface: onSurface,
                   onSurfaceVariant: onSurfaceVariant,
-                  icon: Icons.notifications_outlined,
+                  icon: LucideIcons.bell,
                   title: '알림 설정',
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -167,16 +169,18 @@ class SettingsScreen extends StatelessWidget {
                   },
                 ),
                 const SizedBox(height: 12),
-                // 고객센터 문의 (기능 구현 나중에)
+                // 고객센터 문의
                 _SettingsCard(
                   surface: surface,
                   onSurface: onSurface,
                   onSurfaceVariant: onSurfaceVariant,
-                  icon: Icons.support_agent_outlined,
+                  icon: LucideIcons.headphones,
                   title: '고객센터 문의',
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('고객센터 문의는 준비 중이에요')),
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const CustomerSupportScreen(),
+                      ),
                     );
                   },
                 ),
@@ -198,7 +202,7 @@ class SettingsScreen extends StatelessWidget {
                   surface: surface,
                   onSurface: onSurface,
                   onSurfaceVariant: onSurfaceVariant,
-                  icon: Icons.logout,
+                  icon: LucideIcons.logOut,
                   title: '로그아웃',
                   onTap: () => _logout(context),
                 ),
@@ -207,7 +211,7 @@ class SettingsScreen extends StatelessWidget {
                   surface: surface,
                   onSurface: onSurface,
                   onSurfaceVariant: onSurfaceVariant,
-                  icon: Icons.delete_outline,
+                  icon: LucideIcons.trash2,
                   title: '계정 삭제',
                   titleColor: Colors.red,
                   iconColor: Colors.red,
@@ -362,9 +366,9 @@ class _SettingsCard extends StatelessWidget {
                 ),
               ),
               if (selected)
-                const Icon(Icons.check_circle, color: Color(0xFFF43F5E), size: 24)
+                const Icon(LucideIcons.checkCircle, color: Color(0xFFF43F5E), size: 24)
               else
-                Icon(Icons.chevron_right, color: onSurfaceVariant, size: 24),
+                Icon(LucideIcons.chevronRight, color: onSurfaceVariant, size: 24),
             ],
           ),
         ),
