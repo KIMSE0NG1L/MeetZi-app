@@ -1,4 +1,5 @@
 import 'package:nearo_app/features/messages/data/chat_repository.dart';
+import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/shared/utils/app_config.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/app/app_routes.dart';
@@ -18,34 +19,66 @@ class _MessagesScreenState extends State<MessagesScreen> {
   bool _loading = true;
   List<Map<String, dynamic>> _rooms = [];
   Map<String, int> _unreadCounts = {}; // roomId -> unread count
+  Map<String, DateTime?> _lastMessageTimes = {}; // roomId -> last message time
+  String? _myUserId;
 
+  @override
   @override
   void initState() {
     super.initState();
-    _loadRooms();
+    _initAndLoad();
   }
 
-  Future<void> _loadUnreadCounts() async {
-    // 각 방의 안읽은 메시지 개수 계산
+  Future<void> _initAndLoad() async {
+    // 내 userId 가져오기
+    try {
+      final profile = await AuthRepository().getProfile();
+      setState(() {
+        _myUserId = profile['id']?.toString();
+      });
+    } catch (_) {
+      setState(() {
+        _myUserId = null;
+      });
+    }
+    await _loadRooms();
+  }
+
+  Future<void> _loadUnreadCountsAndTimes() async {
+    // 각 방의 안읽은 메시지 개수와 마지막 메시지 시간 계산 (내 메시지/상대 메시지 중 더 최근 시간)
     Map<String, int> unreadCounts = {};
+    Map<String, DateTime?> lastTimes = {};
     for (final room in _rooms) {
       final roomId = room['roomId']?.toString() ?? '';
       if (roomId.isEmpty) continue;
       try {
         final messages = await _repository.listMessages(roomId: roomId);
         int count = 0;
+        DateTime? lastTime;
         for (final m in messages) {
-          // 내 메시지가 아니고, readAt이 null이면 안읽음
-          final isMine = m['senderId']?.toString() == room['userId']?.toString();
-          if (!isMine && m['readAt'] == null) count++;
+          // 내 userId가 없으면 카운트하지 않음
+          if (_myUserId == null) continue;
+          // '상대가 보낸 메시지'이고, 내가 아직 읽지 않은 경우만 카운트
+          final isFromPartner = m['senderId']?.toString() != _myUserId;
+          final isUnreadFromPartner = isFromPartner && m['readAt'] == null;
+          if (isUnreadFromPartner) count++;
+          // 마지막 메시지 시간 추출 (내 메시지/상대 메시지 모두 포함)
+          final createdAtRaw = m['createdAt']?.toString();
+          final createdAt = createdAtRaw != null ? DateTime.tryParse(createdAtRaw) : null;
+          if (createdAt != null && (lastTime == null || createdAt.isAfter(lastTime))) {
+            lastTime = createdAt;
+          }
         }
         unreadCounts[roomId] = count;
+        lastTimes[roomId] = lastTime;
       } catch (_) {
         unreadCounts[roomId] = 0;
+        lastTimes[roomId] = null;
       }
     }
     setState(() {
       _unreadCounts = unreadCounts;
+      _lastMessageTimes = lastTimes;
     });
   }
 
@@ -109,7 +142,17 @@ class _MessagesScreenState extends State<MessagesScreen> {
       _rooms = rooms;
       _loading = false;
     });
-    await _loadUnreadCounts();
+    await _loadUnreadCountsAndTimes();
+  }
+  String _formatTimeAgo(DateTime? time) {
+    if (time == null) return '';
+    final now = DateTime.now();
+    final diff = now.difference(time);
+    if (diff.inMinutes < 1) return '방금 전';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}분 전';
+    if (diff.inHours < 24) return '${diff.inHours}시간 전';
+    if (diff.inDays < 7) return '${diff.inDays}일 전';
+    return '${time.year}.${time.month.toString().padLeft(2, '0')}.${time.day.toString().padLeft(2, '0')}';
   }
 
   Future<void> _deleteRoom(String roomId) async {
@@ -219,7 +262,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
                           }
                           
                           int unread = _unreadCounts[roomId] ?? 0;
-                          
+                          DateTime? lastTime = _lastMessageTimes[roomId];
+                          String timeAgo = _formatTimeAgo(lastTime);
                           return Dismissible(
                             key: ValueKey(roomId),
                             direction: DismissDirection.endToStart,
@@ -252,12 +296,24 @@ class _MessagesScreenState extends State<MessagesScreen> {
                             child: ListTile(
                               leading: _buildAvatar(photoUrl, avatarSeed, avatarOptions, partner),
                               title: Text(partner),
-                              subtitle: Text(
-                                isActive
-                                    ? last
-                                    : '매칭이 취소된 대화입니다.',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                              subtitle: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      isActive ? last : '매칭이 취소된 대화입니다.',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (timeAgo.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 8.0),
+                                      child: Text(
+                                        timeAgo,
+                                        style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                                      ),
+                                    ),
+                                ],
                               ),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
