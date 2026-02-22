@@ -46,7 +46,23 @@ class NotificationHistoryStore {
       body: body ?? '',
       data: data ?? {},
       createdAt: DateTime.now(),
+      read: false,
     ));
+    await _persist();
+  }
+
+  Future<void> markAsRead(String id) async {
+    await ensureLoaded();
+    final index = items.indexWhere((e) => e.id == id);
+    if (index < 0) return;
+    items[index] = NotificationHistoryItem(
+      id: items[index].id,
+      title: items[index].title,
+      body: items[index].body,
+      data: items[index].data,
+      createdAt: items[index].createdAt,
+      read: true,
+    );
     await _persist();
   }
 
@@ -85,6 +101,7 @@ class NotificationHistoryItem {
   final String body;
   final Map<String, dynamic> data;
   final DateTime createdAt;
+  final bool read;
 
   NotificationHistoryItem({
     required this.id,
@@ -92,16 +109,19 @@ class NotificationHistoryItem {
     required this.body,
     required this.data,
     required this.createdAt,
+    this.read = false,
   });
 
   factory NotificationHistoryItem.fromMap(Map<String, dynamic> map) {
     final data = map['data'];
+    final read = map['read'];
     return NotificationHistoryItem(
       id: map['id']?.toString() ?? '',
       title: map['title']?.toString() ?? '알림',
       body: map['body']?.toString() ?? '',
       data: data is Map ? Map<String, dynamic>.from(data as Map) : {},
       createdAt: DateTime.tryParse(map['createdAt']?.toString() ?? '') ?? DateTime.now(),
+      read: read == true || read == 'true',
     );
   }
 
@@ -112,6 +132,7 @@ class NotificationHistoryItem {
       'body': body,
       'data': data,
       'createdAt': createdAt.toIso8601String(),
+      'read': read,
     };
   }
 }

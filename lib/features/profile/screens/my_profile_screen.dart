@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
@@ -132,7 +133,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                                           : null,
                                                     ),
                                                     fit: BoxFit.cover,
-                                                    placeholderBuilder: (context) => Icon(Icons.person, size: 64, color: Theme.of(context).colorScheme.primary),
+                                                    placeholderBuilder: (context) => Icon(LucideIcons.user, size: 64, color: Theme.of(context).colorScheme.primary),
                                                   ),
                                                 ),
                                               ),
@@ -140,14 +141,14 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                           : CircleAvatar(
                                               radius: 48,
                                               backgroundColor: Colors.white,
-                                              child: Icon(Icons.person, size: 64, color: Theme.of(context).colorScheme.primary),
+                                              child: Icon(LucideIcons.user, size: 64, color: Theme.of(context).colorScheme.primary),
                                             ),
                                     ),
                                     Container(
                                       width: 32,
                                       height: 32,
                                       decoration: BoxDecoration(color: rose, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 4)]),
-                                      child: const Icon(Icons.camera_alt, color: Colors.white, size: 18),
+                                      child: const Icon(LucideIcons.camera, color: Colors.white, size: 18),
                                     ),
                                   ],
                                 ),
@@ -160,7 +161,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(Icons.location_on, size: 16, color: onSurfaceVariant),
+                                    Icon(LucideIcons.mapPin, size: 16, color: onSurfaceVariant),
                                     const SizedBox(width: 6),
                                     Text(
                                       _profile?['affiliationText']?.toString() ?? _profile?['school']?.toString() ?? '-',
@@ -225,7 +226,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                               child: const Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.edit, color: Colors.white, size: 20),
+                                  Icon(LucideIcons.pencil, color: Colors.white, size: 20),
                                   SizedBox(width: 8),
                                   Text('내 프로필 수정', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                                 ],

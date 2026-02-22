@@ -16,6 +16,8 @@ class ApiClient {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        // ngrok 무료 플랜: 브라우저 경고 페이지 스킵 (없으면 HandShakeConnection terminated 발생할 수 있음)
+        'ngrok-skip-browser-warning': 'true',
       },
     );
 
