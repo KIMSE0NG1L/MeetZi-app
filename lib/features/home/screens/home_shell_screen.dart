@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:nearo_app/app/app_routes.dart';
+import 'package:nearo_app/app/app.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/home/screens/university_ranking_screen.dart';
 import 'package:nearo_app/features/matching_board/screens/matching_board_screen.dart';
@@ -18,16 +20,19 @@ class HomeShellScreen extends StatefulWidget {
   State<HomeShellScreen> createState() => _HomeShellScreenState();
 }
 
-class _HomeShellScreenState extends State<HomeShellScreen> {
+class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
   int _currentIndex = 2;
   final PageController _pageController = PageController(initialPage: 2);
   final _authRepository = AuthRepository();
   Map<String, dynamic>? _profile;
   bool _profileLoading = true;
-  final List<Widget> _pages = [
+  final ValueNotifier<int> _boardRefreshTrigger = ValueNotifier<int>(0);
+  bool _routeObserverSubscribed = false;
+
+  List<Widget> get _pages => [
     const UniversityRankingScreen(),
     const MessagesScreen(),
-    MatchingBoardScreen(),
+    MatchingBoardScreen(refreshTrigger: _boardRefreshTrigger),
     const MyProfileScreen(),
     RatingsScreen(),
   ];
@@ -50,9 +55,29 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_routeObserverSubscribed) {
+      final route = ModalRoute.of(context);
+      if (route is PageRoute) {
+        routeObserver.subscribe(this, route);
+        _routeObserverSubscribed = true;
+      }
+    }
+  }
+
+  @override
   void dispose() {
+    routeObserver.unsubscribe(this);
+    _boardRefreshTrigger.dispose();
     _pageController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    // 다른 화면(프로필 수정 등)에서 홈으로 돌아왔을 때 게시판 목록 갱신
+    _boardRefreshTrigger.value++;
   }
 
   Future<void> _loadThemeAndProfile() async {
@@ -204,7 +229,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
     final icons = [
       LucideIcons.trophy,
       LucideIcons.messageCircle,
-      LucideIcons.layoutGrid,
+      LucideIcons.grid3x3,
       LucideIcons.user,
       LucideIcons.shoppingBag,
     ];

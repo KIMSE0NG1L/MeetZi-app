@@ -55,14 +55,14 @@ class _RatingsScreenState extends State<RatingsScreen> {
   }
 
   /// 코인으로 열람권/등록권 구매 (1코인=1열람권, 5코인=1등록권)
-  Future<void> _buyTicket(String product, int cost, String label) async {
+  Future<void> _buyTicket(String product, int cost, String label, {int quantity = 1}) async {
     if ((_myCredit ?? 0) < cost) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('코인이 부족해요.')));
       return;
     }
     setState(() => _loading = true);
     try {
-      await _repository.purchaseTicket(product);
+      await _repository.purchaseTicket(product, quantity: quantity);
       await _fetchCredit();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$label 구매 완료!')));
@@ -203,7 +203,11 @@ class _RatingsScreenState extends State<RatingsScreen> {
                       const SizedBox(height: 8),
                       _ticketCard(dark, surface, onSurface, onSurfaceVariant, rose, 1, '열람권 1장', '1', LucideIcons.eye, () => _buyTicket('view_ticket', 1, '열람권 1장')),
                       const SizedBox(height: 8),
+                      _ticketCard(dark, surface, onSurface, onSurfaceVariant, rose, 100, '열람권 100장', '100', LucideIcons.eye, () => _buyTicket('view_ticket', 100, '열람권 100장', quantity: 100)),
+                      const SizedBox(height: 8),
                       _ticketCard(dark, surface, onSurface, onSurfaceVariant, rose, 5, '등록권 1장', '5', LucideIcons.clipboardList, () => _buyTicket('register_ticket', 5, '등록권 1장')),
+                      const SizedBox(height: 8),
+                      _ticketCard(dark, surface, onSurface, onSurfaceVariant, rose, 500, '등록권 100장', '500', LucideIcons.clipboardList, () => _buyTicket('register_ticket', 500, '등록권 100장', quantity: 100)),
                       const SizedBox(height: 24),
                       ...List.generate(_packages.length, (index) {
                         final pkg = _packages[index];

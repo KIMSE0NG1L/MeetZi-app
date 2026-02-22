@@ -289,6 +289,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                     arguments: {'roomId': roomId, 'partnerNickname': '대화'},
                                   );
                                 }
+                              } else if (type == 'support_reply' || type == 'support_submitted') {
+                                if (!context.mounted) return;
+                                Navigator.of(context).pushNamed(AppRoutes.customerSupport);
                               }
                             },
                           );
