@@ -9,7 +9,7 @@ import 'package:nearo_app/features/messages/data/partner_profile_repository.dart
 import 'package:nearo_app/shared/notification_utils.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/core/auth/auth_repository.dart';
-import 'package:nearo_app/app/app_routes.dart';
+import 'package:nearo_app/features/matching_board/screens/matching_board_screen.dart';
 
 class _ChatMessage {
   final String id;
@@ -707,10 +707,48 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
     }
     return InkWell(
       onTap: () async {
+        // Open the board-style profile bottom sheet (reuse existing UI)
+        Future<Widget> avatarBuilder(Map<String, dynamic> profile) async {
+          final seed = profile['avatarSeed']?.toString() ?? profile['userId']?.toString() ?? _partnerAvatarSeed;
+          final raw = profile['avatarOptions']?.toString() ?? _partnerAvatarOptions;
+          Map<String, String> opts = {};
+          if (raw != null && raw.isNotEmpty) {
+            try {
+              final decoded = jsonDecode(raw);
+              if (decoded is Map<String, dynamic>) opts = decoded.map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
+            } catch (_) {}
+          }
+          if (seed != null && seed.isNotEmpty) {
+            final url = diceBearAvatarUrl(seed, options: opts.isNotEmpty ? opts : null);
+            return CircleAvatar(
+              radius: 40,
+              backgroundColor: Colors.grey.shade300,
+              child: ClipOval(
+                child: SvgPicture.network(
+                  url,
+                  fit: BoxFit.cover,
+                  width: 80,
+                  height: 80,
+                  placeholderBuilder: (_) => Icon(Icons.person, size: 40, color: Colors.grey.shade600),
+                ),
+              ),
+            );
+          }
+          return CircleAvatar(radius: 40, backgroundColor: Colors.grey.shade300, child: Icon(Icons.person, size: 40, color: Colors.grey.shade600));
+        }
+
         if (_partnerProfile != null) {
-          Navigator.of(context).pushNamed(
-            AppRoutes.partnerProfile,
-            arguments: _partnerProfile,
+          await showBoardNoteSheet(
+            context,
+            profiles: [_partnerProfile!],
+            startIndex: 0,
+            buildAvatar: (ctx, profile) => FutureBuilder<Widget>(
+              future: avatarBuilder(profile),
+              builder: (ctx, snap) => snap.hasData ? snap.data! : const SizedBox.shrink(),
+            ),
+            onPop: () {},
+            showTakeButton: false,
+            showHabits: false,
           );
           return;
         }
@@ -720,9 +758,17 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
             if (!mounted) return;
             setState(() => _partnerProfile = profile);
             if (profile != null) {
-              Navigator.of(context).pushNamed(
-                AppRoutes.partnerProfile,
-                arguments: profile,
+              await showBoardNoteSheet(
+                context,
+                profiles: [profile],
+                startIndex: 0,
+                buildAvatar: (ctx, profile) => FutureBuilder<Widget>(
+                  future: avatarBuilder(profile),
+                  builder: (ctx, snap) => snap.hasData ? snap.data! : const SizedBox.shrink(),
+                ),
+                onPop: () {},
+                showTakeButton: false,
+                showHabits: false,
               );
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
