@@ -425,6 +425,8 @@ class _BoardNoteSheetContent extends StatefulWidget {
     required this.onPop,
     this.myCredit,
     this.onRefreshCredit,
+    this.showTakeButton = true,
+    this.showHabits = true,
   });
 
   final List<Map<String, dynamic>> profiles;
@@ -434,6 +436,8 @@ class _BoardNoteSheetContent extends StatefulWidget {
   final VoidCallback onPop;
   final int? myCredit;
   final Future<void> Function()? onRefreshCredit;
+  final bool showTakeButton;
+  final bool showHabits;
 
   @override
   State<_BoardNoteSheetContent> createState() => _BoardNoteSheetContentState();
@@ -606,6 +610,16 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
     final profile = _profile;
     final user = _user;
 
+    dynamic pluck(List<String> keys) {
+      for (final k in keys) {
+        final v1 = profile[k];
+        if (v1 != null && v1.toString().trim().isNotEmpty) return v1;
+        final v2 = user?[k];
+        if (v2 != null && v2.toString().trim().isNotEmpty) return v2;
+      }
+      return null;
+    }
+
     return Container(
       height: MediaQuery.of(context).size.height * 0.88,
       decoration: BoxDecoration(
@@ -646,22 +660,22 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                     const SizedBox(height: 16),
                     Text(_str(profile['nickname']), style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 20),
-                    _row(theme, '학과', _str(profile['department'] ?? user?['department'])),
-                    _row(theme, '성별', _toLabel('gender', profile['gender'] ?? user?['gender'])),
-                    _row(theme, '소속', _str(user?['affiliationText'])),
-                    _row(theme, '키', user?['heightCm'] != null ? '${user!['heightCm']} cm' : '-'),
-                    _row(theme, '학년', _toLabel('gradeYear', user?['gradeYear'])),
-                    _row(theme, 'MBTI', _str(user?['mbti'])),
-                    _row(theme, '흡연', _toLabel('smoking', user?['smoking'])),
-                    _row(theme, '음주', _toLabel('drinking', user?['drinking'])),
-                    _row(theme, '한 줄 소개', _str(user?['introOneLine'])),
-                    _row(theme, '요즘 빠진 것', _str(user?['intoLately'])),
-                    _row(theme, '이상형', _str(user?['idealType'])),
-                    _row(theme, '패션 스타일', _toLabel('fashionStyle', user?['fashionStyle'])),
-                    _row(theme, '선호 데이트', _toLabel('preferredDateType', user?['preferredDateType'])),
-                    _row(theme, '활동 시간대', _toLabel('activityTime', user?['activityTime'])),
-                    if (user?['idealTypeKeywords'] is List)
-                      _row(theme, '나를 소개하는 키워드', (user!['idealTypeKeywords'] as List).join(', ')),
+                    _row(theme, '학과', _str(pluck(['department', 'major', 'departmentName']))),
+                    _row(theme, '성별', _toLabel('gender', pluck(['gender', 'sex'])?.toString())),
+                    _row(theme, '소속', _str(pluck(['affiliation', 'school', 'affiliationText', 'organization']))),
+                    _row(theme, '키', pluck(['heightCm', 'height']) != null ? '${pluck(['heightCm', 'height'])} cm' : '-'),
+                    _row(theme, '학년', _toLabel('gradeYear', pluck(['grade', 'year', 'schoolYear', 'class']) )),
+                    _row(theme, 'MBTI', _str(pluck(['mbti', 'mbtiType']))),
+                    if (widget.showHabits) _row(theme, '흡연', _toLabel('smoking', pluck(['smoking', 'smoke'])?.toString())),
+                    if (widget.showHabits) _row(theme, '음주', _toLabel('drinking', pluck(['drinking', 'alcohol'])?.toString())),
+                    _row(theme, '한 줄 소개', _str(pluck(['oneLineIntroduce', 'introOneLine', 'bio', 'introduction']))),
+                    _row(theme, '요즘 빠진 것', _str(pluck(['intoLately', 'hobby', 'recentInterest']))),
+                    _row(theme, '이상형', _str(pluck(['idealType', 'ideal']))),
+                    _row(theme, '패션 스타일', _toLabel('fashionStyle', pluck(['fashionStyle', 'style']))),
+                    _row(theme, '선호 데이트', _toLabel('preferredDateType', pluck(['preferredDateType', 'preferredDate']))),
+                    _row(theme, '활동 시간대', _toLabel('activityTime', pluck(['activityTime', 'activeTime']))),
+                    if ((pluck(['idealTypeKeywords']) is List) || (user?['idealTypeKeywords'] is List))
+                      _row(theme, '나를 소개하는 키워드', ((pluck(['idealTypeKeywords']) ?? user?['idealTypeKeywords']) as List).join(', ')),
                   ],
                 ),
               ),
@@ -683,16 +697,19 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: _taking || _animating ? null : _take,
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  if (widget.showTakeButton) ...[
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: _taking || _animating ? null : _take,
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: _taking || _animating ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('가져가기'),
                       ),
-                      child: _taking || _animating ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('가져가기'),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -715,5 +732,39 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
       ),
     );
   }
+}
+
+/// Show the board-style profile bottom sheet.
+/// This is a small public helper so other screens can reuse the same UI.
+Future<void> showBoardNoteSheet(
+  BuildContext context, {
+  required List<Map<String, dynamic>> profiles,
+  int startIndex = 0,
+  required Widget Function(BuildContext context, Map<String, dynamic> profile) buildAvatar,
+  Future<void> Function(String profileId)? onTakeNote,
+  required VoidCallback onPop,
+  int? myCredit,
+  Future<void> Function()? onRefreshCredit,
+  bool showTakeButton = true,
+  bool showHabits = true,
+}) async {
+  await showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (ctx) {
+      return _BoardNoteSheetContent(
+        profiles: profiles,
+        startIndex: startIndex,
+        buildAvatar: buildAvatar,
+        onTakeNote: onTakeNote ?? ((_) async {}),
+        onPop: onPop,
+        myCredit: myCredit,
+        onRefreshCredit: onRefreshCredit,
+        showTakeButton: showTakeButton,
+        showHabits: showHabits,
+      );
+    },
+  );
 }
 
