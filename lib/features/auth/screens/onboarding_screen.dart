@@ -54,7 +54,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingStep(
       id: 1,
       title: '365일 열려있는\n우리들만의 온라인 미팅 부스',
-      description: '축제의 미팅부스처럼\nMeetZy 보드에서 마음에 드는 카드를 골라보세요',
+        description: '축제의 미팅부스처럼\nMeetzi 보드에서 마음에 드는 카드를 골라보세요',
       icon: Icons.assignment_outlined,
       color: Color(0xFFFF6B35),
       bgColor: Color(0xFFFFF8F5),
@@ -78,7 +78,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingStep(
       id: 4,
       title: '보드 위의 프로필이\n당신의 현실 로맨스로!',
-      description: 'MeetZy가 두 분의 새로운 시작을 연결해 드립니다',
+        description: 'Meetzi가 두 분의 새로운 시작을 연결해 드립니다',
       icon: Icons.auto_awesome,
       color: Color(0xFFEC4899),
       bgColor: Color(0xFFFFF7FB),
