@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/features/consent/data/consent_repository.dart';
 import 'package:nearo_app/features/messages/data/chat_history_store.dart';
@@ -138,7 +139,7 @@ class _ConsentPreviewScreenState extends State<ConsentPreviewScreen> {
               child: CircleAvatar(
                 radius: 20,
                 backgroundColor: Theme.of(context).colorScheme.primary,
-                child: const Icon(Icons.camera_alt, color: Colors.white),
+                child: const Icon(LucideIcons.camera, color: Colors.white),
               ),
             ),
           ),
@@ -253,7 +254,7 @@ class _ConsentPreviewScreenState extends State<ConsentPreviewScreen> {
                   const SizedBox(width: 8),
                   IconButton(
                     onPressed: _sendMessage,
-                    icon: const Icon(Icons.send),
+                    icon: const Icon(LucideIcons.send),
                   ),
                 ],
               ),

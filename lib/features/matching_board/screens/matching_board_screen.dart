@@ -1,11 +1,85 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/matching_board/data/matching_board_repository.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
+
+/// 채팅 등 외부에서 프로필 시트만 볼 때 사용 (myMatchingTicket: 0, 가져가기 비표시)
+Future<void> showBoardNoteSheet(
+  BuildContext context, {
+  required List<Map<String, dynamic>> profiles,
+  int startIndex = 0,
+  required Widget Function(BuildContext context, Map<String, dynamic> profile) buildAvatar,
+  VoidCallback? onPop,
+  int myMatchingTicket = 0,
+  Future<void> Function()? onRefreshTickets,
+  Future<void> Function(String profileId)? onTakeNote,
+}) async {
+  final sheetContent = _BoardNoteSheetContent(
+    profiles: profiles,
+    startIndex: startIndex,
+    buildAvatar: buildAvatar,
+    onTakeNote: onTakeNote ?? (_) async {},
+    onPop: onPop ?? () {},
+    myMatchingTicket: myMatchingTicket,
+    onRefreshTickets: onRefreshTickets,
+  );
+  if (!context.mounted) return;
+  showGeneralDialog<void>(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: '닫기',
+    barrierColor: Colors.transparent,
+    transitionDuration: const Duration(milliseconds: 600),
+    pageBuilder: (_, __, ___) => const SizedBox.shrink(),
+    transitionBuilder: (ctx, animation, secondaryAnimation, child) {
+      return AnimatedBuilder(
+        animation: animation,
+        builder: (context, _) {
+          final t = Curves.easeOutBack.transform(animation.value);
+          final barrierOpacity = 0.6 * t;
+          final opacity = t;
+          final scale = 0.5 + 0.5 * t;
+          final isReverse = animation.status == AnimationStatus.reverse;
+          final rotateYDeg = isReverse ? 180.0 - 180.0 * t : -180.0 + 180.0 * t;
+          final rotateYRad = rotateYDeg * (3.14159265359 / 180.0);
+          return Stack(
+            children: [
+              GestureDetector(
+                onTap: () => Navigator.of(ctx).pop(),
+                child: Container(color: Colors.black.withOpacity(barrierOpacity)),
+              ),
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 390),
+                  child: Transform(
+                    alignment: Alignment.center,
+                    transform: Matrix4.identity()
+                      ..setEntry(3, 2, 0.001)
+                      ..rotateY(rotateYRad),
+                    child: Transform.scale(
+                      scale: scale,
+                      alignment: Alignment.center,
+                      child: Opacity(
+                        opacity: opacity.clamp(0.0, 1.0),
+                        child: sheetContent,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+}
 
 class MatchingBoardScreen extends StatelessWidget {
   const MatchingBoardScreen({super.key});
@@ -25,14 +99,15 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   final MatchingBoardRepository _repository = MatchingBoardRepository();
   List<Map<String, dynamic>> _profiles = [];
   bool _loading = false;
-  int _profileViewCount = 0;
-  DateTime? _lastViewTime;
   int? _myCredit;
+  MyTickets? _myTickets;
+
   @override
   void initState() {
     super.initState();
     _fetchProfiles();
     _fetchMyCredit();
+    _fetchMyTickets();
   }
 
   Future<void> _fetchMyCredit() async {
@@ -41,6 +116,15 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       setState(() => _myCredit = credit);
     } catch (_) {
       setState(() => _myCredit = null);
+    }
+  }
+
+  Future<void> _fetchMyTickets() async {
+    try {
+      final tickets = await _repository.fetchMyTickets();
+      setState(() => _myTickets = tickets);
+    } catch (_) {
+      setState(() => _myTickets = null);
     }
   }
 
@@ -57,6 +141,14 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   }
 
   Future<void> _registerProfile() async {
+    final registerTicket = _myTickets?.registerTicket ?? 0;
+    if (registerTicket <= 0) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('등록권이 부족해요. 등록권으로 게시판에 등록하면 매칭권 1장이 지급돼요.')),
+      );
+      return;
+    }
     try {
       final authRepo = AuthRepository();
       final profile = await authRepo.getProfile();
@@ -83,11 +175,14 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       if (department != null && department.isNotEmpty) payload['department'] = department;
       await _repository.registerProfile(payload);
       await _fetchProfiles();
+      await _fetchMyTickets();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('프로필 등록 완료')));
-    } catch (_) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('프로필 등록 완료! 매칭권 1장이 지급됐어요.')));
+    } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('프로필 등록 실패')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
     }
   }
 
@@ -118,7 +213,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
             fit: BoxFit.cover,
             width: 64,
             height: 64,
-            placeholderBuilder: (context) => Icon(Icons.person, size: 40, color: Theme.of(context).colorScheme.primary),
+            placeholderBuilder: (context) => Icon(LucideIcons.user, size: 40, color: Theme.of(context).colorScheme.primary),
           ),
         ),
       );
@@ -126,16 +221,9 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     return CircleAvatar(
       radius: 32,
       backgroundColor: Colors.white,
-      child: Icon(Icons.person, size: 40, color: Theme.of(context).colorScheme.primary),
+      child: Icon(LucideIcons.user, size: 40, color: Theme.of(context).colorScheme.primary),
     );
   }
-
-  static const _rose = Color(0xFFF43F5E);
-  static const _blueGradient = LinearGradient(
-    begin: Alignment.centerLeft,
-    end: Alignment.centerRight,
-    colors: [Color(0xFF3B82F6), Color(0xFF6366F1)],
-  );
 
   @override
   Widget build(BuildContext context) {
@@ -165,7 +253,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                   children: [
                     Column(
                       children: [
-                        // AppDesign 스탯 바: 내 아바타 + 닉네임 + 남자 게시판 버튼
+                        // 내 아바타 + 닉네임 + 등록/열람/매칭권
                         Padding(
                           padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
                           child: Material(
@@ -198,7 +286,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                                       ),
                                     )
                                   else
-                                    CircleAvatar(radius: 24, backgroundColor: Colors.grey.shade300, child: Icon(Icons.person, color: Colors.grey.shade600)),
+                                    CircleAvatar(radius: 24, backgroundColor: Colors.grey.shade300, child: Icon(LucideIcons.user, color: Colors.grey.shade600)),
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Text(
@@ -207,25 +295,26 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-                                  Material(
-                                    color: Colors.transparent,
-                                    child: InkWell(
-                                      onTap: () {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('남자 게시판은 준비 중이에요')),
-                                        );
-                                      },
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                        decoration: BoxDecoration(
-                                          gradient: _blueGradient,
-                                          borderRadius: BorderRadius.circular(12),
-                                          boxShadow: [BoxShadow(color: Colors.blue.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 2))],
-                                        ),
-                                        child: const Text('남자 게시판 →', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-                                      ),
-                                    ),
+                                  // 등록권 / 열람권 / 매칭권 (등록권 1장 사용 → 등록 → 매칭권 1장 지급)
+                                  _TicketChip(
+                                    icon: LucideIcons.clipboardList,
+                                    count: _myTickets?.registerTicket ?? 0,
+                                    color: const Color(0xFF10B981),
+                                    dark: dark,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  _TicketChip(
+                                    icon: LucideIcons.eye,
+                                    count: _myTickets?.viewTicket ?? 0,
+                                    color: const Color(0xFF6366F1),
+                                    dark: dark,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  _TicketChip(
+                                    icon: LucideIcons.heart,
+                                    count: _myTickets?.matchingTicket ?? 0,
+                                    color: const Color(0xFFF43F5E),
+                                    dark: dark,
                                   ),
                                 ],
                               ),
@@ -328,7 +417,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(Icons.add, color: Colors.white, size: 22),
+                                  const Icon(LucideIcons.plus, color: Colors.white, size: 22),
                                   const SizedBox(width: 8),
                                   const Text('등록', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                                 ],
@@ -345,7 +434,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     );
   }
 
-  void _openNoteSheet(BuildContext context, int startIndex, String? myUserId) {
+  Future<void> _openNoteSheet(BuildContext context, int startIndex, String? myUserId) async {
     final others = myUserId != null
         ? _profiles.where((p) => p['userId'] != myUserId).toList()
         : List<Map<String, dynamic>>.from(_profiles);
@@ -353,42 +442,149 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     final startInOthers = tappedProfile != null ? others.indexWhere((p) => p['id'] == tappedProfile['id']) : 0;
     final initialIndex = startInOthers >= 0 ? startInOthers : 0;
     if (others.isEmpty) return;
-    showModalBottomSheet<void>(
+    // 열람권: 상세 보기 시 1장 소비
+    final viewTicket = _myTickets?.viewTicket ?? 0;
+    if (viewTicket <= 0) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('열람권이 부족해요. 열람권을 구매한 뒤 프로필을 확인해 주세요.')),
+      );
+      return;
+    }
+    final profileId = tappedProfile?['id']?.toString();
+    if (profileId == null || profileId.isEmpty) return;
+    try {
+      await _repository.consumeViewTicket(profileId);
+      await _fetchMyTickets();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+      return;
+    }
+    if (!mounted) return;
+    final sheetContent = _BoardNoteSheetContent(
+      profiles: others,
+      startIndex: initialIndex,
+      buildAvatar: _buildBoardAvatar,
+      onTakeNote: _takeNote,
+      onPop: () {
+        _fetchProfiles();
+        _fetchMyTickets();
+      },
+      myMatchingTicket: _myTickets?.matchingTicket ?? 0,
+      onRefreshTickets: _fetchMyTickets,
+    );
+    // AppDesign ProfileDetailModal: 열기/닫기 rotateY 플립, scale, opacity, perspective 1000px, spring
+    showGeneralDialog<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => _BoardNoteSheetContent(
-        profiles: others,
-        startIndex: initialIndex,
-        buildAvatar: _buildBoardAvatar,
-        onTakeNote: _takeNote,
-        onPop: _fetchProfiles,
-        myCredit: _myCredit,
-        onRefreshCredit: _fetchMyCredit,
-      ),
+      barrierDismissible: true,
+      barrierLabel: '닫기',
+      barrierColor: Colors.transparent,
+      transitionDuration: const Duration(milliseconds: 600),
+      pageBuilder: (_, __, ___) => const SizedBox.shrink(),
+      transitionBuilder: (ctx, animation, secondaryAnimation, child) {
+        return AnimatedBuilder(
+          animation: animation,
+          builder: (context, _) {
+            final t = Curves.easeOutBack.transform(animation.value);
+            final barrierOpacity = 0.6 * t;
+            final opacity = t;
+            final scale = 0.5 + 0.5 * t;
+            final isReverse = animation.status == AnimationStatus.reverse;
+            final rotateYDeg = isReverse ? 180.0 - 180.0 * t : -180.0 + 180.0 * t;
+            final rotateYRad = rotateYDeg * (3.14159265359 / 180.0);
+            return Stack(
+              children: [
+                GestureDetector(
+                  onTap: () => Navigator.of(ctx).pop(),
+                  child: Container(color: Colors.black.withOpacity(barrierOpacity)),
+                ),
+                Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 390),
+                    child: Transform(
+                      alignment: Alignment.center,
+                      transform: Matrix4.identity()
+                        ..setEntry(3, 2, 0.001)
+                        ..rotateY(rotateYRad),
+                      child: Transform.scale(
+                        scale: scale,
+                        alignment: Alignment.center,
+                        child: Opacity(
+                          opacity: opacity.clamp(0.0, 1.0),
+                          child: sheetContent,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
   Future<void> _takeNote(String profileId) async {
-    // 코인 체크
-    if (_myCredit == null || _myCredit! <= 0) {
+    final matchingTicket = _myTickets?.matchingTicket ?? 0;
+    if (matchingTicket <= 0) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('코인이 부족합니다. 코인을 충전해주세요.')),
+        const SnackBar(content: Text('매칭권이 부족해요. 매칭권을 구매한 뒤 가져가기를 시도해 주세요.')),
       );
       return;
     }
-    
     try {
       await _repository.takeNote(profileId);
       await _fetchProfiles();
-      await _fetchMyCredit(); // 코인 갱신
+      await _fetchMyTickets();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('가져가기 완료! 매칭이 성사되었어요.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('요청을 보냈어요. 상대가 수락하면 매칭돼요.')));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
     }
+  }
+}
+
+/// 등록/열람/매칭권 뱃지 (아이콘 + 개수만)
+class _TicketChip extends StatelessWidget {
+  const _TicketChip({
+    required this.icon,
+    required this.count,
+    required this.color,
+    required this.dark,
+  });
+
+  final IconData icon;
+  final int count;
+  final Color color;
+  final bool dark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: dark ? color.withOpacity(0.25) : color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.5), width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 4),
+          Text(
+            '$count',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: dark ? Colors.white : color),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -423,10 +619,8 @@ class _BoardNoteSheetContent extends StatefulWidget {
     required this.buildAvatar,
     required this.onTakeNote,
     required this.onPop,
-    this.myCredit,
-    this.onRefreshCredit,
-    this.showTakeButton = true,
-    this.showHabits = true,
+    required this.myMatchingTicket,
+    this.onRefreshTickets,
   });
 
   final List<Map<String, dynamic>> profiles;
@@ -434,10 +628,8 @@ class _BoardNoteSheetContent extends StatefulWidget {
   final Widget Function(BuildContext context, Map<String, dynamic> profile) buildAvatar;
   final Future<void> Function(String profileId) onTakeNote;
   final VoidCallback onPop;
-  final int? myCredit;
-  final Future<void> Function()? onRefreshCredit;
-  final bool showTakeButton;
-  final bool showHabits;
+  final int myMatchingTicket;
+  final Future<void> Function()? onRefreshTickets;
 
   @override
   State<_BoardNoteSheetContent> createState() => _BoardNoteSheetContentState();
@@ -446,10 +638,6 @@ class _BoardNoteSheetContent extends StatefulWidget {
 class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
   late int _currentIndex;
   bool _taking = false;
-  bool _animating = false;
-  double _cardScale = 1.0;
-  Offset _cardOffset = Offset.zero;
-  final GlobalKey _cardKey = GlobalKey();
 
   @override
   void initState() {
@@ -470,15 +658,13 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
   }
 
   Future<void> _take() async {
-    if (_taking || _animating) return;
-    
-    // 코인 체크
-    if (widget.myCredit == null || widget.myCredit! <= 0) {
+    if (_taking) return;
+
+    if (widget.myMatchingTicket <= 0) {
       if (!mounted) return;
-      // ModalBottomSheet 위에 표시되도록 root navigator의 context 사용
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('코인이 부족합니다. 코인을 충전해주세요.'),
+          content: const Text('매칭권이 부족해요. 매칭권을 구매한 뒤 가져가기를 시도해 주세요.'),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.all(16),
@@ -487,49 +673,33 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
       );
       return;
     }
-    
+
     setState(() => _taking = true);
-    // 1. 카드 shrink/move 애니메이션 시작
-    setState(() => _animating = true);
-    // 메시지함 위치(예시: 화면 우측 하단) 계산
-    final RenderBox? cardBox = _cardKey.currentContext?.findRenderObject() as RenderBox?;
-    final RenderBox? overlay = Overlay.of(context)?.context.findRenderObject() as RenderBox?;
-    Offset target = Offset.zero;
-    if (cardBox != null && overlay != null) {
-      final cardPos = cardBox.localToGlobal(Offset.zero, ancestor: overlay);
-      final cardSize = cardBox.size;
-      // 메시지함 위치: 우측 하단 32, 32 기준
-      final screenSize = overlay.size;
-      target = Offset(screenSize.width - cardPos.dx - cardSize.width / 2 - 32, screenSize.height - cardPos.dy - cardSize.height / 2 - 32);
+    try {
+      await widget.onTakeNote(_profile['id'] as String);
+      if (widget.onRefreshTickets != null) await widget.onRefreshTickets!();
+      if (!mounted) return;
+      setState(() => _taking = false);
+      // AppDesign ProfileDetailModal: 카드 비행 1.5초 + 스파클 12 → 성공 문구 2초
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        barrierColor: Colors.black54,
+        builder: (ctx) => _MatchCelebrationOverlay(
+          profile: _profile,
+          buildAvatar: widget.buildAvatar,
+        ),
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      widget.onPop();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _taking = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
     }
-    // 애니메이션 실행
-    await Future.wait([
-      Future.delayed(const Duration(milliseconds: 10)),
-      Future(() async {
-        for (int i = 0; i < 20; i++) {
-          await Future.delayed(const Duration(milliseconds: 10));
-          setState(() {
-            _cardScale = 1.0 - 0.03 * i;
-            _cardOffset = Offset(target.dx * (i + 1) / 20, target.dy * (i + 1) / 20);
-          });
-        }
-      })
-    ]);
-    // 2. 실제 데이터 처리
-    await widget.onTakeNote(_profile['id'] as String);
-    // 코인 갱신
-    if (widget.onRefreshCredit != null) {
-      await widget.onRefreshCredit!();
-    }
-    if (!mounted) return;
-    Navigator.of(context).pop();
-    widget.onPop();
-    setState(() {
-      _animating = false;
-      _cardScale = 1.0;
-      _cardOffset = Offset.zero;
-    });
-    setState(() => _taking = false);
   }
 
   static String _str(dynamic v) => v?.toString() ?? '-';
@@ -620,101 +790,242 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
       return null;
     }
 
+    // AppDesign ProfileDetailModal: 로즈 그라데이션 헤더, 아바타+닉네임, 스크롤 정보+태그, 하단 닫기/가져가기
+    const roseGradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFFFB7185), Color(0xFFF472B6), Color(0xFFF43F5E)],
+    );
+    final dark = theme.brightness == Brightness.dark;
+    final listTags = <String>[];
+    final kw = pluck(['idealTypeKeywords']) ?? user?['idealTypeKeywords'];
+    if (kw is List) {
+      for (final e in kw) {
+        final s = e?.toString().trim();
+        if (s != null && s.isNotEmpty) listTags.add(s);
+      }
+    }
+
     return Container(
       height: MediaQuery.of(context).size.height * 0.88,
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        color: dark ? const Color(0xFF1F2937) : Colors.white,
+        borderRadius: BorderRadius.circular(32),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 24, offset: const Offset(0, 8)),
+        ],
       ),
-      child: Column(
-        children: [
-          const SizedBox(height: 12),
-          Container(width: 40, height: 4, decoration: BoxDecoration(color: theme.colorScheme.onSurface.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2))),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 280),
-                switchInCurve: Curves.easeOutCubic,
-                switchOutCurve: Curves.easeInCubic,
-                transitionBuilder: (Widget child, Animation<double> animation) {
-                  return SlideTransition(
-                    position: Tween<Offset>(begin: const Offset(0.15, 0), end: Offset.zero).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
-                    child: FadeTransition(opacity: animation, child: child),
-                  );
-                },
-                child: Column(
-                  key: ValueKey<int>(_currentIndex),
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    AnimatedContainer(
-                      key: _cardKey,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                      transform: Matrix4.identity()
-                        ..translate(_cardOffset.dx, _cardOffset.dy)
-                        ..scale(_cardScale),
-                      child: widget.buildAvatar(context, profile),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(32),
+        child: Column(
+          children: [
+            // 헤더: 그라데이션 + 드래그 핸들 + X + 아바타 + 닉네임
+            Container(
+              height: 160,
+              decoration: BoxDecoration(gradient: roseGradient),
+              child: Stack(
+                children: [
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 28),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          Container(
+                            width: 96,
+                            height: 96,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 4),
+                              boxShadow: [
+                                BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 2)),
+                              ],
+                            ),
+                            child: ClipOval(
+                              child: widget.buildAvatar(context, profile),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            _str(profile['nickname']),
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 16),
-                    Text(_str(profile['nickname']), style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 20),
-                    _row(theme, '학과', _str(pluck(['department', 'major', 'departmentName']))),
-                    _row(theme, '성별', _toLabel('gender', pluck(['gender', 'sex'])?.toString())),
-                    _row(theme, '소속', _str(pluck(['affiliation', 'school', 'affiliationText', 'organization']))),
-                    _row(theme, '키', pluck(['heightCm', 'height']) != null ? '${pluck(['heightCm', 'height'])} cm' : '-'),
-                    _row(theme, '학년', _toLabel('gradeYear', pluck(['grade', 'year', 'schoolYear', 'class']) )),
-                    _row(theme, 'MBTI', _str(pluck(['mbti', 'mbtiType']))),
-                    if (widget.showHabits) _row(theme, '흡연', _toLabel('smoking', pluck(['smoking', 'smoke'])?.toString())),
-                    if (widget.showHabits) _row(theme, '음주', _toLabel('drinking', pluck(['drinking', 'alcohol'])?.toString())),
-                    _row(theme, '한 줄 소개', _str(pluck(['oneLineIntroduce', 'introOneLine', 'bio', 'introduction']))),
-                    _row(theme, '요즘 빠진 것', _str(pluck(['intoLately', 'hobby', 'recentInterest']))),
-                    _row(theme, '이상형', _str(pluck(['idealType', 'ideal']))),
-                    _row(theme, '패션 스타일', _toLabel('fashionStyle', pluck(['fashionStyle', 'style']))),
-                    _row(theme, '선호 데이트', _toLabel('preferredDateType', pluck(['preferredDateType', 'preferredDate']))),
-                    _row(theme, '활동 시간대', _toLabel('activityTime', pluck(['activityTime', 'activeTime']))),
-                    if ((pluck(['idealTypeKeywords']) is List) || (user?['idealTypeKeywords'] is List))
-                      _row(theme, '나를 소개하는 키워드', ((pluck(['idealTypeKeywords']) ?? user?['idealTypeKeywords']) as List).join(', ')),
-                  ],
+                  ),
+                  Positioned(
+                    top: MediaQuery.of(context).padding.top + 8,
+                    right: 12,
+                    child: Material(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                      child: InkWell(
+                        onTap: _taking ? null : () {
+                          Navigator.of(context).pop();
+                          widget.onPop();
+                        },
+                        borderRadius: BorderRadius.circular(20),
+                        child: const Padding(
+                          padding: EdgeInsets.all(10),
+                          child: Icon(LucideIcons.x, color: Colors.white, size: 20),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // 스크롤: 정보 행 + 태그
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 280),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  transitionBuilder: (Widget child, Animation<double> animation) {
+                    return SlideTransition(
+                      position: Tween<Offset>(begin: const Offset(0.15, 0), end: Offset.zero).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+                      child: FadeTransition(opacity: animation, child: child),
+                    );
+                  },
+                  child: Column(
+                    key: ValueKey<int>(_currentIndex),
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _rowAppDesign(theme, dark, '학과', _str(pluck(['department', 'major', 'departmentName']))),
+                      _rowAppDesign(theme, dark, '성별', _toLabel('gender', pluck(['gender', 'sex'])?.toString())),
+                      _rowAppDesign(theme, dark, '소속', _str(pluck(['affiliation', 'school', 'affiliationText', 'organization']))),
+                      _rowAppDesign(theme, dark, '키', pluck(['heightCm', 'height']) != null ? '${pluck(['heightCm', 'height'])} cm' : '-'),
+                      _rowAppDesign(theme, dark, '학번', _toLabel('gradeYear', pluck(['grade', 'year', 'schoolYear', 'class']) )),
+                      _rowAppDesign(theme, dark, 'MBTI', _str(pluck(['mbti', 'mbtiType']))),
+                      _rowAppDesign(theme, dark, '흡연', _toLabel('smoking', pluck(['smoking', 'smoke'])?.toString())),
+                      _rowAppDesign(theme, dark, '음주', _toLabel('drinking', pluck(['drinking', 'alcohol'])?.toString())),
+                      _rowAppDesign(theme, dark, '한 줄 소개', _str(pluck(['oneLineIntroduce', 'introOneLine', 'bio', 'introduction']))),
+                      _rowAppDesign(theme, dark, '요즘 빠진 것', _str(pluck(['intoLately', 'hobby', 'recentInterest']))),
+                      _rowAppDesign(theme, dark, '이상형', _str(pluck(['idealType', 'ideal']))),
+                      _rowAppDesign(theme, dark, '패션 스타일', _toLabel('fashionStyle', pluck(['fashionStyle', 'style']))),
+                      _rowAppDesign(theme, dark, '선호 데이트', _toLabel('preferredDateType', pluck(['preferredDateType', 'preferredDate']))),
+                      _rowAppDesign(theme, dark, '활동 시간대', _toLabel('activityTime', pluck(['activityTime', 'activeTime']))),
+                      if (listTags.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(
+                              width: 112,
+                              child: Text(
+                                '나를 소개하는...',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Wrap(
+                                spacing: 8,
+                                runSpacing: 6,
+                                children: listTags.map((tag) => Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: dark ? Colors.grey.shade700 : Colors.grey.shade100,
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: Text(
+                                    tag,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: dark ? Colors.grey.shade300 : Colors.grey.shade800,
+                                    ),
+                                  ),
+                                )).toList(),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+            // 하단: 닫기/넘기기 + 가져가기 (AppDesign 그라데이션 버튼)
+            Container(
+              padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + MediaQuery.of(context).padding.bottom),
+              decoration: BoxDecoration(
+                color: dark ? const Color(0xFF1F2937) : Colors.white,
+                border: Border(top: BorderSide(color: dark ? Colors.grey.shade700 : Colors.grey.shade200)),
+              ),
               child: Row(
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: _taking || _animating ? null : _skip,
+                      onPressed: _taking ? null : _skip,
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        side: BorderSide(color: dark ? Colors.grey.shade600 : Colors.grey.shade300),
                       ),
-                      child: Text(_currentIndex + 1 < widget.profiles.length ? '넘기기' : '닫기'),
+                      child: Text(
+                        '넘기기',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: dark ? Colors.grey.shade200 : Colors.grey.shade700,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
-                  if (widget.showTakeButton) ...[
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: FilledButton(
-                        onPressed: _taking || _animating ? null : _take,
-                        style: FilledButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        gradient: roseGradient,
+                        boxShadow: [
+                          BoxShadow(color: const Color(0xFFF43F5E).withOpacity(0.4), blurRadius: 8, offset: const Offset(0, 2)),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: _taking ? null : _take,
+                          borderRadius: BorderRadius.circular(12),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            child: Center(
+                              child: _taking
+                                  ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                  : const Text(
+                                      '가져가기',
+                                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                                    ),
+                            ),
+                          ),
                         ),
-                        child: _taking || _animating ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('가져가기'),
                       ),
                     ),
-                  ],
+                  ),
                 ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -726,45 +1037,367 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 100, child: Text(label, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.7)), maxLines: 1, overflow: TextOverflow.ellipsis)),
+          SizedBox(width: 100, child: Text(label, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.7)), maxLines: 1, overflow: TextOverflow.ellipsis)),
           Expanded(child: Text(value, style: theme.textTheme.bodyMedium, maxLines: 3, overflow: TextOverflow.ellipsis)),
+        ],
+      ),
+    );
+  }
+
+  /// AppDesign InfoRow: label 112, value, border-bottom
+  Widget _rowAppDesign(ThemeData theme, bool dark, String label, String value) {
+    if (value.isEmpty || value == '-') return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: dark ? Colors.grey.shade700 : Colors.grey.shade100)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 112,
+            child: Text(
+              label,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              value,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: dark ? Colors.grey.shade300 : const Color(0xFF111827),
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-/// Show the board-style profile bottom sheet.
-/// This is a small public helper so other screens can reuse the same UI.
-Future<void> showBoardNoteSheet(
-  BuildContext context, {
-  required List<Map<String, dynamic>> profiles,
-  int startIndex = 0,
-  required Widget Function(BuildContext context, Map<String, dynamic> profile) buildAvatar,
-  Future<void> Function(String profileId)? onTakeNote,
-  required VoidCallback onPop,
-  int? myCredit,
-  Future<void> Function()? onRefreshCredit,
-  bool showTakeButton = true,
-  bool showHabits = true,
-}) async {
-  await showModalBottomSheet(
+/// 매칭 완료 시 (가져가기 수락 등) 전용 오버레이. 앱 전역에서 호출 가능. 다이얼로그가 닫힐 때까지 완료.
+Future<void> showMatchCompleteCelebration(BuildContext context) {
+  return showDialog<void>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (ctx) {
-      return _BoardNoteSheetContent(
-        profiles: profiles,
-        startIndex: startIndex,
-        buildAvatar: buildAvatar,
-        onTakeNote: onTakeNote ?? ((_) async {}),
-        onPop: onPop,
-        myCredit: myCredit,
-        onRefreshCredit: onRefreshCredit,
-        showTakeButton: showTakeButton,
-        showHabits: showHabits,
-      );
-    },
+    barrierDismissible: false,
+    barrierColor: Colors.black54,
+    builder: (ctx) => const _MatchCompleteOnlyOverlay(),
   );
+}
+
+class _MatchCompleteOnlyOverlay extends StatefulWidget {
+  const _MatchCompleteOnlyOverlay();
+
+  @override
+  State<_MatchCompleteOnlyOverlay> createState() => _MatchCompleteOnlyOverlayState();
+}
+
+class _MatchCompleteOnlyOverlayState extends State<_MatchCompleteOnlyOverlay> {
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(milliseconds: 2000), () {
+      if (mounted) Navigator.of(context).pop();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Center(
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: dark ? const Color(0xFF1F2937) : Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.25), blurRadius: 24, offset: const Offset(0, 8)),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(LucideIcons.heart, size: 80, color: const Color(0xFFF43F5E)),
+              const SizedBox(height: 16),
+              Text(
+                '매칭 완료!',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: dark ? Colors.white : const Color(0xFF111827),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '이제 대화를 시작해보세요 💕',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: dark ? Colors.grey : const Color(0xFF6B7280),
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 가져가기 요청 전송 후: 카드 비행 + 성공 문구 (요청만 보낸 상태 → 상대 수락 시 매칭)
+class _MatchCelebrationOverlay extends StatefulWidget {
+  const _MatchCelebrationOverlay({
+    required this.profile,
+    required this.buildAvatar,
+    this.requestOnly = true,
+  });
+
+  final Map<String, dynamic> profile;
+  final Widget Function(BuildContext context, Map<String, dynamic> profile) buildAvatar;
+  /// true: 요청만 보냄 문구 / false: 카드 획득 문구
+  final bool requestOnly;
+
+  @override
+  State<_MatchCelebrationOverlay> createState() => _MatchCelebrationOverlayState();
+}
+
+class _MatchCelebrationOverlayState extends State<_MatchCelebrationOverlay> with TickerProviderStateMixin {
+  static const _flyingDuration = Duration(milliseconds: 1500);
+  static const _successDuration = Duration(milliseconds: 2000);
+
+  late AnimationController _flyController;
+  late AnimationController _heartController;
+  bool _showSuccess = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _flyController = AnimationController(vsync: this, duration: _flyingDuration);
+    _heartController = AnimationController(vsync: this, duration: const Duration(milliseconds: 600))
+      ..repeat(reverse: true);
+    _flyController.forward().then((_) {
+      if (!mounted) return;
+      setState(() => _showSuccess = true);
+      Future.delayed(_successDuration, () {
+        if (!mounted) return;
+        Navigator.of(context).pop();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _flyController.dispose();
+    _heartController.dispose();
+    super.dispose();
+  }
+
+  static double _lerp(List<double> keyframes, double t) {
+    final n = keyframes.length - 1;
+    final seg = (t * n).clamp(0.0, n.toDouble());
+    final i = seg.floor().clamp(0, n - 1);
+    final f = seg - i;
+    return keyframes[i] + f * (keyframes[i + 1] - keyframes[i]);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final nickname = widget.profile['nickname']?.toString() ?? '';
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    const cardW = 256.0;
+    const cardH = 320.0;
+    final cardBg = Colors.grey.shade300;
+
+    if (_showSuccess) {
+      return _buildSuccessPhase(dark, nickname);
+    }
+    return AnimatedBuilder(
+      animation: _flyController,
+      builder: (context, _) {
+        final t = Curves.easeInOut.transform(_flyController.value);
+        final x = _lerp([0.0, -100.0, 100.0, 0.0], t);
+        final y = _lerp([0.0, -200.0, -400.0, -600.0], t);
+        final scale = _lerp([0.3, 0.5, 0.7, 0.2], t);
+        final rotateDeg = _lerp([-15.0, 5.0, -10.0, 360.0], t);
+        final rotateRad = rotateDeg * (math.pi / 180.0);
+        final opacity = _lerp([0.8, 1.0, 1.0, 0.0], t).clamp(0.0, 1.0);
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            IgnorePointer(
+              child: Center(
+                child: Transform.translate(
+                  offset: Offset(x, y),
+                  child: Transform.scale(
+                    scale: scale,
+                    child: Transform.rotate(
+                      angle: rotateRad,
+                      child: Opacity(
+                        opacity: opacity,
+                        child: Container(
+                          width: cardW,
+                          height: cardH,
+                          decoration: BoxDecoration(
+                            color: cardBg,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 24, offset: const Offset(0, 8)),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [Colors.white.withOpacity(0.25), Colors.transparent],
+                                    ),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(24),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: Colors.white, width: 4),
+                                          boxShadow: [
+                                            BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 2)),
+                                          ],
+                                        ),
+                                        child: ClipOval(
+                                          child: SizedBox(
+                                            width: 128,
+                                            height: 128,
+                                            child: widget.buildAvatar(context, widget.profile),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        nickname,
+                                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF111827)),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            ...List.generate(12, (i) {
+              final angleRad = i * 30 * (math.pi / 180);
+              final progress = _flyController.value;
+              final rad = 150.0 * (progress < 0.5 ? progress * 2 : 1.0);
+              final ox = rad * math.cos(angleRad);
+              final oy = rad * math.sin(angleRad);
+              final sparkOpacity = progress < 0.6 ? (progress / 0.6) : ((1 - progress) / 0.4).clamp(0.0, 1.0);
+              return Positioned(
+                left: MediaQuery.of(context).size.width / 2 + ox - 12,
+                top: MediaQuery.of(context).size.height / 2 + oy - 12,
+                child: IgnorePointer(
+                  child: Opacity(
+                    opacity: sparkOpacity,
+                    child: Icon(LucideIcons.sparkles, color: Colors.amber.shade400, size: 24),
+                  ),
+                ),
+              );
+            }),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildSuccessPhase(bool dark, String nickname) {
+    return Center(
+      child: Material(
+        color: Colors.transparent,
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.5, end: 1),
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.elasticOut,
+          builder: (context, value, child) => Transform.scale(scale: value, child: child),
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: dark ? const Color(0xFF1F2937) : Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.25), blurRadius: 24, offset: const Offset(0, 8)),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AnimatedBuilder(
+                  animation: _heartController,
+                  builder: (context, _) {
+                    final v = _heartController.value;
+                    final scale = 1.0 + 0.2 * math.sin(math.pi * v);
+                    final rotateDeg = 10 * math.sin(2 * math.pi * v);
+                    return Transform.rotate(
+                      angle: rotateDeg * (math.pi / 180),
+                      child: Transform.scale(
+                        scale: scale,
+                        child: Icon(LucideIcons.heart, size: 80, color: const Color(0xFFF43F5E)),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  widget.requestOnly ? '요청을 보냈어요!' : '카드 획득!',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: dark ? Colors.white : const Color(0xFF111827),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  widget.requestOnly
+                      ? '$nickname님이 수락하면\n매칭이 성사돼요 💕'
+                      : '$nickname님의 프로필을\n가져왔어요! 💕',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: dark ? Colors.grey.shade300 : const Color(0xFF6B7280),
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 

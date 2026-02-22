@@ -47,12 +47,58 @@ class _NearoAppState extends State<NearoApp> {
   final _environmentStatusRepository = EnvironmentStatusRepository();
   StreamSubscription<Uri>? _linkSub;
   Map<String, dynamic>? _pendingNotificationData;
+  /// 앱 진입 시 세션 확인 후 결정. null이면 아직 확인 중(스플래시만 표시).
+  String? _initialRoute;
 
   @override
   void initState() {
     super.initState();
-    _initDeepLinks();
     _initFcmOpenHandler();
+    _resolveInitialRoute();
+    _initDeepLinks();
+  }
+
+  /// 세션 확인 후 첫 화면 라우트만 결정. 푸시하지 않음.
+  Future<void> _resolveInitialRoute() async {
+    // 로그인 성공 딥링크 등 초기 링크 먼저 처리(토큰 저장) 후 토큰 기준으로 라우트 결정
+    final initialLink = await _appLinks.getInitialLink();
+    if (initialLink != null) {
+      _handleLink(initialLink);
+    }
+    final token = await _tokenStorage.readAccessToken();
+    if (token == null || token.isEmpty) {
+      if (mounted) setState(() => _initialRoute = AppRoutes.onboarding);
+      return;
+    }
+    try {
+      final profile = await _authRepository.getProfile();
+      final user = (profile['user'] as Map?) ?? profile;
+      final hasProfile = user['nickname'] != null;
+      final hasAffiliation =
+          (user['affiliationText'] as String?)?.trim().isNotEmpty ?? false;
+      if (!hasProfile || !hasAffiliation) {
+        if (mounted) setState(() => _initialRoute = AppRoutes.profileSetup);
+        return;
+      }
+      try {
+        final status =
+            await _environmentStatusRepository.getMyEnvironmentStatus();
+        if (status == null || status['environmentId'] == null) {
+          if (mounted) setState(() => _initialRoute = AppRoutes.environment);
+          return;
+        }
+        if (status['verified'] == true) {
+          if (mounted) setState(() => _initialRoute = AppRoutes.home);
+        } else {
+          if (mounted) setState(() => _initialRoute = AppRoutes.environment);
+        }
+      } catch (_) {
+        if (mounted) setState(() => _initialRoute = AppRoutes.environment);
+      }
+    } catch (_) {
+      await _tokenStorage.clear();
+      if (mounted) setState(() => _initialRoute = AppRoutes.onboarding);
+    }
   }
 
   Future<void> _initFcmOpenHandler() async {
@@ -88,7 +134,6 @@ class _NearoAppState extends State<NearoApp> {
       _handleLink(initialLink);
     }
     _linkSub = _appLinks.uriLinkStream.listen(_handleLink);
-    await _restoreSession();
   }
 
   Future<void> _restoreSession() async {
@@ -173,13 +218,28 @@ class _NearoAppState extends State<NearoApp> {
             return ValueListenableBuilder<bool>(
               valueListenable: ThemeController.secretMode,
               builder: (context, secret, ___) {
+                // 세션 확인이 끝나기 전에는 스플래시만 표시(온보딩 노출 방지)
+                if (_initialRoute == null) {
+                  final theme = secret
+                      ? NearoTheme.secret(seedColor: color)
+                      : NearoTheme.light(seedColor: color);
+                  return MaterialApp(
+                    title: 'NEARO',
+                    theme: theme,
+                    debugShowCheckedModeBanner: false,
+                    home: const Scaffold(
+                      backgroundColor: Colors.white,
+                      body: SizedBox.expand(),
+                    ),
+                  );
+                }
                 return MaterialApp(
                   title: 'NEARO',
                   theme: secret ? NearoTheme.secret(seedColor: color) : NearoTheme.light(seedColor: color),
                   darkTheme: secret ? NearoTheme.secret(seedColor: color) : NearoTheme.dark(seedColor: color),
                   themeMode: mode,
                   navigatorKey: _navigatorKey,
-                  initialRoute: AppRoutes.onboarding,
+                  initialRoute: _initialRoute,
                   builder: (context, child) => child ?? const SizedBox.shrink(),
                   routes: {
                     AppRoutes.onboarding: (_) => const OnboardingScreen(),

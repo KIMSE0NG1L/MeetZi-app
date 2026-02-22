@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/shared/data/notionists_options.dart';
@@ -170,7 +171,7 @@ class _AvatarSetupScreenState extends State<AvatarSetupScreen> {
         appBar: AppBar(
           title: const Text('아바타 편집'),
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
+            icon: const Icon(LucideIcons.arrowLeft),
             onPressed: _onBack,
           ),
         ),
@@ -184,7 +185,7 @@ class _AvatarSetupScreenState extends State<AvatarSetupScreen> {
                     const SizedBox(height: 8),
                     OutlinedButton.icon(
                       onPressed: _randomize,
-                      icon: const Icon(Icons.shuffle, size: 18),
+                      icon: const Icon(LucideIcons.shuffle, size: 18),
                       label: const Text('시드 랜덤'),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -366,7 +367,7 @@ class _OptionThumbnail extends StatelessWidget {
                   child: SvgPicture.network(
                     url,
                     fit: BoxFit.cover,
-                    placeholderBuilder: (context) => Icon(Icons.person, size: 28, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    placeholderBuilder: (context) => Icon(LucideIcons.user, size: 28, color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                 ),
               ),

@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/auth/data/environment_repository.dart';
 
 /// AppDesign RankingScreen: 보라 테마, 트로피 섹션, 카드형 랭킹 리스트
@@ -9,16 +11,35 @@ class UniversityRankingScreen extends StatefulWidget {
   State<UniversityRankingScreen> createState() => _UniversityRankingScreenState();
 }
 
-class _UniversityRankingScreenState extends State<UniversityRankingScreen> {
+class _UniversityRankingScreenState extends State<UniversityRankingScreen> with SingleTickerProviderStateMixin {
   final EnvironmentRepository _envRepo = EnvironmentRepository();
   List<Map<String, dynamic>> _ranking = [];
   bool _loading = true;
   static const _purple = Color(0xFFA855F7);
+  late AnimationController _liveController;
+  late Animation<double> _livePulse;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     _loadRanking();
+    _liveController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+    _livePulse = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _liveController, curve: Curves.easeInOut),
+    );
+    // 실시간처럼: 60초마다 랭킹 다시 불러와서 숫자 갱신
+    _refreshTimer = Timer.periodic(const Duration(seconds: 60), (_) => _refreshRankingQuiet());
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    _liveController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadRanking() async {
@@ -35,6 +56,17 @@ class _UniversityRankingScreenState extends State<UniversityRankingScreen> {
         _loading = false;
       });
     }
+  }
+
+  /// 로딩 인디케이터 없이 조용히 새 데이터만 반영 (실시간 갱신용)
+  Future<void> _refreshRankingQuiet() async {
+    if (!mounted) return;
+    try {
+      final list = await _envRepo.getRanking();
+      if (mounted && list.isNotEmpty) {
+        setState(() => _ranking = list);
+      }
+    } catch (_) {}
   }
 
   static const _defaultRanking = [
@@ -86,7 +118,7 @@ class _UniversityRankingScreenState extends State<UniversityRankingScreen> {
                           color: dark ? _purple.withOpacity(0.3) : const Color(0xFFF3E8FF),
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: Icon(Icons.emoji_events, size: 48, color: dark ? const Color(0xFFC084FC) : _purple),
+                        child: Icon(LucideIcons.trophy, size: 48, color: dark ? const Color(0xFFC084FC) : _purple),
                       ),
                       const SizedBox(height: 16),
                       Text(
@@ -170,12 +202,22 @@ class _UniversityRankingScreenState extends State<UniversityRankingScreen> {
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                     const SizedBox(height: 4),
-                                    Text(
-                                      '${users.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}명 활동중',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
-                                      ),
+                                    AnimatedBuilder(
+                                      animation: _livePulse,
+                                      builder: (context, _) {
+                                        final opacity = 0.45 + 0.55 * _livePulse.value;
+                                        return Opacity(
+                                          opacity: opacity.clamp(0.0, 1.0),
+                                          child: Text(
+                                            '${users.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}명 활동중',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        );
+                                      },
                                     ),
                                   ],
                                 ),

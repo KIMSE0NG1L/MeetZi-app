@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:nearo_app/features/matching/data/matching_repository.dart';
@@ -17,6 +18,7 @@ class _ChatMessage {
   final bool isMine;
   final bool isSystem;
   final DateTime? readAt;
+  final DateTime? createdAt;
   final String senderId;
 
   _ChatMessage({
@@ -26,6 +28,7 @@ class _ChatMessage {
     required this.senderId,
     this.isSystem = false,
     this.readAt,
+    this.createdAt,
   });
 }
 
@@ -136,6 +139,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
             senderId: msg.senderId,
             isSystem: msg.isSystem,
             readAt: readAt,
+            createdAt: msg.createdAt,
           );
         }
       }
@@ -196,6 +200,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
               senderId: senderId ?? '',
               isSystem: m['isSystem'] == true,
               readAt: m['readAt'] != null ? DateTime.tryParse(m['readAt'].toString()) : null,
+              createdAt: m['createdAt'] != null ? DateTime.tryParse(m['createdAt'].toString()) : null,
             );
           }));
         _loading = false;
@@ -268,6 +273,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
           senderId: data['senderId']?.toString() ?? '',
           isSystem: false,
           readAt: data['readAt'] != null ? DateTime.tryParse(data['readAt'].toString()) : null,
+          createdAt: data['createdAt'] != null ? DateTime.tryParse(data['createdAt'].toString()) : null,
         ));
       });
       _scrollToBottom();
@@ -321,6 +327,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
               senderId: msg.senderId,
               isSystem: msg.isSystem,
               readAt: readAt,
+              createdAt: msg.createdAt,
             ));
           } else {
             newList.add(msg);
@@ -383,6 +390,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
           text: text,
           isMine: true,
           senderId: _myUserId ?? '',
+          createdAt: DateTime.now(),
         ));
       });
       try {
@@ -395,6 +403,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
             text: '메시지 전송 실패',
             isMine: false,
             senderId: _myUserId ?? '',
+            createdAt: DateTime.now(),
           ));
         });
       }
@@ -460,185 +469,340 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
     super.dispose();
   }
 
+  // AppDesign: 메시지 전송/수신 시각 (createdAt 우선)
+  String _messageTime(_ChatMessage message) {
+    final dt = message.createdAt ?? message.readAt ?? DateTime.now();
+    final hour = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
+    final ampm = dt.hour >= 12 ? '오후' : '오전';
+    return '$ampm ${hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+  }
+
+  static const _roseGradient = LinearGradient(
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [Color(0xFFFB7185), Color(0xFFF43F5E)],
+  );
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
+    final messageBg = dark ? const Color(0xFF1F2937) : Colors.grey.shade50;
+    final bubbleOther = dark ? const Color(0xFF374151) : Colors.white;
+    final bubbleMine = const Color(0xFFF43F5E);
+    final inputBg = dark ? const Color(0xFF374151) : Colors.grey.shade100;
+    final borderColor = dark ? Colors.grey.shade700 : Colors.grey.shade200;
+    final hintColor = dark ? Colors.grey.shade400 : Colors.grey.shade600;
+    final timeColor = dark ? Colors.grey.shade500 : Colors.grey.shade600;
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_title),
-        actions: [
-          TextButton(
-            onPressed: _cancelMatch,
-            child: const Text('매칭 취소'),
-          ),
-        ],
-      ),
+      backgroundColor: dark ? const Color(0xFF111827) : Colors.grey.shade50,
       body: SafeArea(
         child: Column(
           children: [
-            Expanded(
-              child: Column(
+            // AppDesign: 로즈 그라데이션 헤더, 뒤로가기, 아바타+이름+온라인, 더보기
+            Container(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 12,
+                bottom: 16,
+              ),
+              decoration: const BoxDecoration(
+                gradient: _roseGradient,
+                boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2))],
+              ),
+              child: Row(
                 children: [
-                  if (!_isActive)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      color: Colors.grey.shade200,
-                      child: Text(
-                        '매칭이 취소되어 메시지를 보낼 수 없습니다.',
-                        style: TextStyle(color: Colors.grey.shade700),
+                  Material(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                    child: InkWell(
+                      onTap: () => Navigator.of(context).pop(),
+                      borderRadius: BorderRadius.circular(8),
+                      child: const Padding(
+                        padding: EdgeInsets.all(10),
+                        child: Icon(LucideIcons.arrowLeft, color: Colors.white, size: 24),
                       ),
                     ),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: _loading
-                        ? const Center(child: CircularProgressIndicator())
-                        : _messages.isEmpty
-                            ? const Center(child: Text('첫 메시지를 보내 보세요.'))
-                            : ListView.separated(
-                                controller: _scrollController,
-                                reverse: true,
-                                padding: const EdgeInsets.all(16),
-                                itemCount: _messages.length,
-                                separatorBuilder: (_, __) => const SizedBox(height: 8),
-                                itemBuilder: (context, index) {
-                                  final message = _messages[_messages.length - 1 - index];
-                                  DateTime? messageDate = message.readAt ?? DateTime.now();
-                                  if (messageDate == null && message is _ChatMessage) {
-                                    // fallback to createdAt if available
-                                    // (createdAt이 없으면 현재 시간 사용)
-                                    messageDate = DateTime.now();
-                                  }
-                                  DateTime? prevDate;
-                                  if (index < _messages.length - 1) {
-                                    final prevMessage = _messages[_messages.length - 1 - (index + 1)];
-                                    prevDate = prevMessage.readAt ?? DateTime.now();
-                                  }
-                                  bool isNewDate = false;
-                                  if (messageDate != null) {
-                                    if (prevDate == null ||
-                                        messageDate.year != prevDate.year ||
-                                        messageDate.month != prevDate.month ||
-                                        messageDate.day != prevDate.day) {
-                                      isNewDate = true;
-                                    }
-                                  }
-                                  List<Widget> children = [];
-                                  if (isNewDate) {
-                                    children.add(
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(vertical: 8),
-                                        child: Center(
-                                          child: Text(
-                                            "${messageDate.year}.${messageDate.month.toString().padLeft(2, '0')}.${messageDate.day.toString().padLeft(2, '0')}",
-                                            style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                  if (message.isSystem) {
-                                    children.add(
-                                      Center(
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 8,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.grey.shade200,
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
-                                          child: Text(
-                                            message.text,
-                                            style: TextStyle(color: Colors.grey.shade700),
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  } else {
-                                    final color = message.isMine
-                                        ? Theme.of(context).colorScheme.primary
-                                        : Colors.grey.shade200;
-                                    final textColor = message.isMine
-                                        ? Colors.white
-                                        : Colors.black87;
-                                    children.add(
-                                      Row(
-                                        key: ValueKey('${message.id}_${message.readAt?.millisecondsSinceEpoch ?? 0}'),
-                                        mainAxisAlignment: message.isMine
-                                            ? MainAxisAlignment.end
-                                            : MainAxisAlignment.start,
-                                        crossAxisAlignment: CrossAxisAlignment.end,
-                                        children: [
-                                          if (message.isMine && message.readAt == null)
-                                            Padding(
-                                              padding: const EdgeInsets.only(right: 4),
-                                              child: Text('1', style: TextStyle(color: Colors.red, fontSize: 14, fontWeight: FontWeight.bold)),
-                                            ),
-                                          if (!message.isMine) ...[
-                                            _buildPartnerAvatar(context),
-                                            const SizedBox(width: 8),
-                                          ],
-                                          Column(
-                                            crossAxisAlignment: message.isMine
-                                                ? CrossAxisAlignment.end
-                                                : CrossAxisAlignment.start,
-                                            children: [
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                                decoration: BoxDecoration(
-                                                  color: color,
-                                                  borderRadius: BorderRadius.circular(16),
-                                                ),
-                                                child: Text(message.text, style: TextStyle(color: textColor)),
-                                              ),
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                _formatMessageTime(message.readAt),
-                                                style: TextStyle(
-                                                  color: Colors.grey.shade500,
-                                                  fontSize: 11,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          if (!_isActive && !message.isMine && message.readAt == null)
-                                            Padding(
-                                              padding: const EdgeInsets.only(left: 4),
-                                              child: Text('1', style: TextStyle(color: Colors.red, fontSize: 14, fontWeight: FontWeight.bold)),
-                                            ),
-                                        ],
-                                      ),
-                                    );
-                                  }
-                                  return Column(
-                                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                                    children: children,
-                                  );
-                                },
+                    child: InkWell(
+                      onTap: _openPartnerProfile,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                        child: Row(
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
                               ),
+                              child: _buildPartnerAvatar(context),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    _title,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '온라인',
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.8),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert, color: Colors.white, size: 24),
+                    color: theme.colorScheme.surface,
+                    onSelected: (value) {
+                      if (value == 'cancel') _cancelMatch();
+                    },
+                    itemBuilder: (_) => [
+                      const PopupMenuItem(value: 'cancel', child: Text('매칭 취소')),
+                    ],
                   ),
                 ],
               ),
             ),
+            if (!_isActive)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
+                child: Text(
+                  '매칭이 취소되어 메시지를 보낼 수 없습니다.',
+                  style: TextStyle(color: dark ? Colors.grey.shade300 : Colors.grey.shade700),
+                ),
+              ),
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _messages.isEmpty
+                      ? Center(
+                          child: Text(
+                            '첫 메시지를 보내 보세요.',
+                            style: TextStyle(color: timeColor, fontSize: 15),
+                          ),
+                        )
+                      : ListView.separated(
+                          controller: _scrollController,
+                          reverse: true,
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                          itemCount: _messages.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final message = _messages[_messages.length - 1 - index];
+                            final messageDate = message.createdAt ?? message.readAt ?? DateTime.now();
+                            DateTime? prevDate;
+                            if (index < _messages.length - 1) {
+                              final prev = _messages[_messages.length - 1 - (index + 1)];
+                              prevDate = prev.createdAt ?? prev.readAt ?? DateTime.now();
+                            }
+                            final isNewDate = prevDate == null ||
+                                messageDate.year != prevDate.year ||
+                                messageDate.month != prevDate.month ||
+                                messageDate.day != prevDate.day;
+                            final dateStr = '${messageDate.year}년 ${messageDate.month}월 ${messageDate.day}일';
+                            final List<Widget> children = [];
+                            if (isNewDate) {
+                              children.add(
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  child: Center(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: dark ? Colors.grey.shade800 : Colors.white,
+                                        borderRadius: BorderRadius.circular(999),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.06),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 1),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Text(
+                                        dateStr,
+                                        style: TextStyle(fontSize: 12, color: timeColor),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }
+                            if (message.isSystem) {
+                              children.add(
+                                Center(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: dark ? Colors.grey.shade700 : Colors.grey.shade200,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      message.text,
+                                      style: TextStyle(color: dark ? Colors.grey.shade300 : Colors.grey.shade700),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            } else {
+                              children.add(
+                                Row(
+                                  key: ValueKey('${message.id}_${message.readAt?.millisecondsSinceEpoch ?? 0}'),
+                                  mainAxisAlignment: message.isMine ? MainAxisAlignment.end : MainAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    if (message.isMine && message.readAt == null)
+                                      Padding(
+                                        padding: const EdgeInsets.only(right: 6),
+                                        child: Text('1', style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
+                                      ),
+                                    if (!message.isMine) ...[
+                                      _buildPartnerAvatar(context),
+                                      const SizedBox(width: 8),
+                                    ],
+                                    Flexible(
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        mainAxisAlignment: message.isMine ? MainAxisAlignment.end : MainAxisAlignment.start,
+                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                        children: [
+                                          Flexible(
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                              decoration: BoxDecoration(
+                                                color: message.isMine ? bubbleMine : bubbleOther,
+                                                borderRadius: BorderRadius.only(
+                                                  topLeft: const Radius.circular(16),
+                                                  topRight: const Radius.circular(16),
+                                                  bottomLeft: Radius.circular(message.isMine ? 16 : 4),
+                                                  bottomRight: Radius.circular(message.isMine ? 4 : 16),
+                                                ),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black.withOpacity(0.06),
+                                                    blurRadius: 4,
+                                                    offset: const Offset(0, 1),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: Text(
+                                                message.text,
+                                                style: TextStyle(
+                                                  color: message.isMine ? Colors.white : (dark ? Colors.white : const Color(0xFF111827)),
+                                                  fontSize: 14,
+                                                  height: 1.4,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Padding(
+                                            padding: const EdgeInsets.only(bottom: 2),
+                                            child: Text(
+                                              _messageTime(message),
+                                              style: TextStyle(fontSize: 11, color: timeColor),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (!message.isMine && message.readAt == null)
+                                      Padding(
+                                        padding: const EdgeInsets.only(left: 6),
+                                        child: Text('1', style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
+                                      ),
+                                  ],
+                                ),
+                              );
+                            }
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: children,
+                            );
+                          },
+                        ),
+            ),
             if (_isActive)
-              Padding(
-                padding: const EdgeInsets.all(12),
+              Container(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                decoration: BoxDecoration(
+                  color: dark ? const Color(0xFF374151) : Colors.white,
+                  border: Border(top: BorderSide(color: borderColor)),
+                ),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Expanded(
-                      child: TextField(
-                        controller: _controller,
-                        onSubmitted: (_) => _sendMessage(),
-                        decoration: const InputDecoration(
-                          hintText: '메시지를 입력하세요',
-                          border: OutlineInputBorder(),
+                      child: Container(
+                        constraints: const BoxConstraints(maxHeight: 96),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: inputBg,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: TextField(
+                          controller: _controller,
+                          onSubmitted: (_) => _sendMessage(),
+                          maxLines: null,
+                          textInputAction: TextInputAction.send,
+                          decoration: InputDecoration(
+                            hintText: '메시지를 입력하세요...',
+                            hintStyle: TextStyle(color: hintColor, fontSize: 14),
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: EdgeInsets.zero,
+                          ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      onPressed: _sendMessage,
-                      icon: const Icon(Icons.send),
+                    const SizedBox(width: 12),
+                    ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: _controller,
+                      builder: (context, value, _) {
+                        final hasText = value.text.trim().isNotEmpty;
+                        return Material(
+                          color: hasText ? bubbleMine : (dark ? Colors.grey.shade700 : Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(999),
+                          elevation: 2,
+                          shadowColor: Colors.black26,
+                          child: InkWell(
+                            onTap: hasText ? _sendMessage : null,
+                            borderRadius: BorderRadius.circular(999),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Icon(
+                                LucideIcons.send,
+                                size: 22,
+                                color: hasText ? Colors.white : (dark ? Colors.grey.shade500 : Colors.grey.shade600),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -660,6 +824,84 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
   }
 
   static const double _partnerAvatarRadius = 18;
+
+  Future<void> _openPartnerProfile() async {
+    Future<Widget> avatarBuilder(Map<String, dynamic> profile) async {
+      final seed = profile['avatarSeed']?.toString() ?? profile['userId']?.toString() ?? _partnerAvatarSeed;
+      final raw = profile['avatarOptions']?.toString() ?? _partnerAvatarOptions;
+      Map<String, String> opts = {};
+      if (raw != null && raw.isNotEmpty) {
+        try {
+          final decoded = jsonDecode(raw);
+          if (decoded is Map<String, dynamic>) opts = decoded.map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
+        } catch (_) {}
+      }
+      if (seed != null && seed.isNotEmpty) {
+        final url = diceBearAvatarUrl(seed, options: opts.isNotEmpty ? opts : null);
+        return CircleAvatar(
+          radius: 40,
+          backgroundColor: Colors.grey.shade300,
+          child: ClipOval(
+            child: SvgPicture.network(
+              url,
+              fit: BoxFit.cover,
+              width: 80,
+              height: 80,
+              placeholderBuilder: (_) => Icon(LucideIcons.user, size: 40, color: Colors.grey.shade600),
+            ),
+          ),
+        );
+      }
+      return CircleAvatar(radius: 40, backgroundColor: Colors.grey.shade300, child: Icon(LucideIcons.user, size: 40, color: Colors.grey.shade600));
+    }
+    if (_partnerProfile != null) {
+      await showBoardNoteSheet(
+        context,
+        profiles: [_partnerProfile!],
+        startIndex: 0,
+        buildAvatar: (ctx, profile) => FutureBuilder<Widget>(
+          future: avatarBuilder(profile),
+          builder: (ctx, snap) => snap.hasData ? snap.data! : const SizedBox.shrink(),
+        ),
+        onPop: () {},
+        myMatchingTicket: 0,
+      );
+      return;
+    }
+    if (_matchId != null) {
+      try {
+        final profile = await _partnerProfileRepository.getPartnerProfile(matchId: _matchId!);
+        if (!mounted) return;
+        setState(() => _partnerProfile = profile);
+        if (profile != null) {
+          await showBoardNoteSheet(
+            context,
+            profiles: [profile],
+            startIndex: 0,
+            buildAvatar: (ctx, profile) => FutureBuilder<Widget>(
+              future: avatarBuilder(profile),
+              builder: (ctx, snap) => snap.hasData ? snap.data! : const SizedBox.shrink(),
+            ),
+            onPop: () {},
+            myMatchingTicket: 0,
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('프로필을 불러올 수 없습니다.')),
+          );
+        }
+      } catch (_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('프로필을 불러올 수 없습니다.')),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('프로필을 불러올 수 없습니다.')),
+      );
+    }
+  }
 
   Widget _buildPartnerAvatar(BuildContext context) {
     Widget avatar;
@@ -693,7 +935,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
               fit: BoxFit.cover,
               width: _partnerAvatarRadius * 2,
               height: _partnerAvatarRadius * 2,
-              placeholderBuilder: (_) => Icon(Icons.person, size: _partnerAvatarRadius, color: Colors.grey.shade600),
+              placeholderBuilder: (_) => Icon(LucideIcons.user, size: _partnerAvatarRadius, color: Colors.grey.shade600),
             ),
           ),
         );
@@ -701,92 +943,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
         avatar = CircleAvatar(
           radius: _partnerAvatarRadius,
           backgroundColor: Colors.grey.shade300,
-          child: Icon(Icons.person, size: _partnerAvatarRadius, color: Colors.grey.shade600),
+          child: Icon(LucideIcons.user, size: _partnerAvatarRadius, color: Colors.grey.shade600),
         );
       }
     }
     return InkWell(
-      onTap: () async {
-        // Open the board-style profile bottom sheet (reuse existing UI)
-        Future<Widget> avatarBuilder(Map<String, dynamic> profile) async {
-          final seed = profile['avatarSeed']?.toString() ?? profile['userId']?.toString() ?? _partnerAvatarSeed;
-          final raw = profile['avatarOptions']?.toString() ?? _partnerAvatarOptions;
-          Map<String, String> opts = {};
-          if (raw != null && raw.isNotEmpty) {
-            try {
-              final decoded = jsonDecode(raw);
-              if (decoded is Map<String, dynamic>) opts = decoded.map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
-            } catch (_) {}
-          }
-          if (seed != null && seed.isNotEmpty) {
-            final url = diceBearAvatarUrl(seed, options: opts.isNotEmpty ? opts : null);
-            return CircleAvatar(
-              radius: 40,
-              backgroundColor: Colors.grey.shade300,
-              child: ClipOval(
-                child: SvgPicture.network(
-                  url,
-                  fit: BoxFit.cover,
-                  width: 80,
-                  height: 80,
-                  placeholderBuilder: (_) => Icon(Icons.person, size: 40, color: Colors.grey.shade600),
-                ),
-              ),
-            );
-          }
-          return CircleAvatar(radius: 40, backgroundColor: Colors.grey.shade300, child: Icon(Icons.person, size: 40, color: Colors.grey.shade600));
-        }
-
-        if (_partnerProfile != null) {
-          await showBoardNoteSheet(
-            context,
-            profiles: [_partnerProfile!],
-            startIndex: 0,
-            buildAvatar: (ctx, profile) => FutureBuilder<Widget>(
-              future: avatarBuilder(profile),
-              builder: (ctx, snap) => snap.hasData ? snap.data! : const SizedBox.shrink(),
-            ),
-            onPop: () {},
-            showTakeButton: false,
-            showHabits: false,
-          );
-          return;
-        }
-        if (_matchId != null) {
-          try {
-            final profile = await _partnerProfileRepository.getPartnerProfile(matchId: _matchId!);
-            if (!mounted) return;
-            setState(() => _partnerProfile = profile);
-            if (profile != null) {
-              await showBoardNoteSheet(
-                context,
-                profiles: [profile],
-                startIndex: 0,
-                buildAvatar: (ctx, profile) => FutureBuilder<Widget>(
-                  future: avatarBuilder(profile),
-                  builder: (ctx, snap) => snap.hasData ? snap.data! : const SizedBox.shrink(),
-                ),
-                onPop: () {},
-                showTakeButton: false,
-                showHabits: false,
-              );
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('프로필을 불러올 수 없습니다.')),
-              );
-            }
-          } catch (_) {
-            if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('프로필을 불러올 수 없습니다.')),
-            );
-          }
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('프로필을 불러올 수 없습니다.')),
-          );
-        }
-      },
+      onTap: _openPartnerProfile,
       borderRadius: BorderRadius.circular(_partnerAvatarRadius),
       child: avatar,
     );

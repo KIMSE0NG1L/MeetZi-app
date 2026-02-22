@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/features/notifications/data/notification_history_store.dart';
+import 'package:nearo_app/features/matching_board/screens/take_note_request_response_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -89,19 +92,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final topInset = MediaQuery.of(context).padding.top;
+    final headerHeight = (topInset > 0 ? topInset : 56.0) + 20 + 36;
     return Scaffold(
       backgroundColor: theme.brightness == Brightness.dark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
       body: Column(
         children: [
-          // AppDesign 헤더: 로즈 그라데이션 + 뒤로가기 + 알림 + 액션
+          // AppDesign 헤더: 메시지함 등과 동일 높이 (pt + 20 + 36)
           Container(
-            height: 80,
+            height: headerHeight,
             decoration: const BoxDecoration(
               gradient: _roseGradient,
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(32),
-                bottomRight: Radius.circular(32),
-              ),
               boxShadow: [
                 BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2)),
               ],
@@ -113,7 +114,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 child: Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 22),
+                      icon: const Icon(LucideIcons.arrowLeft, color: Colors.white, size: 22),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                     Expanded(
@@ -129,18 +130,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     ),
                     if (!_selectionMode) ...[
                       IconButton(
-                        icon: const Icon(Icons.checklist, color: Colors.white, size: 24),
+                        icon: const Icon(LucideIcons.listChecks, color: Colors.white, size: 24),
                         onPressed: () => setState(() => _selectionMode = true),
                         tooltip: '선택 삭제',
                       ),
                       IconButton(
-                        icon: Icon(Icons.delete_sweep, color: _items.isEmpty ? Colors.white54 : Colors.white, size: 24),
+                        icon: Icon(LucideIcons.trash2, color: _items.isEmpty ? Colors.white54 : Colors.white, size: 24),
                         onPressed: _items.isEmpty ? null : _deleteAll,
                         tooltip: '전체 삭제',
                       ),
                     ] else ...[
                       IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white, size: 24),
+                        icon: const Icon(LucideIcons.x, color: Colors.white, size: 24),
                         onPressed: () => setState(() {
                           _selectionMode = false;
                           _selectedIds.clear();
@@ -148,7 +149,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         tooltip: '취소',
                       ),
                       IconButton(
-                        icon: Icon(Icons.delete_outline, color: _selectedIds.isEmpty ? Colors.white54 : Colors.white, size: 24),
+                        icon: Icon(LucideIcons.trash2, color: _selectedIds.isEmpty ? Colors.white54 : Colors.white, size: 24),
                         onPressed: _selectedIds.isEmpty ? null : _deleteSelected,
                         tooltip: '선택 삭제',
                       ),
@@ -166,7 +167,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.notifications_none, size: 64, color: theme.colorScheme.outline),
+                            Icon(LucideIcons.bell, size: 64, color: theme.colorScheme.outline),
                             const SizedBox(height: 16),
                             Text(
                               '도착한 알림이 없습니다',
@@ -180,6 +181,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         itemBuilder: (context, index) {
                           final item = _items[index];
                           final selected = _selectedIds.contains(item.id);
+                          final isFromPerson = item.data['type']?.toString() == 'chat';
+                          final senderAvatarUrl = item.data['senderAvatarUrl']?.toString();
                           return ListTile(
                             leading: _selectionMode
                                 ? Checkbox(
@@ -187,29 +190,105 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                     onChanged: (_) => _toggleSelection(item.id),
                                     activeColor: theme.colorScheme.primary,
                                   )
-                                : Icon(Icons.notifications_outlined, color: theme.colorScheme.primary),
-                            title: Text(
-                              item.title,
-                              style: const TextStyle(fontWeight: FontWeight.w600),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                                : _buildNotificationLeading(
+                                    theme: theme,
+                                    isFromPerson: isFromPerson,
+                                    senderAvatarUrl: senderAvatarUrl,
+                                  ),
+                            title: Row(
+                              children: [
+                                if (!item.read)
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 6),
+                                    child: Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        color: theme.colorScheme.primary,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                  ),
+                                Expanded(
+                                  child: Text(
+                                    item.title,
+                                    style: TextStyle(
+                                      fontWeight: item.read ? FontWeight.w500 : FontWeight.w700,
+                                      color: item.read ? theme.colorScheme.onSurface.withOpacity(0.85) : theme.colorScheme.onSurface,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
                             ),
                             subtitle: item.body.isNotEmpty
                                 ? Text(
                                     item.body,
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: theme.colorScheme.onSurface.withOpacity(item.read ? 0.6 : 0.8),
+                                    ),
                                   )
                                 : null,
                             trailing: _selectionMode
                                 ? null
-                                : Text(
-                                    _formatDate(item.createdAt),
-                                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+                                : Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (!item.read)
+                                        Padding(
+                                          padding: const EdgeInsets.only(right: 8),
+                                          child: Text(
+                                            '읽지 않음',
+                                            style: theme.textTheme.labelSmall?.copyWith(
+                                              color: theme.colorScheme.primary,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                      Text(
+                                        _formatDate(item.createdAt),
+                                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+                                      ),
+                                    ],
                                   ),
-                            onTap: () {
+                            onTap: () async {
                               if (_selectionMode) {
                                 _toggleSelection(item.id);
+                                return;
+                              }
+                              if (!item.read) {
+                                await _store.markAsRead(item.id);
+                                if (mounted) _load();
+                              }
+                              final type = item.data['type']?.toString();
+                              if (type == 'take_note_request') {
+                                final requestId = item.data['requestId']?.toString();
+                                if (requestId != null && requestId.isNotEmpty) {
+                                  final requesterProfile = item.data['requesterProfile'] is Map
+                                      ? Map<String, dynamic>.from(item.data['requesterProfile'] as Map)
+                                      : null;
+                                  if (!context.mounted) return;
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute<void>(
+                                      builder: (ctx) => TakeNoteRequestResponseScreen(
+                                        requestId: requestId,
+                                        requesterProfile: requesterProfile,
+                                      ),
+                                    ),
+                                  );
+                                }
+                              } else if (type == 'chat') {
+                                final roomId = item.data['roomId']?.toString();
+                                if (roomId != null && roomId.isNotEmpty) {
+                                  if (!context.mounted) return;
+                                  Navigator.of(context).pushNamed(
+                                    AppRoutes.chatRoom,
+                                    arguments: {'roomId': roomId, 'partnerNickname': '대화'},
+                                  );
+                                }
                               }
                             },
                           );
@@ -217,6 +296,37 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// 사람이 보낸 메시지 알림 → 발신자 아바타, 시스템 알림(매칭·가져가기 등) → 앱 로고
+  Widget _buildNotificationLeading({
+    required ThemeData theme,
+    required bool isFromPerson,
+    String? senderAvatarUrl,
+  }) {
+    const size = 40.0;
+    if (isFromPerson && senderAvatarUrl != null && senderAvatarUrl.isNotEmpty) {
+      return CircleAvatar(
+        radius: size / 2,
+        backgroundColor: theme.colorScheme.surfaceContainerHighest,
+        backgroundImage: NetworkImage(senderAvatarUrl),
+        onBackgroundImageError: (_, __) {},
+      );
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(size / 2),
+      child: Image.asset(
+        'assets/icon.png',
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => CircleAvatar(
+          radius: size / 2,
+          backgroundColor: theme.colorScheme.primaryContainer,
+          child: Icon(LucideIcons.bell, color: theme.colorScheme.primary, size: 22),
+        ),
       ),
     );
   }
