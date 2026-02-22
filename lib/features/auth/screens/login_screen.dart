@@ -112,8 +112,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             offset: Offset(0, 10 * (1 - value)),
                             child: Column(
                               children: [
-                                const Text(
-                                  'MeetZy',
+                                  const Text(
+                                    'Meetzi',
                                   style: TextStyle(
                                     fontSize: 30,
                                     fontWeight: FontWeight.bold,

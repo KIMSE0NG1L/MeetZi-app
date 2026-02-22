@@ -92,8 +92,8 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
   Widget _buildTopBar() {
     final isRanking = _currentIndex == 0;
     final gradient = isRanking ? _purpleGradient : _roseGradient;
-    final String title;
-    final String? subtitle;
+    String title = '';
+    String? subtitle;
     switch (_currentIndex) {
       case 0:
         title = '대학교 랭킹';
@@ -104,7 +104,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
         subtitle = null;
         break;
       case 2:
-        title = 'MeetZy';
+        title = 'Meetzi';
         subtitle = _affiliationShort.isNotEmpty ? _affiliationShort : null;
         break;
       case 3:
@@ -116,8 +116,9 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
         subtitle = null;
         break;
       default:
-        title = 'MeetZy';
+        title = 'Meetzi';
         subtitle = _affiliationShort.isNotEmpty ? _affiliationShort : null;
+        break;
     }
 
     // AppDesign: px-5 pt-14 pb-5 shadow-md; pt-14=56, pb-5=20, px-5=20
