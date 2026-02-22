@@ -1,4 +1,6 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/matching_board/data/matching_board_repository.dart';
 
 /// AppDesign ShopScreen: 보유 코인 박스 + 패키지 카드 (로즈/다크 스타일)
@@ -11,7 +13,7 @@ class RatingsScreen extends StatefulWidget {
 
 class _RatingsScreenState extends State<RatingsScreen> {
   static const List<Map<String, dynamic>> _packages = [
-    {'coins': 10, 'price': 1100, 'bonus': null, 'badge': '첫 구매', 'popular': false},
+    {'coins': 10, 'price': 1100, 'bonus': null, 'badge': null, 'popular': false},
     {'coins': 50, 'price': 5500, 'bonus': 5, 'badge': null, 'popular': false},
     {'coins': 100, 'price': 11000, 'bonus': 15, 'badge': null, 'popular': true},
     {'coins': 300, 'price': 33000, 'bonus': 50, 'badge': null, 'popular': false},
@@ -52,6 +54,89 @@ class _RatingsScreenState extends State<RatingsScreen> {
     }
   }
 
+  /// 코인으로 열람권/등록권 구매 (1코인=1열람권, 5코인=1등록권)
+  Future<void> _buyTicket(String product, int cost, String label, {int quantity = 1}) async {
+    if ((_myCredit ?? 0) < cost) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('코인이 부족해요.')));
+      return;
+    }
+    setState(() => _loading = true);
+    try {
+      await _repository.purchaseTicket(product, quantity: quantity);
+      await _fetchCredit();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$label 구매 완료!')));
+    } catch (e) {
+      if (!mounted) return;
+      String msg = '구매에 실패했어요.';
+      if (e is DioException && e.response?.data is Map) {
+        final data = e.response!.data as Map<String, dynamic>;
+        if (data['message'] != null) msg = data['message'].toString();
+      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Widget _ticketCard(
+    bool dark,
+    Color surface,
+    Color onSurface,
+    Color onSurfaceVariant,
+    Color rose,
+    int cost,
+    String label,
+    String costStr,
+    IconData icon,
+    VoidCallback onTap,
+  ) {
+    return Material(
+      color: surface,
+      borderRadius: BorderRadius.circular(16),
+      elevation: 2,
+      shadowColor: Colors.black.withOpacity(0.06),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: dark ? Colors.grey.shade700 : Colors.grey.shade200),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: dark ? Colors.white.withOpacity(0.12) : const Color(0xFFFFE4E6),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, size: 26, color: dark ? Colors.grey.shade300 : rose),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(label, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: onSurface)),
+                    Text('$costStr코인', style: TextStyle(fontSize: 13, color: onSurfaceVariant)),
+                  ],
+                ),
+              ),
+              Text(
+                '$costStr 코인',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: rose),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
@@ -83,7 +168,7 @@ class _RatingsScreenState extends State<RatingsScreen> {
                             color: dark ? Colors.white.withOpacity(0.2) : Colors.white.withOpacity(0.8),
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(Icons.monetization_on, color: dark ? Colors.amber.shade200 : Colors.amber.shade700, size: 26),
+                          child: Icon(LucideIcons.coins, color: dark ? Colors.amber.shade200 : Colors.amber.shade700, size: 26),
                         ),
                   const SizedBox(width: 16),
                   Column(
@@ -113,31 +198,16 @@ class _RatingsScreenState extends State<RatingsScreen> {
                 : ListView(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: dark ? const Color(0xFF1E3A5F).withOpacity(0.5) : const Color(0xFFEFF6FF),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: dark ? Colors.blue.shade800 : Colors.blue.shade200),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(Icons.card_giftcard, color: dark ? Colors.blue.shade300 : Colors.blue.shade700, size: 22),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('첫 구매 특별 혜택!', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: onSurface)),
-                                  const SizedBox(height: 4),
-                                  Text('처음 구매 시 추가 코인을 드려요', style: TextStyle(fontSize: 12, color: onSurfaceVariant)),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      // 코인으로 구매: 1코인=열람권 1장, 5코인=등록권 1장
+                      Text('코인으로 구매', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: onSurfaceVariant)),
+                      const SizedBox(height: 8),
+                      _ticketCard(dark, surface, onSurface, onSurfaceVariant, rose, 1, '열람권 1장', '1', LucideIcons.eye, () => _buyTicket('view_ticket', 1, '열람권 1장')),
+                      const SizedBox(height: 8),
+                      _ticketCard(dark, surface, onSurface, onSurfaceVariant, rose, 100, '열람권 100장', '100', LucideIcons.eye, () => _buyTicket('view_ticket', 100, '열람권 100장', quantity: 100)),
+                      const SizedBox(height: 8),
+                      _ticketCard(dark, surface, onSurface, onSurfaceVariant, rose, 5, '등록권 1장', '5', LucideIcons.clipboardList, () => _buyTicket('register_ticket', 5, '등록권 1장')),
+                      const SizedBox(height: 8),
+                      _ticketCard(dark, surface, onSurface, onSurfaceVariant, rose, 500, '등록권 100장', '500', LucideIcons.clipboardList, () => _buyTicket('register_ticket', 500, '등록권 100장', quantity: 100)),
                       const SizedBox(height: 24),
                       ...List.generate(_packages.length, (index) {
                         final pkg = _packages[index];
@@ -179,7 +249,7 @@ class _RatingsScreenState extends State<RatingsScreen> {
                                         borderRadius: BorderRadius.circular(16),
                                       ),
                                       child: Icon(
-                                        Icons.monetization_on,
+                                        LucideIcons.coins,
                                         size: 34,
                                         color: dark ? Colors.grey.shade300 : rose,
                                       ),

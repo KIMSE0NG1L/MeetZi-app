@@ -5,15 +5,32 @@ import 'package:dio/dio.dart';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
+import 'package:nearo_app/features/auth/data/environment_repository.dart';
 import 'package:nearo_app/features/photo/data/photo_repository.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/app_config.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/shared/widgets/primary_button.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+
+/// 한글(가나다) 먼저, 영어/로마자 학교명은 맨 아래로 정렬
+void _sortSchoolListKoreanFirst(List<String> list) {
+  bool startsWithHangul(String s) {
+    if (s.isEmpty) return false;
+    final c = s.codeUnitAt(0);
+    return c >= 0xAC00 && c <= 0xD7A3; // 가-힣
+  }
+  list.sort((a, b) {
+    final aFirst = startsWithHangul(a) ? 0 : 1;
+    final bFirst = startsWithHangul(b) ? 0 : 1;
+    if (aFirst != bFirst) return aFirst - bFirst;
+    return a.compareTo(b);
+  });
+}
 
 class ProfileSetupScreen extends StatefulWidget {
   const ProfileSetupScreen({super.key});
@@ -25,10 +42,13 @@ class ProfileSetupScreen extends StatefulWidget {
 class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _repository = AuthRepository();
   final _photoRepository = PhotoRepository();
+  final _envRepository = EnvironmentRepository();
   final _nicknameController = TextEditingController();
   final _idealTypeController = TextEditingController();
   final _departmentController = TextEditingController();
   String _affiliation = '세종대학교';
+  List<String> _schoolList = [];
+  bool _schoolListLoaded = false;
   final _heightController = TextEditingController();
   final _mbtiController = TextEditingController();
   final _introOneLineController = TextEditingController();
@@ -66,6 +86,33 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     }
     _didReadArgs = true;
     _loadProfileIfExists();
+    _loadSchoolList();
+  }
+
+  Future<void> _loadSchoolList() async {
+    try {
+      final list = await _envRepository.getEnvironments();
+      final names = list
+          .where((e) => e is Map && (e as Map)['type']?.toString() == 'university')
+          .map<String>((e) => (e as Map)['name']?.toString() ?? '')
+          .where((s) => s.isNotEmpty)
+          .toList();
+      _sortSchoolListKoreanFirst(names);
+      if (!mounted) return;
+      setState(() {
+        _schoolList = names;
+        _schoolListLoaded = true;
+        if (_schoolList.isNotEmpty && !_schoolList.contains(_affiliation)) {
+          _affiliation = _schoolList.first;
+        }
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _schoolList = ['세종대학교', '건국대학교', '한양대학교'];
+        _schoolListLoaded = true;
+      });
+    }
   }
 
   @override
@@ -340,27 +387,24 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     }
   }
 
-  /// AppDesign ProfileEditScreen: 헤더 + 본문 (다크모드 반영)
-  Widget _buildAppDesignHeader(BuildContext context, {required bool dark}) {
+  /// AppDesign ProfileEditScreen: 흰색 헤더 (뒤로가기, 프로필 수정), bg-gray-50 본문
+  Widget _buildAppDesignHeader(BuildContext context) {
     final topInset = MediaQuery.of(context).padding.top;
     final pt = topInset > 0 ? topInset : 56.0;
-    final headerBg = dark ? const Color(0xFF1F2937) : Colors.white;
-    final headerFg = dark ? Colors.white : const Color(0xFF111827);
-    final iconColor = dark ? Colors.white : const Color(0xFF374151);
     return Container(
-      color: headerBg,
+      color: Colors.white,
       padding: EdgeInsets.only(left: 20, right: 20, top: pt, bottom: 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
             onPressed: () => Navigator.of(context).pop(),
-            icon: Icon(Icons.arrow_back_ios_new, size: 22, color: iconColor),
+            icon: const Icon(LucideIcons.arrowLeft, size: 22, color: Color(0xFF374151)),
             padding: const EdgeInsets.all(8),
           ),
           Text(
             _isEditing ? '프로필 수정' : '프로필 등록',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: headerFg),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF111827)),
           ),
           const SizedBox(width: 40),
         ],
@@ -368,31 +412,26 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     );
   }
 
+  static const _inputBorder = OutlineInputBorder(
+    borderRadius: BorderRadius.all(Radius.circular(12)),
+    borderSide: BorderSide.none,
+  );
+  static const _labelStyle = TextStyle(fontSize: 14, color: Color(0xFF6B7280));
+  static const _sectionLabelStyle = TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF111827));
+
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final bg = dark ? const Color(0xFF111827) : const Color(0xFFF9FAFB);
-    final surface = dark ? const Color(0xFF1F2937) : Colors.white;
-    final onSurface = dark ? Colors.white : const Color(0xFF111827);
-    final onSurfaceVariant = dark ? Colors.grey.shade400 : const Color(0xFF6B7280);
-    final borderColor = dark ? Colors.grey.shade600 : const Color(0xFFE5E7EB);
-    final inputBorder = OutlineInputBorder(
-      borderRadius: const BorderRadius.all(Radius.circular(12)),
-      borderSide: BorderSide(color: borderColor, width: 1),
-    );
-    final labelStyle = TextStyle(fontSize: 14, color: onSurfaceVariant);
-    final sectionLabelStyle = TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: onSurface);
-
+    const bgGray50 = Color(0xFFF9FAFB);
     return Scaffold(
-      backgroundColor: bg,
+      backgroundColor: bgGray50,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Material(
             elevation: 1,
             shadowColor: Colors.black.withOpacity(0.06),
-            color: dark ? const Color(0xFF1F2937) : Colors.white,
-            child: _buildAppDesignHeader(context, dark: dark),
+            color: Colors.white,
+            child: _buildAppDesignHeader(context),
           ),
           Expanded(
             child: SingleChildScrollView(
@@ -401,7 +440,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
-                  Text('아바타', style: sectionLabelStyle),
+                  const Text('아바타', style: _sectionLabelStyle),
                   const SizedBox(height: 12),
                   Row(
                     children: [
@@ -421,10 +460,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                                 width: 80,
                                 height: 80,
                                 decoration: BoxDecoration(
-                                  color: dark ? Colors.grey.shade700 : Colors.grey.shade200,
+                                  color: Colors.grey.shade200,
                                   shape: BoxShape.circle,
                                 ),
-                                child: Icon(Icons.person, size: 40, color: dark ? Colors.grey.shade400 : Colors.grey.shade600),
+                                child: Icon(LucideIcons.user, size: 40, color: Colors.grey.shade600),
                               ),
                       ),
                       const SizedBox(width: 16),
@@ -440,17 +479,17 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                             decoration: BoxDecoration(
-                              border: Border.all(color: borderColor, width: 1),
+                              border: Border.all(color: const Color(0xFFD1D5DB), width: 2),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Text('아바타 편집', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: onSurface)),
+                            child: const Text('아바타 편집', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF374151))),
                           ),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 24),
-                  Text('프로필 사진', style: sectionLabelStyle),
+                  const Text('프로필 사진', style: _sectionLabelStyle),
                   const SizedBox(height: 12),
                   Row(
                     children: [
@@ -458,12 +497,12 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                         width: 80,
                         height: 80,
                         decoration: BoxDecoration(
-                          color: dark ? Colors.grey.shade700 : Colors.grey.shade200,
+                          color: Colors.grey.shade200,
                           borderRadius: BorderRadius.circular(16),
                         ),
                         clipBehavior: Clip.antiAlias,
                         child: _selectedPhoto == null
-                            ? Icon(Icons.upload_file, size: 32, color: dark ? Colors.grey.shade500 : const Color(0xFF9CA3AF))
+                            ? const Icon(LucideIcons.upload, size: 32, color: Color(0xFF9CA3AF))
                             : Image.file(
                                 File(_selectedPhoto!.path),
                                 fit: BoxFit.cover,
@@ -482,10 +521,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                                   decoration: BoxDecoration(
-                                    border: Border.all(color: borderColor, width: 1),
+                                    border: Border.all(color: const Color(0xFFD1D5DB), width: 2),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  child: Text('사진 선택', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: onSurface)),
+                                  child: const Text('사진 선택', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF374151))),
                                 ),
                               ),
                             ),
@@ -548,12 +587,12 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                                 color: isPrimary
                                     ? Theme.of(context).colorScheme.primary
                                     : Colors.transparent,
-                                width: 1,
+                                width: 2,
                               ),
                             ),
                             clipBehavior: Clip.antiAlias,
                             child: storageKey.isEmpty
-                                ? const Icon(Icons.broken_image)
+                                ? const Icon(LucideIcons.imageOff)
                                 : Image.network(
                                     _resolvePhotoUrl(storageKey),
                                     fit: BoxFit.cover,
@@ -588,7 +627,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 ),
               ],
               const SizedBox(height: 16),
-              Text('닉네임 (2~8자, 한글/영문/숫자)', style: labelStyle),
+              const Text('닉네임 (2~8자, 한글/영문/숫자)', style: _labelStyle),
               const SizedBox(height: 8),
               TextField(
                 controller: _nicknameController,
@@ -598,29 +637,26 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 enableSuggestions: true,
                 autocorrect: true,
                 maxLength: 8,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   hintText: '닉네임을 입력하세요',
                   filled: true,
-                  fillColor: surface,
-                  border: inputBorder,
-                  enabledBorder: inputBorder,
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide(color: Color(0xFFF43F5E), width: 1),
-                  ),
+                  fillColor: Colors.white,
+                  border: _inputBorder,
+                  enabledBorder: _inputBorder,
+                  focusedBorder: _inputBorder,
                   contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   counterText: '',
                 ),
               ),
               const SizedBox(height: 16),
-              Text('성별', style: labelStyle),
+              const Text('성별', style: _labelStyle),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _gender,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   filled: true,
-                  fillColor: surface,
-                  border: inputBorder,
+                  fillColor: Colors.white,
+                  border: _inputBorder,
                   contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 items: const [
@@ -633,14 +669,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 },
               ),
               const SizedBox(height: 16),
-              Text('선호 성별', style: labelStyle),
+              const Text('선호 성별', style: _labelStyle),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _preferredGender,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   filled: true,
-                  fillColor: surface,
-                  border: inputBorder,
+                  fillColor: Colors.white,
+                  border: _inputBorder,
                   contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 items: const [
@@ -655,30 +691,40 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 },
               ),
               const SizedBox(height: 16),
-              Text('소속 대학교', style: labelStyle),
+              const Text('소속 대학교', style: _labelStyle),
               const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                value: _affiliation,
-                onChanged: _isEditing
+              InkWell(
+                onTap: _isEditing
                     ? null
-                    : (value) {
-                        if (value == null) return;
-                        setState(() => _affiliation = value);
+                    : () async {
+                        final chosen = await showModalBottomSheet<String>(
+                          context: context,
+                          isScrollControlled: true,
+                          builder: (ctx) => _SchoolPickerSheet(
+                            schoolList: _schoolList,
+                            current: _affiliation,
+                          ),
+                        );
+                        if (chosen != null && mounted) setState(() => _affiliation = chosen);
                       },
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: surface,
-                  border: inputBorder,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: _inputBorder,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    suffixIcon: Icon(LucideIcons.chevronDown, size: 20),
+                  ),
+                  child: Text(
+                    _schoolListLoaded ? _affiliation : '로딩 중...',
+                    style: TextStyle(
+                      color: _schoolListLoaded ? Colors.black87 : Colors.grey,
+                    ),
+                  ),
                 ),
-                items: const [
-                  DropdownMenuItem(value: '세종대학교', child: Text('세종대학교')),
-                  DropdownMenuItem(value: '건국대학교', child: Text('건국대학교')),
-                  DropdownMenuItem(value: '한양대학교', child: Text('한양대학교')),
-                ],
               ),
               const SizedBox(height: 16),
-              Text('키 (150~195cm)', style: labelStyle),
+              const Text('키 (150~195cm)', style: _labelStyle),
               const SizedBox(height: 8),
               InkWell(
                 onTap: () async {
@@ -689,41 +735,41 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   if (v != null) setState(() { _heightCm = v; _heightController.text = v.toString(); });
                 },
                 child: InputDecorator(
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     hintText: '탭하여 선택',
                     filled: true,
-                    fillColor: surface,
-                    border: inputBorder,
+                    fillColor: Colors.white,
+                    border: _inputBorder,
                     contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                   child: Text(_heightCm != null ? '$_heightCm cm' : '탭하여 선택'),
                 ),
               ),
               const SizedBox(height: 16),
-              Text('한 줄 소개 (최대 40자)', style: labelStyle),
+              const Text('한 줄 소개 (최대 40자)', style: _labelStyle),
               const SizedBox(height: 8),
               TextField(
                 controller: _introOneLineController,
                 maxLength: 40,
                 maxLines: 1,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   hintText: '자신을 소개해주세요',
                   filled: true,
-                  fillColor: surface,
-                  border: inputBorder,
+                  fillColor: Colors.white,
+                  border: _inputBorder,
                   contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   counterText: '',
                 ),
               ),
               const SizedBox(height: 16),
-              Text('학번', style: labelStyle),
+              const Text('학번', style: _labelStyle),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _gradeYear,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   filled: true,
-                  fillColor: surface,
-                  border: inputBorder,
+                  fillColor: Colors.white,
+                  border: _inputBorder,
                   contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 items: List.generate(6, (i) => DropdownMenuItem(
@@ -733,21 +779,21 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 onChanged: (v) => setState(() => _gradeYear = v),
               ),
               const SizedBox(height: 16),
-              Text('MBTI', style: labelStyle),
+              const Text('MBTI', style: _labelStyle),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _mbtiOptions.contains(_mbtiController.text.trim()) ? _mbtiController.text.trim() : null,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   filled: true,
-                  fillColor: surface,
-                  border: inputBorder,
+                  fillColor: Colors.white,
+                  border: _inputBorder,
                   contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 items: _mbtiOptions.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
                 onChanged: (v) { if (v != null) setState(() => _mbtiController.text = v); },
               ),
               const SizedBox(height: 16),
-              Text('나를 소개하는 태그', style: labelStyle),
+              const Text('나를 소개하는 태그', style: _labelStyle),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
@@ -756,8 +802,12 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   final selected = _idealTypeKeywords.contains(label);
                   final canSelect = selected || _idealTypeKeywords.length < 3;
                   return FilterChip(
-                    label: Text(label),
+                    label: Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: selected ? Colors.white : const Color(0xFF374151))),
                     selected: selected,
+                    selectedColor: const Color(0xFFF43F5E),
+                    checkmarkColor: Colors.white,
+                    side: BorderSide(color: selected ? const Color(0xFFF43F5E) : const Color(0xFFE5E7EB)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
                     onSelected: canSelect
                         ? (v) {
                             setState(() {
@@ -773,72 +823,72 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 }).toList(),
               ),
               const SizedBox(height: 16),
-              Text('평소 패션 스타일', style: labelStyle),
+              const Text('평소 패션 스타일', style: _labelStyle),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _fashionStyle,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   filled: true,
-                  fillColor: surface,
-                  border: inputBorder,
+                  fillColor: Colors.white,
+                  border: _inputBorder,
                   contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 items: _fashionOptions.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
                 onChanged: (v) => setState(() => _fashionStyle = v),
               ),
               const SizedBox(height: 16),
-              Text('선호 데이트 유형', style: labelStyle),
+              const Text('선호 데이트 유형', style: _labelStyle),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _preferredDateType,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   filled: true,
-                  fillColor: surface,
-                  border: inputBorder,
+                  fillColor: Colors.white,
+                  border: _inputBorder,
                   contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 items: _dateTypeOptions.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
                 onChanged: (v) => setState(() => _preferredDateType = v),
               ),
               const SizedBox(height: 16),
-              Text('활동 시간대', style: labelStyle),
+              const Text('활동 시간대', style: _labelStyle),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _activityTime,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   filled: true,
-                  fillColor: surface,
-                  border: inputBorder,
+                  fillColor: Colors.white,
+                  border: _inputBorder,
                   contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 items: _activityTimeOptions.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
                 onChanged: (v) => setState(() => _activityTime = v),
               ),
               const SizedBox(height: 16),
-              Text('요즘 빠진 것 (최대 20자)', style: labelStyle),
+              const Text('요즘 빠진 것 (최대 20자)', style: _labelStyle),
               const SizedBox(height: 8),
               TextField(
                 controller: _intoLatelyController,
                 maxLength: 20,
                 maxLines: 1,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   hintText: '요즘 관심사를 알려주세요',
                   filled: true,
-                  fillColor: surface,
-                  border: inputBorder,
+                  fillColor: Colors.white,
+                  border: _inputBorder,
                   contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   counterText: '',
                 ),
               ),
               const SizedBox(height: 16),
-              Text('흡연 여부', style: labelStyle),
+              const Text('흡연 여부', style: _labelStyle),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _smoking,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   filled: true,
-                  fillColor: surface,
-                  border: inputBorder,
+                  fillColor: Colors.white,
+                  border: _inputBorder,
                   contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 items: const [
@@ -849,14 +899,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 onChanged: (value) => setState(() => _smoking = value),
               ),
               const SizedBox(height: 16),
-              Text('음주 여부', style: labelStyle),
+              const Text('음주 여부', style: _labelStyle),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _drinking,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   filled: true,
-                  fillColor: surface,
-                  border: inputBorder,
+                  fillColor: Colors.white,
+                  border: _inputBorder,
                   contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 items: const [
@@ -867,30 +917,30 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 onChanged: (value) => setState(() => _drinking = value),
               ),
               const SizedBox(height: 16),
-              Text('이상형', style: labelStyle),
+              const Text('이상형', style: _labelStyle),
               const SizedBox(height: 8),
               TextField(
                 controller: _idealTypeController,
                 textInputAction: TextInputAction.next,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   hintText: '이상형을 입력하세요',
                   filled: true,
-                  fillColor: surface,
-                  border: inputBorder,
+                  fillColor: Colors.white,
+                  border: _inputBorder,
                   contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
               ),
               const SizedBox(height: 16),
-              Text('학과', style: labelStyle),
+              const Text('학과', style: _labelStyle),
               const SizedBox(height: 8),
               TextField(
                 controller: _departmentController,
                 textInputAction: TextInputAction.next,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   hintText: '학과를 입력하세요',
                   filled: true,
-                  fillColor: surface,
-                  border: inputBorder,
+                  fillColor: Colors.white,
+                  border: _inputBorder,
                   contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
               ),
@@ -1006,6 +1056,97 @@ class _HeightPickerState extends State<_HeightPicker> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// 학교 검색 + 가나다순 리스트 선택 시트
+class _SchoolPickerSheet extends StatefulWidget {
+  const _SchoolPickerSheet({
+    required this.schoolList,
+    required this.current,
+  });
+
+  final List<String> schoolList;
+  final String current;
+
+  @override
+  State<_SchoolPickerSheet> createState() => _SchoolPickerSheetState();
+}
+
+class _SchoolPickerSheetState extends State<_SchoolPickerSheet> {
+  final _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<String> get _filtered {
+    if (_query.trim().isEmpty) return widget.schoolList;
+    final q = _query.trim().toLowerCase();
+    return widget.schoolList
+        .where((name) => name.toLowerCase().contains(q))
+        .toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final list = _filtered;
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      minChildSize: 0.4,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (context, scrollController) {
+        return SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (v) => setState(() => _query = v),
+                  decoration: InputDecoration(
+                    hintText: '학교 검색',
+                    prefixIcon: const Icon(LucideIcons.search, size: 22),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                  autofocus: true,
+                ),
+              ),
+              Expanded(
+                child: list.isEmpty
+                    ? Center(
+                        child: Text(
+                          _query.trim().isEmpty ? '학교 목록이 없어요' : '검색 결과가 없어요',
+                          style: TextStyle(color: Colors.grey.shade600),
+                        ),
+                      )
+                    : ListView.builder(
+                        controller: scrollController,
+                        itemCount: list.length,
+                        itemBuilder: (context, i) {
+                          final name = list[i];
+                          final selected = name == widget.current;
+                          return ListTile(
+                            title: Text(name),
+                            trailing: selected ? Icon(LucideIcons.check, size: 20, color: Theme.of(context).colorScheme.primary) : null,
+                            onTap: () => Navigator.of(context).pop(name),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/shared/utils/app_config.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -14,19 +15,19 @@ class _LoginScreenState extends State<LoginScreen> {
   // Onboarding Flow Design - 기능 3종
   static const List<Map<String, dynamic>> _features = [
     {
-      'icon': Icons.groups_outlined,
+      'icon': LucideIcons.users,
       'title': '우리 학교만',
       'description': '검증된 사람들과',
       'color': Color(0xFF3B82F6),
     },
     {
-      'icon': Icons.favorite_border,
+      'icon': LucideIcons.heart,
       'title': '실시간 매칭',
       'description': '즉시 대화 시작',
       'color': Color(0xFFEC4899),
     },
     {
-      'icon': Icons.shield_outlined,
+      'icon': LucideIcons.shield,
       'title': '안전한 만남',
       'description': '익명 프로필',
       'color': Color(0xFF8B5CF6),
@@ -90,7 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 errorBuilder: (_, __, ___) => Container(
                                   color: Colors.white,
                                   child: const Icon(
-                                    Icons.favorite,
+                                    LucideIcons.heart,
                                     size: 56,
                                     color: Color(0xFFEC4899),
                                   ),
@@ -112,8 +113,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             offset: Offset(0, 10 * (1 - value)),
                             child: Column(
                               children: [
-                                const Text(
-                                  'MeetZy',
+                                  const Text(
+                                    'Meetzi',
                                   style: TextStyle(
                                     fontSize: 30,
                                     fontWeight: FontWeight.bold,

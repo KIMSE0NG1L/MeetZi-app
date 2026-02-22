@@ -222,6 +222,11 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
                 isLoading: _isRequesting,
                 onPressed: _requestCode,
               ),
+              const SizedBox(height: 8),
+              Text(
+                '인증 메일이 오지 않으면 정크메일(스팸함)을 확인해 주세요.',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              ),
               const SizedBox(height: 16),
               TextField(
                 controller: _codeController,

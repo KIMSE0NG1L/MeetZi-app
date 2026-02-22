@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/shared/widgets/primary_button.dart';
 
@@ -19,7 +20,7 @@ class ConsentSuccessScreen extends StatelessWidget {
             children: [
               const SizedBox(height: 32),
               Icon(
-                Icons.chat_bubble_outline,
+                LucideIcons.messageCircle,
                 size: 120,
                 color: Theme.of(context).colorScheme.primary,
               ),

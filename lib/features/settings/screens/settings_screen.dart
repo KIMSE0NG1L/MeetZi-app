@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/messages/data/chat_history_store.dart';
-import 'package:nearo_app/features/settings/screens/customer_support_screen.dart';
 import 'package:nearo_app/shared/utils/token_storage.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
+import 'package:nearo_app/features/settings/screens/customer_support_screen.dart';
 
 /// AppDesign SettingsScreen: 로즈 그라데이션 헤더 + 카드형 메뉴 (일반/다크 모드, 로그아웃, 계정 삭제)
 class SettingsScreen extends StatelessWidget {
@@ -18,6 +18,26 @@ class SettingsScreen extends StatelessWidget {
   );
 
   Future<void> _logout(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('로그아웃'),
+        content: const Text(
+          '로그아웃하면 로그인 화면으로 이동하며, 기기에 저장된 대화 기록이 삭제됩니다. 로그아웃할까요?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('로그아웃'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     await ChatHistoryStore.instance.clear();
     final storage = TokenStorage();
     await storage.clear();
@@ -34,7 +54,7 @@ class SettingsScreen extends StatelessWidget {
       builder: (context) => AlertDialog(
         title: const Text('계정 삭제'),
         content: const Text(
-          '정말로 계정을 삭제하시겠습니까? 삭제 후 다시 카카오 로그인이 필요합니다.',
+          '계정을 삭제하면 프로필, 매칭 정보, 대화 내용 등 모든 데이터가 삭제되며 복구할 수 없습니다. 삭제 후 다시 이용하려면 카카오 로그인이 필요합니다. 정말 삭제하시겠습니까?',
         ),
         actions: [
           TextButton(
@@ -43,6 +63,7 @@ class SettingsScreen extends StatelessWidget {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('삭제'),
           ),
         ],
@@ -72,48 +93,46 @@ class SettingsScreen extends StatelessWidget {
     final surface = dark ? const Color(0xFF1F2937) : Colors.white;
     final onSurface = dark ? Colors.white : const Color(0xFF111827);
     final onSurfaceVariant = dark ? Colors.grey.shade400 : Colors.grey.shade600;
-
-    // 홈 상단과 동일: pt-14(56) + pb-5(20) + 콘텐츠, px-5(20)
     final topInset = MediaQuery.of(context).padding.top;
-    final pt = topInset > 0 ? topInset : 56.0;
-    const pb = 20.0;
-    const titleHeight = 36.0;
+    final headerHeight = (topInset > 0 ? topInset : 56.0) + 20 + 36;
 
     return Scaffold(
       backgroundColor: dark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
       body: Column(
         children: [
+          // AppDesign 헤더: 메시지함 등과 동일 높이 (pt + 20 + 36)
           Container(
-            height: pt + pb + titleHeight,
-            width: double.infinity,
+            height: headerHeight,
             decoration: const BoxDecoration(
               gradient: _roseGradient,
               boxShadow: [
                 BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2)),
               ],
             ),
-            child: Padding(
-              padding: EdgeInsets.only(left: 20, right: 20, top: pt, bottom: pb),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(LucideIcons.arrowLeft, color: Colors.white, size: 24),
-                    onPressed: () => Navigator.of(context).pop(),
-                    padding: const EdgeInsets.all(8),
-                  ),
-                  const Expanded(
-                    child: Text(
-                      '설정',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(LucideIcons.arrowLeft, color: Colors.white, size: 22),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                    const Expanded(
+                      child: Text(
+                        '설정',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 48),
-                ],
+                    const SizedBox(width: 48),
+                  ],
+                ),
               ),
             ),
           ),
@@ -155,32 +174,16 @@ class SettingsScreen extends StatelessWidget {
                   },
                 ),
                 const SizedBox(height: 24),
-                // 알림 설정 (기능 구현 나중에)
-                _SettingsCard(
-                  surface: surface,
-                  onSurface: onSurface,
-                  onSurfaceVariant: onSurfaceVariant,
-                  icon: LucideIcons.bell,
-                  title: '알림 설정',
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('알림 설정은 준비 중이에요')),
-                    );
-                  },
-                ),
-                const SizedBox(height: 12),
                 // 고객센터 문의
                 _SettingsCard(
                   surface: surface,
                   onSurface: onSurface,
                   onSurfaceVariant: onSurfaceVariant,
-                  icon: LucideIcons.headphones,
+                  icon: LucideIcons.messageCircle,
                   title: '고객센터 문의',
                   onTap: () {
                     Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const CustomerSupportScreen(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const CustomerSupportScreen()),
                     );
                   },
                 ),
@@ -366,7 +369,7 @@ class _SettingsCard extends StatelessWidget {
                 ),
               ),
               if (selected)
-                const Icon(LucideIcons.checkCircle, color: Color(0xFFF43F5E), size: 24)
+                const Icon(LucideIcons.circleCheck, color: Color(0xFFF43F5E), size: 24)
               else
                 Icon(LucideIcons.chevronRight, color: onSurfaceVariant, size: 24),
             ],

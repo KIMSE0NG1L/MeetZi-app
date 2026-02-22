@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:nearo_app/app/app_routes.dart';
+import 'package:nearo_app/app/app.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/home/screens/university_ranking_screen.dart';
 import 'package:nearo_app/features/matching_board/screens/matching_board_screen.dart';
@@ -18,16 +20,19 @@ class HomeShellScreen extends StatefulWidget {
   State<HomeShellScreen> createState() => _HomeShellScreenState();
 }
 
-class _HomeShellScreenState extends State<HomeShellScreen> {
+class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
   int _currentIndex = 2;
   final PageController _pageController = PageController(initialPage: 2);
   final _authRepository = AuthRepository();
   Map<String, dynamic>? _profile;
   bool _profileLoading = true;
-  final List<Widget> _pages = [
+  final ValueNotifier<int> _boardRefreshTrigger = ValueNotifier<int>(0);
+  bool _routeObserverSubscribed = false;
+
+  List<Widget> get _pages => [
     const UniversityRankingScreen(),
     const MessagesScreen(),
-    MatchingBoardScreen(),
+    MatchingBoardScreen(refreshTrigger: _boardRefreshTrigger),
     const MyProfileScreen(),
     RatingsScreen(),
   ];
@@ -50,9 +55,29 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_routeObserverSubscribed) {
+      final route = ModalRoute.of(context);
+      if (route is PageRoute) {
+        routeObserver.subscribe(this, route);
+        _routeObserverSubscribed = true;
+      }
+    }
+  }
+
+  @override
   void dispose() {
+    routeObserver.unsubscribe(this);
+    _boardRefreshTrigger.dispose();
     _pageController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    // 다른 화면(프로필 수정 등)에서 홈으로 돌아왔을 때 게시판 목록 갱신
+    _boardRefreshTrigger.value++;
   }
 
   Future<void> _loadThemeAndProfile() async {
@@ -93,8 +118,8 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
   Widget _buildTopBar() {
     final isRanking = _currentIndex == 0;
     final gradient = isRanking ? _purpleGradient : _roseGradient;
-    final String title;
-    final String? subtitle;
+    String title = '';
+    String? subtitle;
     switch (_currentIndex) {
       case 0:
         title = '대학교 랭킹';
@@ -105,7 +130,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
         subtitle = null;
         break;
       case 2:
-        title = 'MeetZy';
+        title = 'Meetzi';
         subtitle = _affiliationShort.isNotEmpty ? _affiliationShort : null;
         break;
       case 3:
@@ -117,8 +142,9 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
         subtitle = null;
         break;
       default:
-        title = 'MeetZy';
+        title = 'Meetzi';
         subtitle = _affiliationShort.isNotEmpty ? _affiliationShort : null;
+        break;
     }
 
     // AppDesign: px-5 pt-14 pb-5 shadow-md; pt-14=56, pb-5=20, px-5=20
@@ -200,11 +226,10 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
     const activeColor = Color(0xFFF43F5E); // rose-500
     const inactiveColor = Color(0xFF9CA3AF); // gray-400
     final labels = ['대학교 랭킹', '메시지함', '게시판', '프로필', '상점'];
-    // AppDesign: Trophy, MessageCircle, LayoutGrid, User, ShoppingBag (Lucide)
     final icons = [
       LucideIcons.trophy,
       LucideIcons.messageCircle,
-      LucideIcons.layoutGrid,
+      LucideIcons.grid3x3,
       LucideIcons.user,
       LucideIcons.shoppingBag,
     ];
