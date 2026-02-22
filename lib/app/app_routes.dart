@@ -19,4 +19,5 @@ class AppRoutes {
   static const String users = '/users';
   static const String profileSetup = '/profile/setup';
   static const String avatarSetup = '/profile/avatar-setup';
+  static const String customerSupport = '/settings/customer-support';
 }

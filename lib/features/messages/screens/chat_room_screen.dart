@@ -11,6 +11,8 @@ import 'package:nearo_app/shared/notification_utils.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/core/auth/auth_repository.dart';
 import 'package:nearo_app/features/matching_board/screens/matching_board_screen.dart';
+import 'package:nearo_app/features/messages/data/report_repository.dart';
+import 'package:dio/dio.dart';
 
 class _ChatMessage {
   final String id;
@@ -35,6 +37,15 @@ class _ChatMessage {
 class ChatRoomScreen extends StatefulWidget {
   const ChatRoomScreen({super.key});
 
+  static const _reportReasons = [
+    {'value': 'spam', 'label': '스팸/허위'},
+    {'value': 'harassment', 'label': '욕설·혐오'},
+    {'value': 'impersonation', 'label': '사칭'},
+    {'value': 'sexual', 'label': '성희롱·음란'},
+    {'value': 'scam', 'label': '사기'},
+    {'value': 'other', 'label': '기타'},
+  ];
+
   @override
   State<ChatRoomScreen> createState() => _ChatRoomScreenState();
 }
@@ -50,6 +61,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
   final _partnerProfileRepository = PartnerProfileRepository();
   final _repository = ChatRepository();
   final _matchingRepository = MatchingRepository();
+  final _reportRepository = ReportRepository();
   final _controller = TextEditingController();
   final List<_ChatMessage> _messages = [];
   bool _loading = true;
@@ -572,6 +584,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                       ),
                     ),
                   ),
+                  IconButton(
+                    icon: const Icon(LucideIcons.flag, color: Colors.white, size: 22),
+                    tooltip: '신고',
+                    onPressed: _openReportSheet,
+                  ),
                   PopupMenuButton<String>(
                     icon: const Icon(Icons.more_vert, color: Colors.white, size: 24),
                     color: theme.colorScheme.surface,
@@ -608,7 +625,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                       : ListView.separated(
                           controller: _scrollController,
                           reverse: true,
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                          padding: const EdgeInsets.only(left: 20, right: 12, top: 16, bottom: 16),
                           itemCount: _messages.length,
                           separatorBuilder: (_, __) => const SizedBox(height: 12),
                           itemBuilder: (context, index) {
@@ -689,45 +706,85 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                                         mainAxisSize: MainAxisSize.min,
                                         mainAxisAlignment: message.isMine ? MainAxisAlignment.end : MainAxisAlignment.start,
                                         crossAxisAlignment: CrossAxisAlignment.end,
-                                        children: [
-                                          Flexible(
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                              decoration: BoxDecoration(
-                                                color: message.isMine ? bubbleMine : bubbleOther,
-                                                borderRadius: BorderRadius.only(
-                                                  topLeft: const Radius.circular(16),
-                                                  topRight: const Radius.circular(16),
-                                                  bottomLeft: Radius.circular(message.isMine ? 16 : 4),
-                                                  bottomRight: Radius.circular(message.isMine ? 4 : 16),
-                                                ),
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: Colors.black.withOpacity(0.06),
-                                                    blurRadius: 4,
-                                                    offset: const Offset(0, 1),
+                                        children: message.isMine
+                                            ? [
+                                                Padding(
+                                                  padding: const EdgeInsets.only(bottom: 2),
+                                                  child: Text(
+                                                    _messageTime(message),
+                                                    style: TextStyle(fontSize: 11, color: timeColor),
                                                   ),
-                                                ],
-                                              ),
-                                              child: Text(
-                                                message.text,
-                                                style: TextStyle(
-                                                  color: message.isMine ? Colors.white : (dark ? Colors.white : const Color(0xFF111827)),
-                                                  fontSize: 14,
-                                                  height: 1.4,
                                                 ),
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 6),
-                                          Padding(
-                                            padding: const EdgeInsets.only(bottom: 2),
-                                            child: Text(
-                                              _messageTime(message),
-                                              style: TextStyle(fontSize: 11, color: timeColor),
-                                            ),
-                                          ),
-                                        ],
+                                                const SizedBox(width: 6),
+                                                Flexible(
+                                                  child: Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                                    decoration: BoxDecoration(
+                                                      color: bubbleMine,
+                                                      borderRadius: const BorderRadius.only(
+                                                        topLeft: Radius.circular(16),
+                                                        topRight: Radius.circular(16),
+                                                        bottomLeft: Radius.circular(16),
+                                                        bottomRight: Radius.circular(4),
+                                                      ),
+                                                      boxShadow: [
+                                                        BoxShadow(
+                                                          color: Colors.black.withOpacity(0.06),
+                                                          blurRadius: 4,
+                                                          offset: const Offset(0, 1),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    child: Text(
+                                                      message.text,
+                                                      style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 14,
+                                                        height: 1.4,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ]
+                                            : [
+                                                Flexible(
+                                                  child: Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                                    decoration: BoxDecoration(
+                                                      color: bubbleOther,
+                                                      borderRadius: BorderRadius.only(
+                                                        topLeft: const Radius.circular(16),
+                                                        topRight: const Radius.circular(16),
+                                                        bottomLeft: const Radius.circular(4),
+                                                        bottomRight: Radius.circular(16),
+                                                      ),
+                                                      boxShadow: [
+                                                        BoxShadow(
+                                                          color: Colors.black.withOpacity(0.06),
+                                                          blurRadius: 4,
+                                                          offset: const Offset(0, 1),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    child: Text(
+                                                      message.text,
+                                                      style: TextStyle(
+                                                        color: dark ? Colors.white : const Color(0xFF111827),
+                                                        fontSize: 14,
+                                                        height: 1.4,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 6),
+                                                Padding(
+                                                  padding: const EdgeInsets.only(bottom: 2),
+                                                  child: Text(
+                                                    _messageTime(message),
+                                                    style: TextStyle(fontSize: 11, color: timeColor),
+                                                  ),
+                                                ),
+                                              ],
                                       ),
                                     ),
                                     if (!message.isMine && message.readAt == null)
@@ -824,6 +881,39 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
   }
 
   static const double _partnerAvatarRadius = 18;
+  static final Set<String> _reportedMatchIds = {};
+
+  void _openReportSheet() async {
+    if (_matchId == null) {
+      await _loadRoomState();
+      if (!mounted) return;
+      if (_matchId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('잠시 후 다시 시도해 주세요.')),
+        );
+        return;
+      }
+    }
+    final matchId = _matchId!;
+    final partnerName = _title;
+    final alreadyReported = _reportedMatchIds.contains(matchId);
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _ReportSheetContent(
+        matchId: matchId,
+        partnerName: partnerName,
+        reportRepository: _reportRepository,
+        alreadyReported: alreadyReported,
+        onSubmitted: () {
+          _reportedMatchIds.add(matchId);
+          Navigator.of(ctx).pop();
+        },
+        onError: (msg) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg))),
+      ),
+    );
+  }
 
   Future<void> _openPartnerProfile() async {
     Future<Widget> avatarBuilder(Map<String, dynamic> profile) async {
@@ -865,6 +955,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
         ),
         onPop: () {},
         myMatchingTicket: 0,
+        hideActionButtons: true,
       );
       return;
     }
@@ -884,6 +975,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
             ),
             onPop: () {},
             myMatchingTicket: 0,
+            hideActionButtons: true,
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -951,6 +1043,286 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
       onTap: _openPartnerProfile,
       borderRadius: BorderRadius.circular(_partnerAvatarRadius),
       child: avatar,
+    );
+  }
+}
+
+class _ReportReasonGrid extends StatelessWidget {
+  const _ReportReasonGrid({
+    required this.reasons,
+    required this.selectedValue,
+    required this.dark,
+    required this.onSurface,
+    required this.onSelected,
+  });
+
+  final List<Map<String, String>> reasons;
+  final String selectedValue;
+  final bool dark;
+  final Color onSurface;
+  final void Function(String) onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    const chipHeight = 40.0;
+    const gap = 8.0;
+    final chipList = reasons.map((r) {
+      final value = r['value']!;
+      final label = r['label']!;
+      final selected = selectedValue == value;
+      return SizedBox(
+        height: chipHeight,
+        child: ChoiceChip(
+          label: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              color: selected
+                  ? (dark ? Colors.white : Colors.red.shade900)
+                  : onSurface,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+          selected: selected,
+          onSelected: (_) => onSelected(value),
+          selectedColor: dark ? Colors.red.shade800 : Colors.red.shade100,
+          backgroundColor: dark ? Colors.grey.shade800 : Colors.grey.shade200,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+      );
+    }).toList();
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            Expanded(child: chipList[0]),
+            const SizedBox(width: gap),
+            Expanded(child: chipList[1]),
+            const SizedBox(width: gap),
+            Expanded(child: chipList[2]),
+          ],
+        ),
+        const SizedBox(height: gap),
+        Row(
+          children: [
+            Expanded(child: chipList[3]),
+            const SizedBox(width: gap),
+            Expanded(child: chipList[4]),
+            const SizedBox(width: gap),
+            Expanded(child: chipList[5]),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _ReportSheetContent extends StatefulWidget {
+  const _ReportSheetContent({
+    required this.matchId,
+    required this.partnerName,
+    required this.reportRepository,
+    required this.alreadyReported,
+    required this.onSubmitted,
+    required this.onError,
+  });
+
+  final String matchId;
+  final String partnerName;
+  final ReportRepository reportRepository;
+  final bool alreadyReported;
+  final VoidCallback onSubmitted;
+  final void Function(String) onError;
+
+  @override
+  State<_ReportSheetContent> createState() => _ReportSheetContentState();
+}
+
+class _ReportSheetContentState extends State<_ReportSheetContent> {
+  String _reason = 'spam';
+  final _detailController = TextEditingController();
+  bool _sending = false;
+
+  @override
+  void dispose() {
+    _detailController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_sending) return;
+    setState(() => _sending = true);
+    try {
+      await widget.reportRepository.report(
+        matchId: widget.matchId,
+        reason: _reason,
+        detail: _detailController.text.trim().isEmpty ? null : _detailController.text.trim(),
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('신고가 접수되었습니다.')));
+      widget.onSubmitted();
+    } on DioException catch (e) {
+      if (!mounted) return;
+      final msg = e.response?.data is Map && e.response!.data['message'] != null
+          ? e.response!.data['message'].toString()
+          : '신고 접수에 실패했어요.';
+      widget.onError(msg);
+    } catch (_) {
+      if (!mounted) return;
+      widget.onError('신고 접수에 실패했어요.');
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final surface = dark ? const Color(0xFF1F2937) : Colors.white;
+    final onSurface = dark ? Colors.white : const Color(0xFF111827);
+    final onSurfaceVariant = dark ? Colors.grey.shade400 : Colors.grey.shade600;
+    final padding = MediaQuery.of(context).viewPadding;
+    final viewInsets = MediaQuery.of(context).viewInsets;
+
+    if (widget.alreadyReported) {
+      return Container(
+        padding: EdgeInsets.only(
+          left: 24,
+          right: 24,
+          bottom: padding.bottom + viewInsets.bottom + 24,
+        ),
+        decoration: BoxDecoration(
+          color: surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(top: 20),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade400,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+            Icon(LucideIcons.checkCircle, size: 56, color: Colors.green.shade600),
+            const SizedBox(height: 16),
+            Text(
+              '신고완료',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: onSurface),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '이미 신고가 접수된 대화입니다.',
+              style: TextStyle(fontSize: 14, color: onSurfaceVariant),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('닫기'),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: EdgeInsets.only(
+        left: 24,
+        right: 24,
+        bottom: padding.bottom + viewInsets.bottom + 16,
+      ),
+      decoration: BoxDecoration(
+        color: surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.only(top: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade400,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Icon(LucideIcons.flag, size: 24, color: Colors.red.shade400),
+                const SizedBox(width: 8),
+                Text(
+                  '상대방 신고',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: onSurface),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${widget.partnerName}님을 신고합니다. 사유와 내용을 입력해 주세요.',
+              style: TextStyle(fontSize: 13, color: onSurfaceVariant),
+            ),
+            const SizedBox(height: 20),
+            Text('신고 사유', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: onSurface)),
+            const SizedBox(height: 8),
+            _ReportReasonGrid(
+              reasons: ChatRoomScreen._reportReasons,
+              selectedValue: _reason,
+              dark: dark,
+              onSurface: onSurface,
+              onSelected: (value) => setState(() => _reason = value),
+            ),
+            const SizedBox(height: 16),
+            Text('상세 내용 (선택)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: onSurface)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _detailController,
+              maxLines: 4,
+              decoration: InputDecoration(
+                hintText: '구체적인 상황을 적어 주시면 검토에 도움이 됩니다.',
+                filled: true,
+                fillColor: dark ? Colors.grey.shade800 : Colors.grey.shade100,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
+              style: TextStyle(color: onSurface, fontSize: 14),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _sending ? null : _submit,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red.shade600,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: _sending
+                    ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Text('신고하기'),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
