@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/theme/nearo_theme.dart';
 import 'package:nearo_app/ui/screens/auth/login_screen.dart';
 import 'package:nearo_app/ui/widgets/primary_button.dart';
@@ -16,17 +17,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<_OnboardingPage> _pages = const [
     _OnboardingPage(
-      icon: Icons.place_outlined,
+      icon: LucideIcons.mapPin,
       title: '같은 공간에서\n자연스럽게 만나는 사람',
       description: '대학교, 직장, 아파트 등 같은 생활 반경 안에서\n마주칠 수 있는 사람과 연결돼요.',
     ),
     _OnboardingPage(
-      icon: Icons.lock_outline,
+      icon: LucideIcons.lock,
       title: '익명으로 가볍게\n시작하는 매칭',
       description: '얼굴 공개 없이 닉네임과 간단한 정보만 먼저 공개해\n부담 없이 대화를 시작할 수 있어요.',
     ),
     _OnboardingPage(
-      icon: Icons.favorite_border,
+      icon: LucideIcons.heart,
       title: '상호 동의 후에만\n얼굴 공개',
       description: '두 사람이 모두 동의할 때만 사진이 공개돼요.\n안전하고 자연스러운 연결을 지향해요.',
     ),

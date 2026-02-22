@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
@@ -352,7 +353,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         children: [
           IconButton(
             onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.arrow_back_ios_new, size: 22, color: Color(0xFF374151)),
+            icon: const Icon(LucideIcons.arrowLeft, size: 22, color: Color(0xFF374151)),
             padding: const EdgeInsets.all(8),
           ),
           Text(
@@ -416,7 +417,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                                   color: Colors.grey.shade200,
                                   shape: BoxShape.circle,
                                 ),
-                                child: Icon(Icons.person, size: 40, color: Colors.grey.shade600),
+                                child: Icon(LucideIcons.user, size: 40, color: Colors.grey.shade600),
                               ),
                       ),
                       const SizedBox(width: 16),
@@ -455,7 +456,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                         ),
                         clipBehavior: Clip.antiAlias,
                         child: _selectedPhoto == null
-                            ? const Icon(Icons.upload_file, size: 32, color: Color(0xFF9CA3AF))
+                            ? const Icon(LucideIcons.upload, size: 32, color: Color(0xFF9CA3AF))
                             : Image.file(
                                 File(_selectedPhoto!.path),
                                 fit: BoxFit.cover,
@@ -545,7 +546,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                             ),
                             clipBehavior: Clip.antiAlias,
                             child: storageKey.isEmpty
-                                ? const Icon(Icons.broken_image)
+                                ? const Icon(LucideIcons.imageOff)
                                 : Image.network(
                                     _resolvePhotoUrl(storageKey),
                                     fit: BoxFit.cover,

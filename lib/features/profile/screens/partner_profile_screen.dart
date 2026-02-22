@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:convert';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
@@ -45,7 +46,7 @@ class PartnerProfileScreen extends StatelessWidget {
             fit: BoxFit.cover,
             width: 80,
             height: 80,
-            placeholderBuilder: (_) => Icon(Icons.person, size: 40, color: Colors.grey.shade600),
+            placeholderBuilder: (_) => Icon(LucideIcons.user, size: 40, color: Colors.grey.shade600),
           ),
         ),
       );

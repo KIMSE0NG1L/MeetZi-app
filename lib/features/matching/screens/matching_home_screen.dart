@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/matching/data/matching_repository.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:lottie/lottie.dart';
@@ -173,7 +174,7 @@ class _MatchingHomeScreenState extends State<MatchingHomeScreen>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    Icons.favorite,
+                    LucideIcons.heart,
                     size: 120,
                     color: Theme.of(context).colorScheme.primary,
                   ),
@@ -231,7 +232,7 @@ class _MatchingHomeScreenState extends State<MatchingHomeScreen>
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  Icons.favorite,
+                  LucideIcons.heart,
                   size: 80,
                   color: Theme.of(context).colorScheme.primary,
                 ),
