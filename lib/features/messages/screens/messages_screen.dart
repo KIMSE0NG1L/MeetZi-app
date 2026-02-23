@@ -171,7 +171,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final onSurface = dark ? Colors.white : const Color(0xFF111827);
     final onSurfaceVariant = dark ? Colors.grey.shade400 : Colors.grey.shade600;
-    const rose = Color(0xFFF43F5E);
+    final primary = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
       backgroundColor: dark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
@@ -317,7 +317,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                             Container(
                                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                               decoration: BoxDecoration(
-                                                color: rose,
+                                                color: primary,
                                                 borderRadius: BorderRadius.circular(12),
                                               ),
                                               child: Text(

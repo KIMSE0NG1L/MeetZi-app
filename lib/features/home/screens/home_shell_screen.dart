@@ -11,6 +11,7 @@ import 'package:nearo_app/features/profile/screens/my_profile_screen.dart';
 import 'package:nearo_app/features/ratings/screens/ratings_screen.dart';
 import 'package:nearo_app/features/settings/screens/settings_screen.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
+import 'package:nearo_app/features/auth/data/environment_status_repository.dart';
 
 /// AppDesign 기준: 탭별 헤더 그라데이션 + 하단 5탭 네비 (대학교 랭킹 / 메시지함 / 게시판 / 프로필 / 상점)
 class HomeShellScreen extends StatefulWidget {
@@ -37,11 +38,6 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
     RatingsScreen(),
   ];
 
-  static const _roseGradient = LinearGradient(
-    begin: Alignment.centerLeft,
-    end: Alignment.centerRight,
-    colors: [Color(0xFFFB7185), Color(0xFFF43F5E)], // rose-400 to rose-500
-  );
   static const _purpleGradient = LinearGradient(
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,
@@ -84,20 +80,12 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
     try {
       final result = await _authRepository.getProfile();
       final user = (result['user'] as Map?)?.cast<String, dynamic>() ?? result as Map<String, dynamic>;
-      final affiliation = user['affiliationText']?.toString();
-      if (affiliation != null && affiliation.isNotEmpty) {
-        switch (affiliation) {
-          case '세종대학교':
-            ThemeController.setSeedColor(const Color(0xFFB93234));
-            break;
-          case '건국대학교':
-            ThemeController.setSeedColor(const Color(0xFF036B3F));
-            break;
-          case '한양대학교':
-            ThemeController.setSeedColor(const Color(0xFF1D2475));
-            break;
-        }
-      }
+      try {
+        final status = await EnvironmentStatusRepository().getMyEnvironmentStatus();
+        final primaryHex = (status['environment'] as Map?)?['primaryColor']?.toString();
+        final primary = ThemeController.parsePrimaryColor(primaryHex);
+        if (primary != null) ThemeController.setSeedColor(primary);
+      } catch (_) {}
       setState(() {
         _profile = user;
         _profileLoading = false;
@@ -117,7 +105,8 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
 
   Widget _buildTopBar() {
     final isRanking = _currentIndex == 0;
-    final gradient = isRanking ? _purpleGradient : _roseGradient;
+    final primary = Theme.of(context).colorScheme.primary;
+    final gradient = isRanking ? _purpleGradient : ThemeController.gradientFromPrimary(primary);
     String title = '';
     String? subtitle;
     switch (_currentIndex) {
@@ -223,7 +212,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
   }
 
   Widget _buildBottomNav() {
-    const activeColor = Color(0xFFF43F5E); // rose-500
+    final activeColor = Theme.of(context).colorScheme.primary;
     const inactiveColor = Color(0xFF9CA3AF); // gray-400
     final labels = ['대학교 랭킹', '메시지함', '게시판', '프로필', '상점'];
     final icons = [

@@ -84,7 +84,7 @@ class _RatingsScreenState extends State<RatingsScreen> {
     Color surface,
     Color onSurface,
     Color onSurfaceVariant,
-    Color rose,
+    Color accent,
     int cost,
     String label,
     String costStr,
@@ -114,7 +114,7 @@ class _RatingsScreenState extends State<RatingsScreen> {
                   color: dark ? Colors.white.withOpacity(0.12) : const Color(0xFFFFE4E6),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, size: 26, color: dark ? Colors.grey.shade300 : rose),
+                child: Icon(icon, size: 26, color: dark ? Colors.grey.shade300 : accent),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -128,7 +128,7 @@ class _RatingsScreenState extends State<RatingsScreen> {
               ),
               Text(
                 '$costStr 코인',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: rose),
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: accent),
               ),
             ],
           ),
@@ -143,7 +143,7 @@ class _RatingsScreenState extends State<RatingsScreen> {
     final surface = dark ? const Color(0xFF1F2937) : Colors.white;
     final onSurface = dark ? Colors.white : const Color(0xFF111827);
     final onSurfaceVariant = dark ? Colors.grey.shade400 : Colors.grey.shade600;
-    const rose = Color(0xFFF43F5E);
+    final primary = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
       backgroundColor: dark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
@@ -186,7 +186,7 @@ class _RatingsScreenState extends State<RatingsScreen> {
                     onPressed: () {
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('사용내역은 준비 중이에요')));
                     },
-                    child: Text('사용내역', style: TextStyle(color: rose, fontWeight: FontWeight.w600)),
+                    child: Text('사용내역', style: TextStyle(color: primary, fontWeight: FontWeight.w600)),
                   ),
                 ],
               ),
@@ -206,13 +206,13 @@ class _RatingsScreenState extends State<RatingsScreen> {
                         // 코인으로 구매: 1코인=열람권 1장, 5코인=등록권 1장
                         Text('코인으로 구매', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: onSurfaceVariant)),
                         const SizedBox(height: 8),
-                        _ticketCard(dark, surface, onSurface, onSurfaceVariant, rose, 1, '열람권 1장', '1', LucideIcons.eye, () => _buyTicket('view_ticket', 1, '열람권 1장')),
+                        _ticketCard(dark, surface, onSurface, onSurfaceVariant, primary, 1, '열람권 1장', '1', LucideIcons.eye, () => _buyTicket('view_ticket', 1, '열람권 1장')),
                         const SizedBox(height: 8),
-                        _ticketCard(dark, surface, onSurface, onSurfaceVariant, rose, 100, '열람권 100장', '100', LucideIcons.eye, () => _buyTicket('view_ticket', 100, '열람권 100장', quantity: 100)),
+                        _ticketCard(dark, surface, onSurface, onSurfaceVariant, primary, 100, '열람권 100장', '100', LucideIcons.eye, () => _buyTicket('view_ticket', 100, '열람권 100장', quantity: 100)),
                         const SizedBox(height: 8),
-                        _ticketCard(dark, surface, onSurface, onSurfaceVariant, rose, 5, '등록권 1장', '5', LucideIcons.clipboardList, () => _buyTicket('register_ticket', 5, '등록권 1장')),
+                        _ticketCard(dark, surface, onSurface, onSurfaceVariant, primary, 5, '등록권 1장', '5', LucideIcons.clipboardList, () => _buyTicket('register_ticket', 5, '등록권 1장')),
                         const SizedBox(height: 8),
-                        _ticketCard(dark, surface, onSurface, onSurfaceVariant, rose, 500, '등록권 100장', '500', LucideIcons.clipboardList, () => _buyTicket('register_ticket', 500, '등록권 100장', quantity: 100)),
+                        _ticketCard(dark, surface, onSurface, onSurfaceVariant, primary, 500, '등록권 100장', '500', LucideIcons.clipboardList, () => _buyTicket('register_ticket', 500, '등록권 100장', quantity: 100)),
                         const SizedBox(height: 24),
                         ...List.generate(_packages.length, (index) {
                           final pkg = _packages[index];
@@ -256,7 +256,7 @@ class _RatingsScreenState extends State<RatingsScreen> {
                                         child: Icon(
                                           LucideIcons.coins,
                                           size: 34,
-                                          color: dark ? Colors.grey.shade300 : rose,
+                                          color: dark ? Colors.grey.shade300 : primary,
                                         ),
                                       ),
                                       const SizedBox(width: 16),
@@ -274,7 +274,7 @@ class _RatingsScreenState extends State<RatingsScreen> {
                                                 ),
                                                 if (bonus != null) ...[
                                                   const SizedBox(width: 8),
-                                                  Text('+$bonus', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFFF43F5E))),
+                                                  Text('+$bonus', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary)),
                                                 ],
                                               ],
                                             ),

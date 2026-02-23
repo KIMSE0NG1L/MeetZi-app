@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
+import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 
 class MyProfileScreen extends StatefulWidget {
@@ -86,7 +87,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     final surface = dark ? const Color(0xFF1F2937) : Colors.white;
     final onSurface = dark ? Colors.white : const Color(0xFF111827);
     final onSurfaceVariant = dark ? Colors.grey.shade400 : Colors.grey.shade600;
-    const rose = Color(0xFFF43F5E);
+    final primary = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
       backgroundColor: dark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
@@ -149,7 +150,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                       Container(
                                         width: 32,
                                         height: 32,
-                                        decoration: BoxDecoration(color: rose, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 4)]),
+                                        decoration: BoxDecoration(color: primary, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 4)]),
                                         child: const Icon(LucideIcons.camera, color: Colors.white, size: 18),
                                       ),
                                     ],
@@ -196,10 +197,10 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                       children: ((_profile!['idealTypeKeywords'] as List).map((e) => e?.toString() ?? '')).where((s) => s.isNotEmpty).map((tag) => Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                         decoration: BoxDecoration(
-                                          color: dark ? rose.withOpacity(0.3) : const Color(0xFFFFF1F2),
+                                          color: dark ? primary.withOpacity(0.3) : primary.withOpacity(0.08),
                                           borderRadius: BorderRadius.circular(999),
                                         ),
-                                        child: Text('#$tag', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: dark ? const Color(0xFFFDA4AF) : rose)),
+                                        child: Text('#$tag', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: dark ? primary.withOpacity(0.9) : primary)),
                                       )).toList(),
                                     ),
                                   ],
@@ -217,13 +218,9 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                 width: double.infinity,
                                 padding: const EdgeInsets.symmetric(vertical: 16),
                                 decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    begin: Alignment.centerLeft,
-                                    end: Alignment.centerRight,
-                                    colors: [Color(0xFFF43F5E), Color(0xFFEC4899)],
-                                  ),
+                                  gradient: ThemeController.gradientFromPrimary(primary),
                                   borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [BoxShadow(color: rose.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4))],
+                                  boxShadow: [BoxShadow(color: primary.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4))],
                                 ),
                                 child: const Row(
                                   mainAxisAlignment: MainAxisAlignment.center,

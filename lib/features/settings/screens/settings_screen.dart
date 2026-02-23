@@ -11,11 +11,6 @@ import 'package:nearo_app/features/settings/screens/customer_support_screen.dart
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
-  static const _roseGradient = LinearGradient(
-    begin: Alignment.centerLeft,
-    end: Alignment.centerRight,
-    colors: [Color(0xFFFB7185), Color(0xFFF43F5E)],
-  );
 
   Future<void> _logout(BuildContext context) async {
     final confirmed = await showDialog<bool>(
@@ -103,9 +98,9 @@ class SettingsScreen extends StatelessWidget {
           // AppDesign 헤더: 메시지함 등과 동일 높이 (pt + 20 + 36)
           Container(
             height: headerHeight,
-            decoration: const BoxDecoration(
-              gradient: _roseGradient,
-              boxShadow: [
+            decoration: BoxDecoration(
+              gradient: ThemeController.gradientFromPrimary(Theme.of(context).colorScheme.primary),
+              boxShadow: const [
                 BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2)),
               ],
             ),
@@ -254,7 +249,6 @@ class _ThemeModeRow extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
-  static const _rose500 = Color(0xFFF43F5E);
 
   @override
   Widget build(BuildContext context) {
@@ -268,8 +262,8 @@ class _ThemeModeRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: selected ? Border.all(color: _rose500, width: 2) : null,
-            boxShadow: selected ? [BoxShadow(color: _rose500.withOpacity(0.2), blurRadius: 8, spreadRadius: 0)] : null,
+            border: selected ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2) : null,
+            boxShadow: selected ? [BoxShadow(color: Theme.of(context).colorScheme.primary.withOpacity(0.2), blurRadius: 8, spreadRadius: 0)] : null,
           ),
           child: Row(
             children: [
@@ -288,10 +282,10 @@ class _ThemeModeRow extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: selected ? _rose500 : (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF4B5563) : const Color(0xFFD1D5DB)),
+                    color: selected ? Theme.of(context).colorScheme.primary : (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF4B5563) : const Color(0xFFD1D5DB)),
                     width: 2,
                   ),
-                  color: selected ? _rose500 : null,
+                  color: selected ? Theme.of(context).colorScheme.primary : null,
                 ),
                 child: selected
                     ? const Center(
@@ -352,7 +346,7 @@ class _SettingsCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: selected ? Border.all(color: const Color(0xFFF43F5E), width: 2) : null,
+            border: selected ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2) : null,
           ),
           child: Row(
             children: [
@@ -369,7 +363,7 @@ class _SettingsCard extends StatelessWidget {
                 ),
               ),
               if (selected)
-                const Icon(LucideIcons.circleCheck, color: Color(0xFFF43F5E), size: 24)
+                Icon(LucideIcons.circleCheck, color: Theme.of(context).colorScheme.primary, size: 24)
               else
                 Icon(LucideIcons.chevronRight, color: onSurfaceVariant, size: 24),
             ],

@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:nearo_app/shared/theme/theme_controller.dart';
 
 /// 자주 묻는 질문 화면 (예시 FAQ)
 class FaqScreen extends StatelessWidget {
   const FaqScreen({super.key});
-
-  static const _roseGradient = LinearGradient(
-    begin: Alignment.centerLeft,
-    end: Alignment.centerRight,
-    colors: [Color(0xFFFB7185), Color(0xFFF43F5E)],
-  );
 
   static final _items = [
     _FaqItem(
@@ -56,9 +51,9 @@ class FaqScreen extends StatelessWidget {
         children: [
           Container(
             height: headerHeight,
-            decoration: const BoxDecoration(
-              gradient: _roseGradient,
-              boxShadow: [
+            decoration: BoxDecoration(
+              gradient: ThemeController.gradientFromPrimary(Theme.of(context).colorScheme.primary),
+              boxShadow: const [
                 BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2)),
               ],
             ),

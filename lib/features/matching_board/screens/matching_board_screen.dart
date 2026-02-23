@@ -7,6 +7,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/matching_board/data/matching_board_repository.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
+import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 
 /// 채팅 등 외부에서 프로필 시트만 볼 때 사용 (hideActionButtons: true → 넘기기/가져가기 비표시)
@@ -333,7 +334,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                                   _TicketChip(
                                     icon: LucideIcons.heart,
                                     count: _myTickets?.matchingTicket ?? 0,
-                                    color: const Color(0xFFF43F5E),
+                                    color: Theme.of(context).colorScheme.primary,
                                     dark: dark,
                                   ),
                                 ],
@@ -429,7 +430,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                       bottom: 24,
                       child: Center(
                         child: Material(
-                          color: const Color(0xFFFB7185),
+                          color: Theme.of(context).colorScheme.primary,
                           borderRadius: BorderRadius.circular(999),
                           elevation: 8,
                           shadowColor: Colors.black.withOpacity(0.25),
@@ -816,12 +817,8 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
       return null;
     }
 
-    // AppDesign ProfileDetailModal: 로즈 그라데이션 헤더, 아바타+닉네임, 스크롤 정보+태그, 하단 닫기/가져가기
-    const roseGradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [Color(0xFFFB7185), Color(0xFFF472B6), Color(0xFFF43F5E)],
-    );
+    // AppDesign ProfileDetailModal: 테마 primary 그라데이션 헤더, 아바타+닉네임, 스크롤 정보+태그, 하단 닫기/가져가기
+    final primaryGradient = ThemeController.gradientFromPrimaryDiagonal(theme.colorScheme.primary);
     final dark = theme.brightness == Brightness.dark;
     final listTags = <String>[];
     final kw = pluck(['idealTypeKeywords']) ?? user?['idealTypeKeywords'];
@@ -848,7 +845,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
             // 헤더: 그라데이션 + 드래그 핸들 + X + 아바타 + 닉네임 (높이 200으로 오버플로우 방지)
             Container(
               height: 200,
-              decoration: BoxDecoration(gradient: roseGradient),
+              decoration: BoxDecoration(gradient: primaryGradient),
               child: Stack(
                 children: [
                   Center(
@@ -1051,9 +1048,9 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                           child: Container(
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(12),
-                              gradient: roseGradient,
+                              gradient: primaryGradient,
                               boxShadow: [
-                                BoxShadow(color: const Color(0xFFF43F5E).withOpacity(0.4), blurRadius: 8, offset: const Offset(0, 2)),
+                                BoxShadow(color: theme.colorScheme.primary.withOpacity(0.4), blurRadius: 8, offset: const Offset(0, 2)),
                               ],
                             ),
                             child: Material(
@@ -1183,7 +1180,7 @@ class _MatchCompleteOnlyOverlayState extends State<_MatchCompleteOnlyOverlay> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(LucideIcons.heart, size: 80, color: const Color(0xFFF43F5E)),
+              Icon(LucideIcons.heart, size: 80, color: Theme.of(context).colorScheme.primary),
               const SizedBox(height: 16),
               Text(
                 '매칭 완료!',
@@ -1421,7 +1418,7 @@ class _MatchCelebrationOverlayState extends State<_MatchCelebrationOverlay> with
                       angle: rotateDeg * (math.pi / 180),
                       child: Transform.scale(
                         scale: scale,
-                        child: Icon(LucideIcons.heart, size: 80, color: const Color(0xFFF43F5E)),
+                        child: Icon(LucideIcons.heart, size: 80, color: Theme.of(context).colorScheme.primary),
                       ),
                     );
                   },
