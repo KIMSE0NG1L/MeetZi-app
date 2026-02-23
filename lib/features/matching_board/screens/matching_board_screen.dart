@@ -316,7 +316,6 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-                                  // 등록권 / 열람권 / 매칭권 (등록권 1장 사용 → 등록 → 매칭권 1장 지급)
                                   _TicketChip(
                                     icon: LucideIcons.clipboardList,
                                     count: _myTickets?.registerTicket ?? 0,
@@ -345,81 +344,85 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                         Expanded(
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 20),
-                            child: GridView.builder(
-                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 3,
-                                childAspectRatio: 0.62,
-                                crossAxisSpacing: 16,
-                                mainAxisSpacing: 16,
-                              ),
-                              itemCount: _profiles.length,
-                              itemBuilder: (context, index) {
-                                final profile = _profiles[index];
-                                final isMe = myUserId != null && profile['userId'] == myUserId;
-                                final tag = isMe ? '' : ((profile['idealType'] ?? (profile['user'] as Map<String, dynamic>?)?['idealType'])?.toString() ?? '-');
-                                // AppDesign 스타일: 단순 카드, 탭 시 프로필 상세(노트 시트)만 열기
-                                return Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    onTap: isMe ? null : () => _openNoteSheet(context, index, myUserId),
-                                    borderRadius: BorderRadius.circular(16),
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: surface,
-                                        borderRadius: BorderRadius.circular(16),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withOpacity(0.08),
-                                            blurRadius: 12,
-                                            offset: const Offset(0, 4),
-                                          ),
-                                        ],
-                                      ),
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-                                        child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Container(
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                border: Border.all(color: dark ? Colors.grey.shade700 : const Color(0xFFF3F4F6), width: 2),
-                                                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 4)],
+                            child: RefreshIndicator(
+                              onRefresh: () async {
+                                await _fetchProfiles();
+                                await _fetchMyTickets();
+                              },
+                              child: GridView.builder(
+                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 3,
+                                  childAspectRatio: 0.62,
+                                  crossAxisSpacing: 16,
+                                  mainAxisSpacing: 16,
+                                ),
+                                itemCount: _profiles.length,
+                                itemBuilder: (context, index) {
+                                  final profile = _profiles[index];
+                                  final isMe = myUserId != null && profile['userId'] == myUserId;
+                                  final tag = isMe ? '' : ((profile['idealType'] ?? (profile['user'] as Map<String, dynamic>?)?['idealType'])?.toString() ?? '-');
+                                  return Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: isMe ? null : () => _openNoteSheet(context, index, myUserId),
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: surface,
+                                          borderRadius: BorderRadius.circular(16),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(0.08),
+                                              blurRadius: 12,
+                                              offset: const Offset(0, 4),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                                          child: Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Container(
+                                                decoration: BoxDecoration(
+                                                  shape: BoxShape.circle,
+                                                  border: Border.all(color: dark ? Colors.grey.shade700 : const Color(0xFFF3F4F6), width: 2),
+                                                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 4)],
+                                                ),
+                                                child: _buildBoardAvatar(context, profile),
                                               ),
-                                              child: _buildBoardAvatar(context, profile),
-                                            ),
-                                            const SizedBox(height: 10),
-                                            Text(
-                                              isMe ? '나' : (profile['nickname'] ?? ''),
-                                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: onSurface),
-                                              textAlign: TextAlign.center,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            if (tag.isNotEmpty) ...[
-                                              const SizedBox(height: 2),
+                                              const SizedBox(height: 10),
                                               Text(
-                                                tag,
-                                                style: TextStyle(fontSize: 11, color: onSurfaceVariant),
+                                                isMe ? '나' : (profile['nickname'] ?? ''),
+                                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: onSurface),
                                                 textAlign: TextAlign.center,
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
                                               ),
+                                              if (tag.isNotEmpty) ...[
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  tag,
+                                                  style: TextStyle(fontSize: 11, color: onSurfaceVariant),
+                                                  textAlign: TextAlign.center,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ],
                                             ],
-                                          ],
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                );
-                              },
+                                  );
+                                },
+                              ),
                             ),
                           ),
                         ),
                         const SizedBox(height: 100),
                       ],
                     ),
-                    // AppDesign FAB 등록
                     Positioned(
                       left: 0,
                       right: 0,
@@ -923,6 +926,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+                physics: const AlwaysScrollableScrollPhysics(),
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 280),
                   switchInCurve: Curves.easeOutCubic,

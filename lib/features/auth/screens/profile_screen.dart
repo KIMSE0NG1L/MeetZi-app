@@ -49,52 +49,57 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: ListView(
-            children: [
-              TextField(
-                controller: _nicknameController,
-                decoration: const InputDecoration(
-                  labelText: '닉네임',
-                  border: OutlineInputBorder(),
+          child: RefreshIndicator(
+            onRefresh: () async {
+              await _run(_repository.getProfile);
+            },
+            child: ListView(
+              children: [
+                TextField(
+                  controller: _nicknameController,
+                  decoration: const InputDecoration(
+                    labelText: '닉네임',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _genderController,
-                decoration: const InputDecoration(
-                  labelText: '성별 (MALE/FEMALE)',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _genderController,
+                  decoration: const InputDecoration(
+                    labelText: '성별 (MALE/FEMALE)',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _baseTypeController,
-                decoration: const InputDecoration(
-                  labelText: '베이스 타입',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _baseTypeController,
+                  decoration: const InputDecoration(
+                    labelText: '베이스 타입',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              PrimaryButton(
-                label: '프로필 조회',
-                isLoading: _isLoading,
-                onPressed: () => _run(_repository.getProfile),
-              ),
-              const SizedBox(height: 12),
-              PrimaryButton(
-                label: '프로필 수정',
-                isLoading: _isLoading,
-                onPressed: () => _run(
-                  () => _repository.updateProfile({
-                    'nickname': _nicknameController.text.trim(),
-                    'gender': _genderController.text.trim(),
-                    'baseType': _baseTypeController.text.trim(),
-                  }),
+                const SizedBox(height: 16),
+                PrimaryButton(
+                  label: '프로필 조회',
+                  isLoading: _isLoading,
+                  onPressed: () => _run(_repository.getProfile),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Text(_result, style: Theme.of(context).textTheme.bodyMedium),
-            ],
+                const SizedBox(height: 12),
+                PrimaryButton(
+                  label: '프로필 수정',
+                  isLoading: _isLoading,
+                  onPressed: () => _run(
+                    () => _repository.updateProfile({
+                      'nickname': _nicknameController.text.trim(),
+                      'gender': _genderController.text.trim(),
+                      'baseType': _baseTypeController.text.trim(),
+                    }),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(_result, style: Theme.of(context).textTheme.bodyMedium),
+              ],
+            ),
           ),
         ),
       ),

@@ -201,23 +201,27 @@ class _MessagesScreenState extends State<MessagesScreen> {
                     ),
                   ),
                 )
-              : ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  itemCount: _rooms.length,
-                  separatorBuilder: (_, __) => Divider(height: 1, color: dark ? Colors.grey.shade800 : Colors.grey.shade200),
-                  itemBuilder: (context, index) {
-                    final room = _rooms[index];
-                    final partner = room['partnerNickname']?.toString() ?? '대화';
-                    final last = room['lastMessage']?.toString() ?? '';
-                    final photoKey = room['partnerPhotoStorageKey']?.toString();
-                    final photoUrl = _resolvePhotoUrl(photoKey);
-                    final roomId = room['roomId']?.toString() ?? '';
-                    final isActive = room['isActive'] == true;
-                    final avatarSeed = room['partnerAvatarSeed']?.toString() ?? room['partnerUserId']?.toString();
-                    final avatarOptionsRaw = room['partnerAvatarOptions']?.toString();
-                    Map<String, String> avatarOptions = {};
-                    if (avatarOptionsRaw != null && avatarOptionsRaw.isNotEmpty) {
-                      try {
+              : RefreshIndicator(
+                  onRefresh: () async {
+                    await _initAndLoad();
+                  },
+                  child: ListView.separated(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    itemCount: _rooms.length,
+                    separatorBuilder: (_, __) => Divider(height: 1, color: dark ? Colors.grey.shade800 : Colors.grey.shade200),
+                    itemBuilder: (context, index) {
+                      final room = _rooms[index];
+                      final partner = room['partnerNickname']?.toString() ?? '대화';
+                      final last = room['lastMessage']?.toString() ?? '';
+                      final photoKey = room['partnerPhotoStorageKey']?.toString();
+                      final photoUrl = _resolvePhotoUrl(photoKey);
+                      final roomId = room['roomId']?.toString() ?? '';
+                      final isActive = room['isActive'] == true;
+                      final avatarSeed = room['partnerAvatarSeed']?.toString() ?? room['partnerUserId']?.toString();
+                      final avatarOptionsRaw = room['partnerAvatarOptions']?.toString();
+                      Map<String, String> avatarOptions = {};
+                      if (avatarOptionsRaw != null && avatarOptionsRaw.isNotEmpty) {
+                        try {
                         final decoded = jsonDecode(avatarOptionsRaw);
                         if (decoded is Map<String, dynamic>) {
                           avatarOptions = decoded.map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
@@ -335,6 +339,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                     );
                   },
                 ),
+              ),
     );
   }
 }

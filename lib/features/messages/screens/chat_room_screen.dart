@@ -1212,7 +1212,7 @@ class _ReportSheetContentState extends State<_ReportSheetContent> {
               ),
             ),
             const SizedBox(height: 32),
-            Icon(LucideIcons.checkCircle, size: 56, color: Colors.green.shade600),
+            Icon(LucideIcons.circleCheck, size: 56, color: Colors.green.shade600),
             const SizedBox(height: 16),
             Text(
               '신고완료',

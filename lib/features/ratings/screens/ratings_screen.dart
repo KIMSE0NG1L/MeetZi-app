@@ -192,110 +192,116 @@ class _RatingsScreenState extends State<RatingsScreen> {
               ),
             ),
           ),
+
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
-                : ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    children: [
-                      // 코인으로 구매: 1코인=열람권 1장, 5코인=등록권 1장
-                      Text('코인으로 구매', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: onSurfaceVariant)),
-                      const SizedBox(height: 8),
-                      _ticketCard(dark, surface, onSurface, onSurfaceVariant, rose, 1, '열람권 1장', '1', LucideIcons.eye, () => _buyTicket('view_ticket', 1, '열람권 1장')),
-                      const SizedBox(height: 8),
-                      _ticketCard(dark, surface, onSurface, onSurfaceVariant, rose, 100, '열람권 100장', '100', LucideIcons.eye, () => _buyTicket('view_ticket', 100, '열람권 100장', quantity: 100)),
-                      const SizedBox(height: 8),
-                      _ticketCard(dark, surface, onSurface, onSurfaceVariant, rose, 5, '등록권 1장', '5', LucideIcons.clipboardList, () => _buyTicket('register_ticket', 5, '등록권 1장')),
-                      const SizedBox(height: 8),
-                      _ticketCard(dark, surface, onSurface, onSurfaceVariant, rose, 500, '등록권 100장', '500', LucideIcons.clipboardList, () => _buyTicket('register_ticket', 500, '등록권 100장', quantity: 100)),
-                      const SizedBox(height: 24),
-                      ...List.generate(_packages.length, (index) {
-                        final pkg = _packages[index];
-                        final coins = pkg['coins'] as int;
-                        final price = pkg['price'] as int;
-                        final bonus = pkg['bonus'] as int?;
-                        final badge = pkg['badge'] as String?;
-                        final popular = pkg['popular'] as bool? ?? false;
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: Material(
-                            color: surface,
-                            borderRadius: BorderRadius.circular(16),
-                            elevation: 2,
-                            shadowColor: Colors.black.withOpacity(0.06),
-                            child: InkWell(
-                              onTap: () => _buyCredit(coins),
+                : RefreshIndicator(
+                    onRefresh: () async {
+                      await _fetchCredit();
+                    },
+                    child: ListView(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      children: [
+                        // 코인으로 구매: 1코인=열람권 1장, 5코인=등록권 1장
+                        Text('코인으로 구매', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: onSurfaceVariant)),
+                        const SizedBox(height: 8),
+                        _ticketCard(dark, surface, onSurface, onSurfaceVariant, rose, 1, '열람권 1장', '1', LucideIcons.eye, () => _buyTicket('view_ticket', 1, '열람권 1장')),
+                        const SizedBox(height: 8),
+                        _ticketCard(dark, surface, onSurface, onSurfaceVariant, rose, 100, '열람권 100장', '100', LucideIcons.eye, () => _buyTicket('view_ticket', 100, '열람권 100장', quantity: 100)),
+                        const SizedBox(height: 8),
+                        _ticketCard(dark, surface, onSurface, onSurfaceVariant, rose, 5, '등록권 1장', '5', LucideIcons.clipboardList, () => _buyTicket('register_ticket', 5, '등록권 1장')),
+                        const SizedBox(height: 8),
+                        _ticketCard(dark, surface, onSurface, onSurfaceVariant, rose, 500, '등록권 100장', '500', LucideIcons.clipboardList, () => _buyTicket('register_ticket', 500, '등록권 100장', quantity: 100)),
+                        const SizedBox(height: 24),
+                        ...List.generate(_packages.length, (index) {
+                          final pkg = _packages[index];
+                          final coins = pkg['coins'] as int;
+                          final price = pkg['price'] as int;
+                          final bonus = pkg['bonus'] as int?;
+                          final badge = pkg['badge'] as String?;
+                          final popular = pkg['popular'] as bool? ?? false;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Material(
+                              color: surface,
                               borderRadius: BorderRadius.circular(16),
-                              child: Container(
-                                padding: const EdgeInsets.all(20),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: dark ? Colors.grey.shade700 : Colors.grey.shade200,
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 64,
-                                      height: 64,
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                          colors: dark ? [Colors.grey.shade700, Colors.grey.shade600] : [const Color(0xFFFFE4E6), const Color(0xFFFCE7F3)],
-                                        ),
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                      child: Icon(
-                                        LucideIcons.coins,
-                                        size: 34,
-                                        color: dark ? Colors.grey.shade300 : rose,
-                                      ),
+                              elevation: 2,
+                              shadowColor: Colors.black.withOpacity(0.06),
+                              child: InkWell(
+                                onTap: () => _buyCredit(coins),
+                                borderRadius: BorderRadius.circular(16),
+                                child: Container(
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: dark ? Colors.grey.shade700 : Colors.grey.shade200,
+                                      width: 1,
                                     ),
-                                        const SizedBox(width: 16),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Row(
-                                                crossAxisAlignment: CrossAxisAlignment.baseline,
-                                                textBaseline: TextBaseline.alphabetic,
-                                                children: [
-                                                  Text(
-                                                    '${coins.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}',
-                                                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: onSurface),
-                                                  ),
-                                                  if (bonus != null) ...[
-                                                    const SizedBox(width: 8),
-                                                    Text('+$bonus', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFFF43F5E))),
-                                                  ],
-                                                ],
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text('코인', style: TextStyle(fontSize: 14, color: onSurfaceVariant)),
-                                            ],
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 64,
+                                        height: 64,
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                            colors: dark ? [Colors.grey.shade700, Colors.grey.shade600] : [const Color(0xFFFFE4E6), const Color(0xFFFCE7F3)],
                                           ),
+                                          borderRadius: BorderRadius.circular(16),
                                         ),
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.end,
+                                        child: Icon(
+                                          LucideIcons.coins,
+                                          size: 34,
+                                          color: dark ? Colors.grey.shade300 : rose,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            Text(
-                                              '${price.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}원',
-                                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: onSurface),
+                                            Row(
+                                              crossAxisAlignment: CrossAxisAlignment.baseline,
+                                              textBaseline: TextBaseline.alphabetic,
+                                              children: [
+                                                Text(
+                                                  '${coins.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}',
+                                                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: onSurface),
+                                                ),
+                                                if (bonus != null) ...[
+                                                  const SizedBox(width: 8),
+                                                  Text('+$bonus', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFFF43F5E))),
+                                                ],
+                                              ],
                                             ),
+                                            const SizedBox(height: 4),
+                                            Text('코인', style: TextStyle(fontSize: 14, color: onSurfaceVariant)),
                                           ],
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                        children: [
+                                          Text(
+                                            '${price.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}원',
+                                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: onSurface),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
-                        );
-                      }),
-                      const SizedBox(height: 96),
-                    ],
+                            ),
+                          );
+                        }),
+                        const SizedBox(height: 96),
+                      ],
+                    ),
                   ),
           ),
         ],
