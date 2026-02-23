@@ -49,8 +49,15 @@ class _UsersScreenState extends State<UsersScreen> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: ListView(
-            children: [
+          child: RefreshIndicator(
+            onRefresh: () async {
+              // 새로고침 시 프로필 조회 등 원하는 동작을 여기에 추가
+              await _run(() => _repository.getPartnerProfile(
+                matchId: _matchIdController.text.trim(),
+              ));
+            },
+            child: ListView(
+              children: [
               TextField(
                 controller: _nicknameController,
                 decoration: const InputDecoration(
@@ -106,7 +113,8 @@ class _UsersScreenState extends State<UsersScreen> {
               ),
               const SizedBox(height: 16),
               Text(_result, style: Theme.of(context).textTheme.bodyMedium),
-            ],
+              ],
+            ),
           ),
         ),
       ),
