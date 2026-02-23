@@ -96,145 +96,148 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
               ? Center(child: Text(_error!, style: TextStyle(color: onSurfaceVariant)))
               : _profile == null
                   ? Center(child: Text('프로필 정보가 없습니다.', style: TextStyle(color: onSurfaceVariant)))
-                  : ListView(
-                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
-                      children: [
-                        Material(
-                          color: surface,
-                          borderRadius: BorderRadius.circular(24),
-                          elevation: 2,
-                          shadowColor: Colors.black.withOpacity(0.06),
-                          child: Padding(
-                            padding: const EdgeInsets.all(24),
-                            child: Column(
-                              children: [
-                                Stack(
-                                  alignment: Alignment.bottomRight,
-                                  children: [
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        border: Border.all(color: const Color(0xFFFECDD3), width: 4),
-                                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 12)],
-                                      ),
-                                      child: _profile?['avatarSeed'] != null && (_profile!['avatarSeed'] as String).isNotEmpty
-                                          ? CircleAvatar(
-                                              radius: 48,
-                                              backgroundColor: Colors.white,
-                                              child: ClipOval(
-                                                child: SizedBox(
-                                                  width: 96,
-                                                  height: 96,
-                                                  child: SvgPicture.network(
-                                                    diceBearAvatarUrl(
-                                                      _profile!['avatarSeed'] as String,
-                                                      options: _profile?['avatarOptions'] is Map<String, dynamic>
-                                                          ? (_profile!['avatarOptions'] as Map<String, dynamic>).map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''))
-                                                          : null,
+                  : RefreshIndicator(
+                      onRefresh: _load,
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
+                        children: [
+                          Material(
+                            color: surface,
+                            borderRadius: BorderRadius.circular(24),
+                            elevation: 2,
+                            shadowColor: Colors.black.withOpacity(0.06),
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                children: [
+                                  Stack(
+                                    alignment: Alignment.bottomRight,
+                                    children: [
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: const Color(0xFFFECDD3), width: 4),
+                                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 12)],
+                                        ),
+                                        child: _profile?['avatarSeed'] != null && (_profile!['avatarSeed'] as String).isNotEmpty
+                                            ? CircleAvatar(
+                                                radius: 48,
+                                                backgroundColor: Colors.white,
+                                                child: ClipOval(
+                                                  child: SizedBox(
+                                                    width: 96,
+                                                    height: 96,
+                                                    child: SvgPicture.network(
+                                                      diceBearAvatarUrl(
+                                                        _profile!['avatarSeed'] as String,
+                                                        options: _profile?['avatarOptions'] is Map<String, dynamic>
+                                                            ? (_profile!['avatarOptions'] as Map<String, dynamic>).map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''))
+                                                            : null,
+                                                      ),
+                                                      fit: BoxFit.cover,
+                                                      placeholderBuilder: (context) => Icon(LucideIcons.user, size: 64, color: Theme.of(context).colorScheme.primary),
                                                     ),
-                                                    fit: BoxFit.cover,
-                                                    placeholderBuilder: (context) => Icon(LucideIcons.user, size: 64, color: Theme.of(context).colorScheme.primary),
                                                   ),
                                                 ),
+                                              )
+                                            : CircleAvatar(
+                                                radius: 48,
+                                                backgroundColor: Colors.white,
+                                                child: Icon(LucideIcons.user, size: 64, color: Theme.of(context).colorScheme.primary),
                                               ),
-                                            )
-                                          : CircleAvatar(
-                                              radius: 48,
-                                              backgroundColor: Colors.white,
-                                              child: Icon(LucideIcons.user, size: 64, color: Theme.of(context).colorScheme.primary),
-                                            ),
-                                    ),
-                                    Container(
-                                      width: 32,
-                                      height: 32,
-                                      decoration: BoxDecoration(color: rose, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 4)]),
-                                      child: const Icon(LucideIcons.camera, color: Colors.white, size: 18),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  _profile?['nickname']?.toString() ?? '',
-                                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: onSurface),
-                                ),
-                                const SizedBox(height: 8),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(LucideIcons.mapPin, size: 16, color: onSurfaceVariant),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      _profile?['affiliationText']?.toString() ?? _profile?['school']?.toString() ?? '-',
-                                      style: TextStyle(fontSize: 14, color: onSurfaceVariant),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 24),
-                                Divider(height: 1, color: dark ? Colors.grey.shade700 : Colors.grey.shade200),
-                                const SizedBox(height: 16),
-                                _InfoRow(label: '소속', value: _profile?['affiliationText']?.toString() ?? _profile?['school']?.toString() ?? '-', onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
-                                _InfoRow(label: '성별', value: _profile?['gender']?.toString() == 'male' ? '남성' : '여성', onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
-                                _InfoRow(label: '학과', value: _profile?['department']?.toString() ?? '-', onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
-                                _InfoRow(label: '키', value: _profile?['heightCm'] != null ? '${_profile!['heightCm']}cm' : '-', onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
-                                _InfoRow(label: '학년', value: _toLabel('gradeYear', _profile?['gradeYear']), onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
-                                _InfoRow(label: 'MBTI', value: _profile?['mbti']?.toString() ?? '-', onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
-                                _InfoRow(label: '한줄소개', value: _profile?['introOneLine']?.toString() ?? '-', onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
-                                if (_profile?['idealTypeKeywords'] is List && (_profile!['idealTypeKeywords'] as List).isNotEmpty) ...[
+                                      ),
+                                      Container(
+                                        width: 32,
+                                        height: 32,
+                                        decoration: BoxDecoration(color: rose, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 4)]),
+                                        child: const Icon(LucideIcons.camera, color: Colors.white, size: 18),
+                                      ),
+                                    ],
+                                  ),
                                   const SizedBox(height: 16),
-                                  Divider(height: 1, color: dark ? Colors.grey.shade700 : Colors.grey.shade200),
-                                  const SizedBox(height: 12),
-                                  Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Text('관심사', style: TextStyle(fontSize: 14, color: onSurfaceVariant)),
+                                  Text(
+                                    _profile?['nickname']?.toString() ?? '',
+                                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: onSurface),
                                   ),
                                   const SizedBox(height: 8),
-                                  Wrap(
-                                    spacing: 8,
-                                    runSpacing: 8,
-                                    children: ((_profile!['idealTypeKeywords'] as List).map((e) => e?.toString() ?? '')).where((s) => s.isNotEmpty).map((tag) => Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                      decoration: BoxDecoration(
-                                        color: dark ? rose.withOpacity(0.3) : const Color(0xFFFFF1F2),
-                                        borderRadius: BorderRadius.circular(999),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(LucideIcons.mapPin, size: 16, color: onSurfaceVariant),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        _profile?['affiliationText']?.toString() ?? _profile?['school']?.toString() ?? '-',
+                                        style: TextStyle(fontSize: 14, color: onSurfaceVariant),
                                       ),
-                                      child: Text('#$tag', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: dark ? const Color(0xFFFDA4AF) : rose)),
-                                    )).toList(),
+                                    ],
                                   ),
+                                  const SizedBox(height: 24),
+                                  Divider(height: 1, color: dark ? Colors.grey.shade700 : Colors.grey.shade200),
+                                  const SizedBox(height: 16),
+                                  _InfoRow(label: '소속', value: _profile?['affiliationText']?.toString() ?? _profile?['school']?.toString() ?? '-', onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
+                                  _InfoRow(label: '성별', value: _profile?['gender']?.toString() == 'male' ? '남성' : '여성', onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
+                                  _InfoRow(label: '학과', value: _profile?['department']?.toString() ?? '-', onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
+                                  _InfoRow(label: '키', value: _profile?['heightCm'] != null ? '${_profile!['heightCm']}cm' : '-', onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
+                                  _InfoRow(label: '학년', value: _toLabel('gradeYear', _profile?['gradeYear']), onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
+                                  _InfoRow(label: 'MBTI', value: _profile?['mbti']?.toString() ?? '-', onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
+                                  _InfoRow(label: '한줄소개', value: _profile?['introOneLine']?.toString() ?? '-', onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
+                                  if (_profile?['idealTypeKeywords'] is List && (_profile!['idealTypeKeywords'] as List).isNotEmpty) ...[
+                                    const SizedBox(height: 16),
+                                    Divider(height: 1, color: dark ? Colors.grey.shade700 : Colors.grey.shade200),
+                                    const SizedBox(height: 12),
+                                    Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: Text('관심사', style: TextStyle(fontSize: 14, color: onSurfaceVariant)),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: ((_profile!['idealTypeKeywords'] as List).map((e) => e?.toString() ?? '')).where((s) => s.isNotEmpty).map((tag) => Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: dark ? rose.withOpacity(0.3) : const Color(0xFFFFF1F2),
+                                          borderRadius: BorderRadius.circular(999),
+                                        ),
+                                        child: Text('#$tag', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: dark ? const Color(0xFFFDA4AF) : rose)),
+                                      )).toList(),
+                                    ),
+                                  ],
                                 ],
-                              ],
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 24),
-                        Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () => Navigator.of(context).pushNamed(AppRoutes.profileSetup, arguments: true),
-                            borderRadius: BorderRadius.circular(16),
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  begin: Alignment.centerLeft,
-                                  end: Alignment.centerRight,
-                                  colors: [Color(0xFFF43F5E), Color(0xFFEC4899)],
+                          const SizedBox(height: 24),
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () => Navigator.of(context).pushNamed(AppRoutes.profileSetup, arguments: true),
+                              borderRadius: BorderRadius.circular(16),
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    begin: Alignment.centerLeft,
+                                    end: Alignment.centerRight,
+                                    colors: [Color(0xFFF43F5E), Color(0xFFEC4899)],
+                                  ),
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [BoxShadow(color: rose.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4))],
                                 ),
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [BoxShadow(color: rose.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4))],
-                              ),
-                              child: const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(LucideIcons.pencil, color: Colors.white, size: 20),
-                                  SizedBox(width: 8),
-                                  Text('내 프로필 수정', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                                ],
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(LucideIcons.pencil, color: Colors.white, size: 20),
+                                    SizedBox(width: 8),
+                                    Text('내 프로필 수정', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
     );
   }

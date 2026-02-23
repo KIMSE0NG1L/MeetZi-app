@@ -5,6 +5,7 @@ import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/messages/data/chat_history_store.dart';
 import 'package:nearo_app/shared/utils/token_storage.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
+import 'package:nearo_app/features/settings/screens/customer_support_screen.dart';
 
 /// AppDesign SettingsScreen: 로즈 그라데이션 헤더 + 카드형 메뉴 (일반/다크 모드, 로그아웃, 계정 삭제)
 class SettingsScreen extends StatelessWidget {
@@ -173,21 +174,7 @@ class SettingsScreen extends StatelessWidget {
                   },
                 ),
                 const SizedBox(height: 24),
-                // 알림 설정 (기능 구현 나중에)
-                _SettingsCard(
-                  surface: surface,
-                  onSurface: onSurface,
-                  onSurfaceVariant: onSurfaceVariant,
-                  icon: LucideIcons.bell,
-                  title: '알림 설정',
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('알림 설정은 준비 중이에요')),
-                    );
-                  },
-                ),
-                const SizedBox(height: 12),
-                // 고객센터 문의 (기능 구현 나중에)
+                // 고객센터 문의
                 _SettingsCard(
                   surface: surface,
                   onSurface: onSurface,
@@ -195,8 +182,8 @@ class SettingsScreen extends StatelessWidget {
                   icon: LucideIcons.messageCircle,
                   title: '고객센터 문의',
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('고객센터 문의는 준비 중이에요')),
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const CustomerSupportScreen()),
                     );
                   },
                 ),

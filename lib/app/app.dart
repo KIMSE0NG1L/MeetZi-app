@@ -29,6 +29,7 @@ import 'package:nearo_app/features/auth/data/environment_status_repository.dart'
 import 'package:nearo_app/features/home/screens/home_shell_screen.dart';
 import 'dart:async';
 import 'package:nearo_app/features/profile/screens/avatar_setup_screen.dart';
+import 'package:nearo_app/features/settings/screens/customer_support_screen.dart';
 
 final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
 
@@ -120,12 +121,18 @@ class _NearoAppState extends State<NearoApp> {
   }
 
   void _handleNotificationData(Map<String, dynamic> data) {
+    final type = data['type']?.toString();
+    if (type == 'support_reply' || type == 'support_submitted') {
+      _navigatorKey.currentState?.pushNamed(AppRoutes.customerSupport);
+      return;
+    }
     final roomId = data['roomId']?.toString();
-    if (roomId == null || roomId.isEmpty) return;
-    _navigatorKey.currentState?.pushNamed(
-      AppRoutes.chatRoom,
-      arguments: {'roomId': roomId, 'partnerNickname': '대화'},
-    );
+    if (roomId != null && roomId.isNotEmpty) {
+      _navigatorKey.currentState?.pushNamed(
+        AppRoutes.chatRoom,
+        arguments: {'roomId': roomId, 'partnerNickname': '대화'},
+      );
+    }
   }
 
   Future<void> _initDeepLinks() async {
@@ -261,6 +268,7 @@ class _NearoAppState extends State<NearoApp> {
                     AppRoutes.avatarSetup: (_) => AvatarSetupScreen(),
                     AppRoutes.partnerProfile: (_) => const PartnerProfileScreen(),
                     AppRoutes.home: (_) => const HomeShellScreen(),
+                    AppRoutes.customerSupport: (_) => const CustomerSupportScreen(),
                   },
                   navigatorObservers: [routeObserver],
                 );

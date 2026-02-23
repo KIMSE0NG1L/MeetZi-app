@@ -9,7 +9,7 @@ import 'package:nearo_app/features/matching_board/data/matching_board_repository
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 
-/// 채팅 등 외부에서 프로필 시트만 볼 때 사용 (myMatchingTicket: 0, 가져가기 비표시)
+/// 채팅 등 외부에서 프로필 시트만 볼 때 사용 (hideActionButtons: true → 넘기기/가져가기 비표시)
 Future<void> showBoardNoteSheet(
   BuildContext context, {
   required List<Map<String, dynamic>> profiles,
@@ -19,6 +19,8 @@ Future<void> showBoardNoteSheet(
   int myMatchingTicket = 0,
   Future<void> Function()? onRefreshTickets,
   Future<void> Function(String profileId)? onTakeNote,
+  /// true면 넘기기/가져가기 버튼 숨김 (채팅방에서 프로필 보기용)
+  bool hideActionButtons = false,
 }) async {
   final sheetContent = _BoardNoteSheetContent(
     profiles: profiles,
@@ -28,6 +30,7 @@ Future<void> showBoardNoteSheet(
     onPop: onPop ?? () {},
     myMatchingTicket: myMatchingTicket,
     onRefreshTickets: onRefreshTickets,
+    hideActionButtons: hideActionButtons,
   );
   if (!context.mounted) return;
   showGeneralDialog<void>(
@@ -82,15 +85,21 @@ Future<void> showBoardNoteSheet(
 }
 
 class MatchingBoardScreen extends StatelessWidget {
-  const MatchingBoardScreen({super.key});
+  const MatchingBoardScreen({super.key, this.refreshTrigger});
+
+  final ValueNotifier<int>? refreshTrigger;
 
   @override
   Widget build(BuildContext context) {
-    return _MatchingBoardScreenBody();
+    return _MatchingBoardScreenBody(refreshTrigger: refreshTrigger);
   }
 }
 
 class _MatchingBoardScreenBody extends StatefulWidget {
+  const _MatchingBoardScreenBody({this.refreshTrigger});
+
+  final ValueNotifier<int>? refreshTrigger;
+
   @override
   State<_MatchingBoardScreenBody> createState() => _MatchingBoardScreenBodyState();
 }
@@ -107,6 +116,18 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     super.initState();
     _fetchProfiles();
     _fetchMyCredit();
+    _fetchMyTickets();
+    widget.refreshTrigger?.addListener(_onRefreshTriggered);
+  }
+
+  @override
+  void dispose() {
+    widget.refreshTrigger?.removeListener(_onRefreshTriggered);
+    super.dispose();
+  }
+
+  void _onRefreshTriggered() {
+    _fetchProfiles();
     _fetchMyTickets();
   }
 
@@ -295,7 +316,6 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-                                  // 등록권 / 열람권 / 매칭권 (등록권 1장 사용 → 등록 → 매칭권 1장 지급)
                                   _TicketChip(
                                     icon: LucideIcons.clipboardList,
                                     count: _myTickets?.registerTicket ?? 0,
@@ -324,81 +344,85 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                         Expanded(
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 20),
-                            child: GridView.builder(
-                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 3,
-                                childAspectRatio: 0.62,
-                                crossAxisSpacing: 16,
-                                mainAxisSpacing: 16,
-                              ),
-                              itemCount: _profiles.length,
-                              itemBuilder: (context, index) {
-                                final profile = _profiles[index];
-                                final isMe = myUserId != null && profile['userId'] == myUserId;
-                                final tag = isMe ? '' : ((profile['idealType'] ?? (profile['user'] as Map<String, dynamic>?)?['idealType'])?.toString() ?? '-');
-                                // AppDesign 스타일: 단순 카드, 탭 시 프로필 상세(노트 시트)만 열기
-                                return Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    onTap: isMe ? null : () => _openNoteSheet(context, index, myUserId),
-                                    borderRadius: BorderRadius.circular(16),
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: surface,
-                                        borderRadius: BorderRadius.circular(16),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withOpacity(0.08),
-                                            blurRadius: 12,
-                                            offset: const Offset(0, 4),
-                                          ),
-                                        ],
-                                      ),
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-                                        child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Container(
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                border: Border.all(color: dark ? Colors.grey.shade700 : const Color(0xFFF3F4F6), width: 2),
-                                                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 4)],
+                            child: RefreshIndicator(
+                              onRefresh: () async {
+                                await _fetchProfiles();
+                                await _fetchMyTickets();
+                              },
+                              child: GridView.builder(
+                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 3,
+                                  childAspectRatio: 0.62,
+                                  crossAxisSpacing: 16,
+                                  mainAxisSpacing: 16,
+                                ),
+                                itemCount: _profiles.length,
+                                itemBuilder: (context, index) {
+                                  final profile = _profiles[index];
+                                  final isMe = myUserId != null && profile['userId'] == myUserId;
+                                  final tag = isMe ? '' : ((profile['idealType'] ?? (profile['user'] as Map<String, dynamic>?)?['idealType'])?.toString() ?? '-');
+                                  return Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: isMe ? null : () => _openNoteSheet(context, index, myUserId),
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: surface,
+                                          borderRadius: BorderRadius.circular(16),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(0.08),
+                                              blurRadius: 12,
+                                              offset: const Offset(0, 4),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                                          child: Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Container(
+                                                decoration: BoxDecoration(
+                                                  shape: BoxShape.circle,
+                                                  border: Border.all(color: dark ? Colors.grey.shade700 : const Color(0xFFF3F4F6), width: 2),
+                                                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 4)],
+                                                ),
+                                                child: _buildBoardAvatar(context, profile),
                                               ),
-                                              child: _buildBoardAvatar(context, profile),
-                                            ),
-                                            const SizedBox(height: 10),
-                                            Text(
-                                              isMe ? '나' : (profile['nickname'] ?? ''),
-                                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: onSurface),
-                                              textAlign: TextAlign.center,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            if (tag.isNotEmpty) ...[
-                                              const SizedBox(height: 2),
+                                              const SizedBox(height: 10),
                                               Text(
-                                                tag,
-                                                style: TextStyle(fontSize: 11, color: onSurfaceVariant),
+                                                isMe ? '나' : (profile['nickname'] ?? ''),
+                                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: onSurface),
                                                 textAlign: TextAlign.center,
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
                                               ),
+                                              if (tag.isNotEmpty) ...[
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  tag,
+                                                  style: TextStyle(fontSize: 11, color: onSurfaceVariant),
+                                                  textAlign: TextAlign.center,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ],
                                             ],
-                                          ],
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                );
-                              },
+                                  );
+                                },
+                              ),
                             ),
                           ),
                         ),
                         const SizedBox(height: 100),
                       ],
                     ),
-                    // AppDesign FAB 등록
                     Positioned(
                       left: 0,
                       right: 0,
@@ -621,6 +645,7 @@ class _BoardNoteSheetContent extends StatefulWidget {
     required this.onPop,
     required this.myMatchingTicket,
     this.onRefreshTickets,
+    this.hideActionButtons = false,
   });
 
   final List<Map<String, dynamic>> profiles;
@@ -630,6 +655,7 @@ class _BoardNoteSheetContent extends StatefulWidget {
   final VoidCallback onPop;
   final int myMatchingTicket;
   final Future<void> Function()? onRefreshTickets;
+  final bool hideActionButtons;
 
   @override
   State<_BoardNoteSheetContent> createState() => _BoardNoteSheetContentState();
@@ -819,9 +845,9 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
         borderRadius: BorderRadius.circular(32),
         child: Column(
           children: [
-            // 헤더: 그라데이션 + 드래그 핸들 + X + 아바타 + 닉네임
+            // 헤더: 그라데이션 + 드래그 핸들 + X + 아바타 + 닉네임 (높이 200으로 오버플로우 방지)
             Container(
-              height: 160,
+              height: 200,
               decoration: BoxDecoration(gradient: roseGradient),
               child: Stack(
                 children: [
@@ -855,14 +881,20 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          Text(
-                            _str(profile['nickname']),
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                          ConstrainedBox(
+                            constraints: BoxConstraints(maxWidth: 280),
+                            child: Text(
+                              _str(profile['nickname']),
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                decoration: TextDecoration.none,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                              textAlign: TextAlign.center,
                             ),
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
@@ -894,6 +926,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+                physics: const AlwaysScrollableScrollPhysics(),
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 280),
                   switchInCurve: Curves.easeOutCubic,
@@ -965,64 +998,86 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                 ),
               ),
             ),
-            // 하단: 닫기/넘기기 + 가져가기 (AppDesign 그라데이션 버튼)
+            // 하단: 채팅방에서는 닫기만, 게시판에서는 넘기기 + 가져가기
             Container(
               padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + MediaQuery.of(context).padding.bottom),
               decoration: BoxDecoration(
                 color: dark ? const Color(0xFF1F2937) : Colors.white,
                 border: Border(top: BorderSide(color: dark ? Colors.grey.shade700 : Colors.grey.shade200)),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _taking ? null : _skip,
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        side: BorderSide(color: dark ? Colors.grey.shade600 : Colors.grey.shade300),
-                      ),
-                      child: Text(
-                        '넘기기',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: dark ? Colors.grey.shade200 : Colors.grey.shade700,
+              child: widget.hideActionButtons
+                  ? SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          widget.onPop();
+                        },
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          side: BorderSide(color: dark ? Colors.grey.shade600 : Colors.grey.shade300),
                         ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        gradient: roseGradient,
-                        boxShadow: [
-                          BoxShadow(color: const Color(0xFFF43F5E).withOpacity(0.4), blurRadius: 8, offset: const Offset(0, 2)),
-                        ],
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: _taking ? null : _take,
-                          borderRadius: BorderRadius.circular(12),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            child: Center(
-                              child: _taking
-                                  ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                                  : const Text(
-                                      '가져가기',
-                                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                                    ),
-                            ),
+                        child: Text(
+                          '닫기',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: dark ? Colors.grey.shade200 : Colors.grey.shade700,
                           ),
                         ),
                       ),
+                    )
+                  : Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: _taking ? null : _skip,
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              side: BorderSide(color: dark ? Colors.grey.shade600 : Colors.grey.shade300),
+                            ),
+                            child: Text(
+                              '넘기기',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: dark ? Colors.grey.shade200 : Colors.grey.shade700,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              gradient: roseGradient,
+                              boxShadow: [
+                                BoxShadow(color: const Color(0xFFF43F5E).withOpacity(0.4), blurRadius: 8, offset: const Offset(0, 2)),
+                              ],
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: _taking ? null : _take,
+                                borderRadius: BorderRadius.circular(12),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  child: Center(
+                                    child: _taking
+                                        ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                        : const Text(
+                                            '가져가기',
+                                            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                                          ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
             ),
           ],
         ),
