@@ -13,6 +13,7 @@ import 'package:nearo_app/core/auth/auth_repository.dart';
 import 'package:nearo_app/features/matching_board/screens/matching_board_screen.dart';
 import 'package:nearo_app/features/messages/data/report_repository.dart';
 import 'package:nearo_app/features/users/data/block_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
 
 class _ChatMessage {
@@ -52,6 +53,29 @@ class ChatRoomScreen extends StatefulWidget {
 }
 
 class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObserver {
+  bool _isMuted = false;
+  Future<void> _toggleMute() async {
+    if (_roomId == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'chat_mute_${_roomId!}';
+    final newMute = !_isMuted;
+    await prefs.setBool(key, newMute);
+    setState(() {
+      _isMuted = newMute;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_isMuted ? '채팅방 알람이 꺼졌습니다.' : '채팅방 알람이 켜졌습니다.')),
+    );
+  }
+  Future<void> _loadMuteStatus() async {
+    if (_roomId == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'chat_mute_${_roomId!}';
+    final muted = prefs.getBool(key) ?? false;
+    setState(() {
+      _isMuted = muted;
+    });
+  }
 
   String _formatMessageTime(DateTime? dateTime) {
     final dt = dateTime ?? DateTime.now();
@@ -103,6 +127,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
     }
     if (_roomId != null) {
       _fetchMyUserIdAndInitSocketAndLoadMessages();
+      _loadMuteStatus();
     } else {
       setState(() => _loading = false);
     }
@@ -636,7 +661,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                     onPressed: _openReportSheet,
                   ),
                   IconButton(
-                    icon: const Text('🚫', style: TextStyle(fontSize: 20)),
+                    icon: Icon(LucideIcons.ban, color: Colors.white, size: 22),
                     tooltip: '차단',
                     onPressed: _partnerId != null ? _openBlockConfirm : null,
                   ),
@@ -645,9 +670,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                     color: theme.colorScheme.surface,
                     onSelected: (value) {
                       if (value == 'cancel') _cancelMatch();
+                      if (value == 'mute') _toggleMute();
                     },
                     itemBuilder: (_) => [
                       const PopupMenuItem(value: 'cancel', child: Text('매칭 취소')),
+                      PopupMenuItem(
+                        value: 'mute',
+                        child: Text(_isMuted ? '채팅방 알람 켜기' : '채팅방 알람 끄기'),
+                      ),
                     ],
                   ),
                 ],
