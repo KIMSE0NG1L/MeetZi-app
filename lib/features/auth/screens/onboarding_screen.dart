@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/auth/data/environment_repository.dart';
 import 'package:nearo_app/features/auth/screens/login_screen.dart';
 
@@ -55,7 +56,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       id: 1,
       title: '365일 열려있는\n우리들만의 온라인 미팅 부스',
         description: '축제의 미팅부스처럼\nMeetzi 보드에서 마음에 드는 카드를 골라보세요',
-      icon: Icons.assignment_outlined,
+      icon: LucideIcons.clipboardList,
       color: Color(0xFFFF6B35),
       bgColor: Color(0xFFFFF8F5),
     ),
@@ -481,7 +482,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                           borderRadius: BorderRadius.circular(16), // rounded-2xl
                         ),
                         child: Icon(
-                          Icons.emoji_events_outlined,
+                          LucideIcons.trophy,
                           size: 48, // w-12 h-12 = 48px
                           color: step.color,
                         ),

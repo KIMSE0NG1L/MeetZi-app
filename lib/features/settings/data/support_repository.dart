@@ -6,15 +6,14 @@ class SupportRepository {
 
   final ApiClient _client;
 
-  /// 문의 전송. 입력한 이메일 주소로 답변 메일 발송.
+  /// 문의 전송. 답변은 앱 내 문의함에서 확인.
   Future<void> sendInquiry({
-    required String email,
     required String category,
     required String message,
   }) async {
     await _client.dio.post(
       '/support/inquiry',
-      data: {'email': email, 'category': category, 'message': message},
+      data: {'category': category, 'message': message},
     );
   }
 

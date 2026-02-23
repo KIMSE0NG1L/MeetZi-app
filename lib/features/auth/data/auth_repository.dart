@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:nearo_app/shared/api/api_client.dart';
 import 'package:nearo_app/shared/api/endpoints.dart';
 import 'package:nearo_app/shared/utils/token_storage.dart';
@@ -39,10 +40,21 @@ class AuthRepository {
   }
 
   Future<void> deleteAccount() async {
+    final token = await _tokenStorage.readAccessToken();
+    if (token == null || token.isEmpty) {
+      await _tokenStorage.clear();
+      throw Exception('로그인 정보가 없습니다. 다시 로그인 후 시도해 주세요.');
+    }
     try {
-      await _client.dio.delete(ApiEndpoints.accountDelete);
+      // 헤더만으로 401 나는 경우 대비, 쿼리에도 토큰 전달
+      final uri = '${ApiEndpoints.accountDelete}?access_token=${Uri.encodeComponent(token)}';
+      await _client.dio.delete(
+        uri,
+        options: Options(
+          headers: {'Authorization': 'Bearer $token'},
+        ),
+      );
     } finally {
-      // 계정 삭제 완료 후 토큰 삭제 (로그아웃)
       await _tokenStorage.clear();
     }
   }

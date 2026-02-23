@@ -12,6 +12,7 @@ import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/core/auth/auth_repository.dart';
 import 'package:nearo_app/features/matching_board/screens/matching_board_screen.dart';
 import 'package:nearo_app/features/messages/data/report_repository.dart';
+import 'package:nearo_app/features/users/data/block_repository.dart';
 import 'package:dio/dio.dart';
 
 class _ChatMessage {
@@ -62,7 +63,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
   final _repository = ChatRepository();
   final _matchingRepository = MatchingRepository();
   final _reportRepository = ReportRepository();
+  final _blockRepository = BlockRepository();
   final _controller = TextEditingController();
+  String? _partnerId;
   final List<_ChatMessage> _messages = [];
   bool _loading = true;
   String _title = '대화';
@@ -367,6 +370,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
       _partnerNickname = room['partnerNickname']?.toString();
       _partnerAvatarSeed = room['partnerAvatarSeed']?.toString();
       _partnerAvatarOptions = room['partnerAvatarOptions']?.toString();
+      _partnerId = room['partnerId']?.toString();
       _matchId = room['matchId']?.toString();
       final list = room['messageReadAts'];
       if (list is List) _applyMessageReadAts(list);
@@ -456,6 +460,48 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('매칭 취소에 실패했습니다.')),
       );
+    }
+  }
+
+  Future<void> _openBlockConfirm() async {
+    if (_partnerId == null) return;
+    final partnerId = _partnerId!;
+    final partnerName = _title;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('사용자 차단'),
+        content: Text(
+          '$partnerName님을 차단하시겠어요? 차단하면 대화가 비활성화되고 목록에서 숨겨질 수 있어요.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text('차단', style: TextStyle(color: Colors.red.shade600)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await _blockRepository.blockUser(partnerId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('차단되었습니다.')),
+      );
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      String msg = '차단에 실패했어요.';
+      if (e is DioException && e.response?.data is Map) {
+        final d = e.response!.data as Map<String, dynamic>;
+        if (d['message'] != null) msg = d['message'].toString();
+      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     }
   }
 
@@ -588,6 +634,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                     icon: const Icon(LucideIcons.flag, color: Colors.white, size: 22),
                     tooltip: '신고',
                     onPressed: _openReportSheet,
+                  ),
+                  IconButton(
+                    icon: const Text('🚫', style: TextStyle(fontSize: 20)),
+                    tooltip: '차단',
+                    onPressed: _partnerId != null ? _openBlockConfirm : null,
                   ),
                   PopupMenuButton<String>(
                     icon: const Icon(Icons.more_vert, color: Colors.white, size: 24),

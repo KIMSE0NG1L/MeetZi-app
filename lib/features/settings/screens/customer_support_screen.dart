@@ -14,7 +14,6 @@ class CustomerSupportScreen extends StatefulWidget {
 
 class _CustomerSupportScreenState extends State<CustomerSupportScreen> {
   String _selectedCategory = '';
-  final _emailController = TextEditingController();
   final _messageController = TextEditingController();
   bool _submitted = false;
   bool _sending = false;
@@ -44,7 +43,6 @@ class _CustomerSupportScreenState extends State<CustomerSupportScreen> {
 
   @override
   void dispose() {
-    _emailController.dispose();
     _messageController.dispose();
     super.dispose();
   }
@@ -60,13 +58,11 @@ class _CustomerSupportScreenState extends State<CustomerSupportScreen> {
   }
 
   Future<void> _submit() async {
-    final email = _emailController.text.trim();
     final message = _messageController.text.trim();
-    if (email.isEmpty || message.isEmpty || _selectedCategory.isEmpty) return;
+    if (message.isEmpty || _selectedCategory.isEmpty) return;
     setState(() => _sending = true);
     try {
       await _supportRepo.sendInquiry(
-        email: email,
         category: _selectedCategory,
         message: message,
       );
@@ -81,7 +77,6 @@ class _CustomerSupportScreenState extends State<CustomerSupportScreen> {
         setState(() {
           _submitted = false;
           _selectedCategory = '';
-          _emailController.clear();
           _messageController.clear();
         });
       });
@@ -178,7 +173,7 @@ class _CustomerSupportScreenState extends State<CustomerSupportScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                '입력하신 이메일로 답변 드리겠습니다.',
+                '앱 내 문의함에서 답변을 확인해 주세요.',
                 style: TextStyle(fontSize: 14, color: onSurfaceVariant),
                 textAlign: TextAlign.center,
               ),
@@ -198,9 +193,8 @@ class _CustomerSupportScreenState extends State<CustomerSupportScreen> {
     Color onSurfaceVariant,
     Color rose,
   ) {
-    final email = _emailController.text.trim();
     final message = _messageController.text.trim();
-    final canSubmit = !_sending && email.isNotEmpty && message.isNotEmpty && _selectedCategory.isNotEmpty;
+    final canSubmit = !_sending && message.isNotEmpty && _selectedCategory.isNotEmpty;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
@@ -263,28 +257,6 @@ class _CustomerSupportScreenState extends State<CustomerSupportScreen> {
                 ),
               );
             }).toList(),
-          ),
-          const SizedBox(height: 16),
-          Text('이메일 주소', style: TextStyle(fontSize: 13, color: onSurfaceVariant)),
-          const SizedBox(height: 2),
-          Text('답변 받을 본인 이메일을 입력해 주세요.', style: TextStyle(fontSize: 11, color: onSurfaceVariant)),
-          const SizedBox(height: 6),
-          TextField(
-            controller: _emailController,
-            onChanged: (_) => setState(() {}),
-            keyboardType: TextInputType.emailAddress,
-            decoration: InputDecoration(
-              hintText: 'example@email.com',
-              filled: true,
-              fillColor: surfaceCard,
-              prefixIcon: Icon(LucideIcons.mail, size: 20, color: onSurfaceVariant),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            ),
-            style: TextStyle(color: onSurface, fontSize: 14),
           ),
           const SizedBox(height: 16),
           Text('문의 내용', style: TextStyle(fontSize: 13, color: onSurfaceVariant)),

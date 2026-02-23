@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import 'package:nearo_app/shared/utils/app_config.dart';
 import 'package:nearo_app/shared/utils/token_storage.dart';
 
@@ -20,6 +23,17 @@ class ApiClient {
         'ngrok-skip-browser-warning': 'true',
       },
     );
+
+    // ngrok 등 개발 환경에서 HandshakeException 방지 (Android 등)
+    if (AppConfig.baseUrl.contains('ngrok')) {
+      _dio.httpClientAdapter = IOHttpClientAdapter(
+        createHttpClient: () {
+          final client = HttpClient();
+          client.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+          return client;
+        },
+      );
+    }
 
     _dio.interceptors.add(
       InterceptorsWrapper(
