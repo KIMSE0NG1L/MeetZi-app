@@ -31,4 +31,5 @@ class ApiEndpoints {
   static String emailVerificationConfirm(String environmentId) =>
       '/environments/$environmentId/email-verifications/confirm';
   static const String health = '/health';
+  static String userBlock(String userId) => '/users/block/$userId';
 }

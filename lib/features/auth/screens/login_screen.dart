@@ -65,10 +65,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       duration: const Duration(milliseconds: 500),
                       curve: Curves.easeOutBack,
                       builder: (context, value, child) {
+                        final clamped = value.clamp(0.0, 1.0);
                         return Transform.scale(
                           scale: value,
                           child: Opacity(
-                            opacity: value,
+                            opacity: clamped,
                             child: Container(
                               width: 112,
                               height: 112,
@@ -107,8 +108,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       tween: Tween(begin: 0.0, end: 1.0),
                       duration: const Duration(milliseconds: 500),
                       builder: (context, value, child) {
+                        final opacity = value.clamp(0.0, 1.0);
                         return Opacity(
-                          opacity: value,
+                          opacity: opacity,
                           child: Transform.translate(
                             offset: Offset(0, 10 * (1 - value)),
                             child: Column(
@@ -157,7 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     milliseconds: 500 + (index * 100)),
                                 builder: (context, value, child) {
                                   return Opacity(
-                                    opacity: value,
+                                    opacity: value.clamp(0.0, 1.0),
                                     child: Transform.translate(
                                       offset: Offset(0, 20 * (1 - value)),
                                       child: Padding(
@@ -225,7 +227,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         duration: const Duration(milliseconds: 600),
                         builder: (context, value, child) {
                           return Opacity(
-                            opacity: value,
+                            opacity: value.clamp(0.0, 1.0),
                             child: Container(
                               width: double.infinity,
                               padding: const EdgeInsets.symmetric(
@@ -287,7 +289,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       duration: const Duration(milliseconds: 500),
                       builder: (context, value, child) {
                         return Opacity(
-                          opacity: value,
+                          opacity: value.clamp(0.0, 1.0),
                           child: Transform.translate(
                             offset: Offset(0, 20 * (1 - value)),
                             child: Material(
