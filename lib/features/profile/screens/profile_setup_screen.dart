@@ -537,13 +537,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                                   decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      begin: Alignment.centerLeft,
-                                      end: Alignment.centerRight,
-                                      colors: [Color(0xFFF43F5E), Color(0xFFEC4899)],
-                                    ),
+                                    gradient: ThemeController.gradientFromPrimary(Theme.of(context).colorScheme.primary),
                                     borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [BoxShadow(color: const Color(0xFFF43F5E).withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 2))],
+                                    boxShadow: [BoxShadow(color: Theme.of(context).colorScheme.primary.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 2))],
                                   ),
                                   child: _isUploadingPhoto
                                       ? const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)))
@@ -801,12 +797,13 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 children: _idealKeywordOptions.map((label) {
                   final selected = _idealTypeKeywords.contains(label);
                   final canSelect = selected || _idealTypeKeywords.length < 3;
+                  final primary = Theme.of(context).colorScheme.primary;
                   return FilterChip(
                     label: Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: selected ? Colors.white : const Color(0xFF374151))),
                     selected: selected,
-                    selectedColor: const Color(0xFFF43F5E),
+                    selectedColor: primary,
                     checkmarkColor: Colors.white,
-                    side: BorderSide(color: selected ? const Color(0xFFF43F5E) : const Color(0xFFE5E7EB)),
+                    side: BorderSide(color: selected ? primary : const Color(0xFFE5E7EB)),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
                     onSelected: canSelect
                         ? (v) {
@@ -956,13 +953,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                        colors: [Color(0xFFF43F5E), Color(0xFFEC4899)],
-                      ),
+                      gradient: ThemeController.gradientFromPrimary(Theme.of(context).colorScheme.primary),
                       borderRadius: BorderRadius.circular(16),
-                      boxShadow: [BoxShadow(color: const Color(0xFFF43F5E).withOpacity(0.35), blurRadius: 12, offset: const Offset(0, 4))],
+                      boxShadow: [BoxShadow(color: Theme.of(context).colorScheme.primary.withOpacity(0.35), blurRadius: 12, offset: const Offset(0, 4))],
                     ),
                     child: _isLoading
                         ? const Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)))

@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/features/notifications/data/notification_history_store.dart';
 import 'package:nearo_app/features/matching_board/screens/take_note_request_response_screen.dart';
+import 'package:nearo_app/shared/theme/theme_controller.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -83,12 +84,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     _load();
   }
 
-  static const _roseGradient = LinearGradient(
-    begin: Alignment.centerLeft,
-    end: Alignment.centerRight,
-    colors: [Color(0xFFFB7185), Color(0xFFF43F5E)],
-  );
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -101,9 +96,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           // AppDesign 헤더: 메시지함 등과 동일 높이 (pt + 20 + 36)
           Container(
             height: headerHeight,
-            decoration: const BoxDecoration(
-              gradient: _roseGradient,
-              boxShadow: [
+            decoration: BoxDecoration(
+              gradient: ThemeController.gradientFromPrimary(Theme.of(context).colorScheme.primary),
+              boxShadow: const [
                 BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2)),
               ],
             ),

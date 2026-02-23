@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/settings/data/support_repository.dart';
 import 'package:nearo_app/features/settings/screens/faq_screen.dart';
+import 'package:nearo_app/shared/theme/theme_controller.dart';
 
 /// AppDesign CustomerSupport: 로즈 그라데이션 헤더 + 빠른 도움말 + 문의하기 폼 + 연락처
 class CustomerSupportScreen extends StatefulWidget {
@@ -21,11 +22,6 @@ class _CustomerSupportScreenState extends State<CustomerSupportScreen> {
   bool _loadingInquiries = false;
   final _supportRepo = SupportRepository();
 
-  static const _roseGradient = LinearGradient(
-    begin: Alignment.centerLeft,
-    end: Alignment.centerRight,
-    colors: [Color(0xFFFB7185), Color(0xFFF43F5E)],
-  );
 
   static const _categories = [
     {'id': 'account', 'label': '계정 문제', 'icon': '👤'},
@@ -99,7 +95,7 @@ class _CustomerSupportScreenState extends State<CustomerSupportScreen> {
     final surfaceCard = dark ? const Color(0xFF374151) : Colors.white;
     final onSurface = dark ? Colors.white : const Color(0xFF111827);
     final onSurfaceVariant = dark ? Colors.grey.shade400 : Colors.grey.shade600;
-    final rose = const Color(0xFFF43F5E);
+    final primary = Theme.of(context).colorScheme.primary;
     final topInset = MediaQuery.of(context).padding.top;
     final headerHeight = (topInset > 0 ? topInset : 56.0) + 20 + 36;
 
@@ -109,9 +105,9 @@ class _CustomerSupportScreenState extends State<CustomerSupportScreen> {
         children: [
           Container(
             height: headerHeight,
-            decoration: const BoxDecoration(
-              gradient: _roseGradient,
-              boxShadow: [
+            decoration: BoxDecoration(
+              gradient: ThemeController.gradientFromPrimary(primary),
+              boxShadow: const [
                 BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2)),
               ],
             ),
@@ -143,7 +139,7 @@ class _CustomerSupportScreenState extends State<CustomerSupportScreen> {
             ),
           ),
           Expanded(
-            child: _submitted ? _buildSuccessContent(dark, onSurface, onSurfaceVariant) : _buildFormContent(context, dark, surface, surfaceCard, onSurface, onSurfaceVariant, rose),
+            child: _submitted ? _buildSuccessContent(dark, onSurface, onSurfaceVariant) : _buildFormContent(context, dark, surface, surfaceCard, onSurface, onSurfaceVariant, primary),
           ),
         ],
       ),
@@ -191,7 +187,7 @@ class _CustomerSupportScreenState extends State<CustomerSupportScreen> {
     Color surfaceCard,
     Color onSurface,
     Color onSurfaceVariant,
-    Color rose,
+    Color primary,
   ) {
     final message = _messageController.text.trim();
     final canSubmit = !_sending && message.isNotEmpty && _selectedCategory.isNotEmpty;
@@ -210,7 +206,7 @@ class _CustomerSupportScreenState extends State<CustomerSupportScreen> {
             icon: LucideIcons.info,
             title: '자주 묻는 질문',
             subtitle: 'FAQ에서 답변을 찾아보세요',
-            rose: rose,
+            primary: primary,
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const FaqScreen()),
@@ -231,7 +227,7 @@ class _CustomerSupportScreenState extends State<CustomerSupportScreen> {
               final icon = c['icon']! as String;
               final selected = _selectedCategory == id;
               return Material(
-                color: selected ? rose : surfaceCard,
+                color: selected ? primary : surfaceCard,
                 borderRadius: BorderRadius.circular(12),
                 child: InkWell(
                   onTap: () => setState(() => _selectedCategory = id),
@@ -281,7 +277,7 @@ class _CustomerSupportScreenState extends State<CustomerSupportScreen> {
           SizedBox(
             width: double.infinity,
             child: Material(
-              color: canSubmit ? rose : (dark ? Colors.grey.shade700 : Colors.grey.shade300),
+              color: canSubmit ? primary : (dark ? Colors.grey.shade700 : Colors.grey.shade300),
               borderRadius: BorderRadius.circular(16),
               child: InkWell(
                 onTap: canSubmit ? _submit : null,
@@ -346,7 +342,7 @@ class _CustomerSupportScreenState extends State<CustomerSupportScreen> {
                   surfaceCard: surfaceCard,
                   onSurface: onSurface,
                   onSurfaceVariant: onSurfaceVariant,
-                  rose: rose,
+                  primary: primary,
                   categories: _categories,
                   onTap: () => _showInquiryDetail(context, q, dark, surfaceCard, onSurface, onSurfaceVariant),
                 )),
@@ -429,7 +425,7 @@ class _CustomerSupportScreenState extends State<CustomerSupportScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF43F5E).withOpacity(0.08),
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(reply, style: TextStyle(fontSize: 14, color: onSurface)),
@@ -453,7 +449,7 @@ class _InquiryTile extends StatelessWidget {
     required this.surfaceCard,
     required this.onSurface,
     required this.onSurfaceVariant,
-    required this.rose,
+    required this.primary,
     required this.categories,
     required this.onTap,
   });
@@ -462,7 +458,7 @@ class _InquiryTile extends StatelessWidget {
   final Color surfaceCard;
   final Color onSurface;
   final Color onSurfaceVariant;
-  final Color rose;
+  final Color primary;
   final List<Map<String, String>> categories;
   final VoidCallback onTap;
 
@@ -501,8 +497,8 @@ class _InquiryTile extends StatelessWidget {
                             const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(color: rose.withOpacity(0.2), borderRadius: BorderRadius.circular(6)),
-                              child: Text('답변 있음', style: TextStyle(fontSize: 11, color: rose, fontWeight: FontWeight.w500)),
+                              decoration: BoxDecoration(color: primary.withOpacity(0.2), borderRadius: BorderRadius.circular(6)),
+                              child: Text('답변 있음', style: TextStyle(fontSize: 11, color: primary, fontWeight: FontWeight.w500)),
                             ),
                           ],
                         ],
@@ -537,7 +533,7 @@ class _QuickHelpCard extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.subtitle,
-    required this.rose,
+    required this.primary,
     required this.onTap,
   });
 
@@ -547,7 +543,7 @@ class _QuickHelpCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
-  final Color rose;
+  final Color primary;
   final VoidCallback onTap;
 
   @override
@@ -562,7 +558,7 @@ class _QuickHelpCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              Icon(icon, size: 22, color: rose),
+              Icon(icon, size: 22, color: primary),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(

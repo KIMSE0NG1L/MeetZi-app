@@ -13,6 +13,7 @@ import 'package:nearo_app/core/auth/auth_repository.dart';
 import 'package:nearo_app/features/matching_board/screens/matching_board_screen.dart';
 import 'package:nearo_app/features/messages/data/report_repository.dart';
 import 'package:nearo_app/features/users/data/block_repository.dart';
+import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
 
@@ -560,11 +561,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
     return '$ampm ${hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 
-  static const _roseGradient = LinearGradient(
-    begin: Alignment.centerLeft,
-    end: Alignment.centerRight,
-    colors: [Color(0xFFFB7185), Color(0xFFF43F5E)],
-  );
 
   @override
   Widget build(BuildContext context) {
@@ -572,7 +568,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
     final dark = theme.brightness == Brightness.dark;
     final messageBg = dark ? const Color(0xFF1F2937) : Colors.grey.shade50;
     final bubbleOther = dark ? const Color(0xFF374151) : Colors.white;
-    final bubbleMine = const Color(0xFFF43F5E);
+    final bubbleMine = theme.colorScheme.primary;
     final inputBg = dark ? const Color(0xFF374151) : Colors.grey.shade100;
     final borderColor = dark ? Colors.grey.shade700 : Colors.grey.shade200;
     final hintColor = dark ? Colors.grey.shade400 : Colors.grey.shade600;
@@ -591,9 +587,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                 top: 12,
                 bottom: 16,
               ),
-              decoration: const BoxDecoration(
-                gradient: _roseGradient,
-                boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2))],
+              decoration: BoxDecoration(
+                gradient: ThemeController.gradientFromPrimary(theme.colorScheme.primary),
+                boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2))],
               ),
               child: Row(
                 children: [

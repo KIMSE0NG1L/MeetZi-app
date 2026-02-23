@@ -3,16 +3,11 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 
 /// AppDesign ProfileDetailModal 스타일: 3D 플립·스프링·스테거드 효과 + 그라데이션 헤더·InfoRow·태그·닫기만 (채팅용)
 class ChatPartnerProfileModal {
-  static const _headerGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFFFB7185), Color(0xFFEC4899), Color(0xFFF43F5E)],
-  );
-
   static Future<void> show(
     BuildContext context, {
     required Map<String, dynamic> profile,
@@ -345,9 +340,9 @@ class _ModalCard extends StatelessWidget {
             Container(
               height: 160,
               width: double.infinity,
-              decoration: const BoxDecoration(
-                gradient: ChatPartnerProfileModal._headerGradient,
-                borderRadius: BorderRadius.only(
+              decoration: BoxDecoration(
+                gradient: ThemeController.gradientFromPrimaryDiagonal(Theme.of(context).colorScheme.primary),
+                borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(32),
                   topRight: Radius.circular(32),
                 ),
