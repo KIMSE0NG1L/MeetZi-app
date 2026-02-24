@@ -5,50 +5,50 @@ class NearoTheme {
         final colorScheme = ColorScheme.fromSeed(
           seedColor: seedColor ?? primary,
           brightness: Brightness.dark,
-          background: Colors.black,
+          background: Colors.white,
         );
         return ThemeData(
           useMaterial3: true,
           colorScheme: colorScheme.copyWith(
             primary: primary,
             secondary: secondary,
-            background: Colors.black,
+            background: Colors.white,
           ),
-          scaffoldBackgroundColor: Colors.black,
+          scaffoldBackgroundColor: Colors.white,
           appBarTheme: const AppBarTheme(
-            backgroundColor: Colors.black,
+            backgroundColor: Colors.white,
             elevation: 0,
             centerTitle: true,
-            foregroundColor: Colors.white,
+            foregroundColor: Color(0xFF111827),
           ),
           textTheme: const TextTheme(
             headlineLarge: TextStyle(
               fontSize: 32,
               fontWeight: FontWeight.w700,
-              color: Colors.white,
+              color: Color(0xFF111827),
               height: 1.2,
             ),
             headlineMedium: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.w700,
-              color: Colors.white,
+              color: Color(0xFF111827),
               height: 1.2,
             ),
             titleMedium: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: Colors.white,
+              color: Color(0xFF111827),
             ),
             bodyLarge: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w400,
-              color: Colors.white70,
+              color: Colors.white,
               height: 1.5,
             ),
             bodyMedium: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w400,
-              color: Colors.white70,
+              color: Colors.white,
               height: 1.5,
             ),
           ),
@@ -65,7 +65,7 @@ class NearoTheme {
           ),
           outlinedButtonTheme: OutlinedButtonThemeData(
             style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.white,
+              foregroundColor: Color(0xFF111827),
               side: BorderSide(color: colorScheme.outline),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
               shape: RoundedRectangleBorder(
@@ -79,50 +79,50 @@ class NearoTheme {
       final colorScheme = ColorScheme.fromSeed(
         seedColor: seedColor ?? primary,
         brightness: Brightness.dark,
-        background: Colors.black,
+        background: Colors.white,
       );
       return ThemeData(
         useMaterial3: true,
         colorScheme: colorScheme.copyWith(
           primary: primary,
           secondary: secondary,
-          background: Colors.black,
+          background: Colors.white,
         ),
-        scaffoldBackgroundColor: Colors.black,
+        scaffoldBackgroundColor: Colors.white,
         appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.transparent,
+          backgroundColor: Colors.white,
           elevation: 0,
           centerTitle: true,
-          foregroundColor: Colors.white,
+          foregroundColor: Color(0xFF111827),
         ),
         textTheme: const TextTheme(
           headlineLarge: TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.w700,
-            color: Colors.white,
+            color: Color(0xFF111827),
             height: 1.2,
           ),
           headlineMedium: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.w700,
-            color: Colors.white,
+            color: Color(0xFF111827),
             height: 1.2,
           ),
           titleMedium: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: Color(0xFF111827),
           ),
           bodyLarge: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w400,
-            color: Colors.white70,
+            color: Color(0xFF5F5F6E),
             height: 1.5,
           ),
           bodyMedium: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w400,
-            color: Colors.white70,
+            color: Color(0xFF5F5F6E),
             height: 1.5,
           ),
         ),
@@ -139,7 +139,7 @@ class NearoTheme {
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
-            foregroundColor: Colors.white,
+            foregroundColor: Color(0xFF111827),
             side: BorderSide(color: colorScheme.outline),
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
             shape: RoundedRectangleBorder(
@@ -157,55 +157,59 @@ class NearoTheme {
 
   static ThemeData light({Color? seedColor}) {
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: seedColor ?? primary,
+      seedColor: seedColor ?? Colors.black,
       brightness: Brightness.light,
-      background: background,
+      background: Colors.black,
     );
 
     return ThemeData(
       useMaterial3: true,
-      colorScheme: colorScheme,
-      scaffoldBackgroundColor: background,
+      colorScheme: colorScheme.copyWith(
+        primary: Colors.black,
+        secondary: Colors.black,
+        background: Colors.black,
+      ),
+      scaffoldBackgroundColor: Colors.black,
       appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.transparent,
+        backgroundColor: Colors.black,
         elevation: 0,
         centerTitle: true,
-        foregroundColor: textPrimary,
+        foregroundColor: Colors.white,
       ),
       textTheme: const TextTheme(
         headlineLarge: TextStyle(
           fontSize: 32,
           fontWeight: FontWeight.w700,
-          color: textPrimary,
+          color: Colors.white,
           height: 1.2,
         ),
         headlineMedium: TextStyle(
           fontSize: 24,
           fontWeight: FontWeight.w700,
-          color: textPrimary,
+          color: Colors.white,
           height: 1.2,
         ),
         titleMedium: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w600,
-          color: textPrimary,
+          color: Colors.white,
         ),
         bodyLarge: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w400,
-          color: textSecondary,
+          color: Colors.white,
           height: 1.5,
         ),
         bodyMedium: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w400,
-          color: textSecondary,
+          color: Colors.white,
           height: 1.5,
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: primary,
+          backgroundColor: Colors.black,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(
@@ -216,8 +220,8 @@ class NearoTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: textPrimary,
-          side: BorderSide(color: colorScheme.outline),
+          foregroundColor: Colors.white,
+          side: BorderSide(color: Colors.white),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),

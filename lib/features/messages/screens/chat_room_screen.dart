@@ -566,16 +566,16 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final dark = theme.brightness == Brightness.dark;
-    final messageBg = dark ? const Color(0xFF1F2937) : Colors.grey.shade50;
-    final bubbleOther = dark ? const Color(0xFF374151) : Colors.white;
+    final messageBg = Colors.white;
+    final bubbleOther = Colors.white;
     final bubbleMine = theme.colorScheme.primary;
-    final inputBg = dark ? const Color(0xFF374151) : Colors.grey.shade100;
-    final borderColor = dark ? Colors.grey.shade700 : Colors.grey.shade200;
-    final hintColor = dark ? Colors.grey.shade400 : Colors.grey.shade600;
-    final timeColor = dark ? Colors.grey.shade500 : Colors.grey.shade600;
+    final inputBg = Colors.grey.shade100;
+    final borderColor = Colors.grey.shade200;
+    final hintColor = Colors.grey.shade600;
+    final timeColor = Colors.grey.shade600;
 
     return Scaffold(
-      backgroundColor: dark ? const Color(0xFF111827) : Colors.grey.shade50,
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
@@ -589,7 +589,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
               ),
               decoration: BoxDecoration(
                 gradient: ThemeController.gradientFromPrimary(theme.colorScheme.primary),
-                boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2))],
+                boxShadow: const [BoxShadow(color: Color(0x1A000000), blurRadius: 8, offset: Offset(0, 2))],
               ),
               child: Row(
                 children: [
@@ -727,7 +727,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                                       decoration: BoxDecoration(
-                                        color: dark ? Colors.grey.shade800 : Colors.white,
+                                        color: Colors.white,
                                         borderRadius: BorderRadius.circular(999),
                                         boxShadow: [
                                           BoxShadow(
@@ -752,7 +752,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                                     decoration: BoxDecoration(
-                                      color: dark ? Colors.grey.shade700 : Colors.grey.shade200,
+                                      color: Colors.grey.shade200,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
@@ -837,7 +837,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                                                       ),
                                                       boxShadow: [
                                                         BoxShadow(
-                                                          color: Colors.black.withOpacity(0.06),
+                                                          color: Color(0x1A000000),
                                                           blurRadius: 4,
                                                           offset: const Offset(0, 1),
                                                         ),
@@ -1257,9 +1257,9 @@ class _ReportSheetContentState extends State<_ReportSheetContent> {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final surface = dark ? const Color(0xFF1F2937) : Colors.white;
-    final onSurface = dark ? Colors.white : const Color(0xFF111827);
-    final onSurfaceVariant = dark ? Colors.grey.shade400 : Colors.grey.shade600;
+    final surface = Colors.white;
+    final onSurface = const Color(0xFF111827);
+    final onSurfaceVariant = Colors.grey.shade600;
     final padding = MediaQuery.of(context).viewPadding;
     final viewInsets = MediaQuery.of(context).viewInsets;
 

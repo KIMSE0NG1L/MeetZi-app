@@ -102,12 +102,12 @@ class _TakeNoteRequestResponseScreenState extends State<TakeNoteRequestResponseS
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final dark = theme.brightness == Brightness.dark;
-    final surface = dark ? const Color(0xFF1F2937) : Colors.white;
-    final onSurface = dark ? Colors.white : const Color(0xFF111827);
-    final onSurfaceVariant = dark ? Colors.grey.shade400 : Colors.grey.shade600;
+    final surface = Colors.white;
+    final onSurface = const Color(0xFF111827);
+    final onSurfaceVariant = Colors.grey.shade600;
 
     return Scaffold(
-      backgroundColor: dark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('가져가기 요청'),
         centerTitle: true,
@@ -147,7 +147,7 @@ class _TakeNoteRequestResponseScreenState extends State<TakeNoteRequestResponseS
                         color: surface,
                         borderRadius: BorderRadius.circular(16),
                         elevation: 2,
-                        shadowColor: Colors.black.withOpacity(0.08),
+                        shadowColor: Color(0x1A000000),
                         child: Padding(
                           padding: const EdgeInsets.all(20),
                           child: Column(

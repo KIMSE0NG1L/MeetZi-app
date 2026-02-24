@@ -140,13 +140,13 @@ class _RatingsScreenState extends State<RatingsScreen> {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final surface = dark ? const Color(0xFF1F2937) : Colors.white;
-    final onSurface = dark ? Colors.white : const Color(0xFF111827);
-    final onSurfaceVariant = dark ? Colors.grey.shade400 : Colors.grey.shade600;
+    final surface = Colors.black;
+    final onSurface = Colors.white;
+    final onSurfaceVariant = Colors.white70;
     final primary = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
-      backgroundColor: dark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
+      backgroundColor: Colors.black,
       body: Column(
         children: [
           // 보유 코인 (로즈 헤더 아래 흰색 반투명 스타일)
@@ -154,22 +154,22 @@ class _RatingsScreenState extends State<RatingsScreen> {
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white24),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
                     decoration: BoxDecoration(
-                      color: dark ? Colors.white.withOpacity(0.12) : Colors.white.withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: dark ? Colors.grey.shade700 : Colors.grey.shade200),
+                      color: Colors.black,
+                      shape: BoxShape.circle,
                     ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: dark ? Colors.white.withOpacity(0.2) : Colors.white.withOpacity(0.8),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(LucideIcons.coins, color: dark ? Colors.amber.shade200 : Colors.amber.shade700, size: 26),
-                        ),
+                    child: Icon(LucideIcons.coins, color: Colors.amber.shade200, size: 26),
+                  ),
                   const SizedBox(width: 16),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -227,7 +227,7 @@ class _RatingsScreenState extends State<RatingsScreen> {
                               color: surface,
                               borderRadius: BorderRadius.circular(16),
                               elevation: 2,
-                              shadowColor: Colors.black.withOpacity(0.06),
+                              shadowColor: Color(0x1A000000),
                               child: InkWell(
                                 onTap: () => _buyCredit(coins),
                                 borderRadius: BorderRadius.circular(16),

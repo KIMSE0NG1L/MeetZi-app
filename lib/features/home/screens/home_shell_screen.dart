@@ -278,10 +278,10 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: Colors.white,
         border: Border(top: BorderSide(color: Colors.grey.shade300)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8, offset: const Offset(0, -2)),
+          BoxShadow(color: Color(0x1A000000), blurRadius: 8, offset: const Offset(0, -2)),
         ],
       ),
       child: SafeArea(

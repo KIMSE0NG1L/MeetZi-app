@@ -17,7 +17,7 @@ class ChatPartnerProfileModal {
       context: context,
       barrierDismissible: true,
       barrierLabel: '닫기',
-      barrierColor: Colors.black54,
+      barrierColor: Colors.white70,
       transitionDuration: const Duration(milliseconds: 450),
       pageBuilder: (_, __, ___) => const SizedBox.shrink(),
       transitionBuilder: (context, animation, secondaryAnimation, child) {

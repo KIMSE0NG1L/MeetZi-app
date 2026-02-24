@@ -90,7 +90,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final topInset = MediaQuery.of(context).padding.top;
     final headerHeight = (topInset > 0 ? topInset : 56.0) + 20 + 36;
     return Scaffold(
-      backgroundColor: theme.brightness == Brightness.dark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
+      backgroundColor: Colors.white,
       body: Column(
         children: [
           // AppDesign 헤더: 메시지함 등과 동일 높이 (pt + 20 + 36)
@@ -99,7 +99,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             decoration: BoxDecoration(
               gradient: ThemeController.gradientFromPrimary(Theme.of(context).colorScheme.primary),
               boxShadow: const [
-                BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2)),
+                BoxShadow(color: Color(0x1A000000), blurRadius: 8, offset: Offset(0, 2)),
               ],
             ),
             child: SafeArea(

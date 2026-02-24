@@ -91,16 +91,16 @@ class _CustomerSupportScreenState extends State<CustomerSupportScreen> {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final surface = dark ? const Color(0xFF1F2937) : Colors.white;
-    final surfaceCard = dark ? const Color(0xFF374151) : Colors.white;
-    final onSurface = dark ? Colors.white : const Color(0xFF111827);
-    final onSurfaceVariant = dark ? Colors.grey.shade400 : Colors.grey.shade600;
+    final surface = Colors.white;
+    final surfaceCard = Colors.white;
+    final onSurface = const Color(0xFF111827);
+    final onSurfaceVariant = Colors.grey.shade600;
     final primary = Theme.of(context).colorScheme.primary;
     final topInset = MediaQuery.of(context).padding.top;
     final headerHeight = (topInset > 0 ? topInset : 56.0) + 20 + 36;
 
     return Scaffold(
-      backgroundColor: dark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
+      backgroundColor: Colors.white,
       body: Column(
         children: [
           Container(
@@ -108,7 +108,7 @@ class _CustomerSupportScreenState extends State<CustomerSupportScreen> {
             decoration: BoxDecoration(
               gradient: ThemeController.gradientFromPrimary(primary),
               boxShadow: const [
-                BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2)),
+                BoxShadow(color: Color(0x1A000000), blurRadius: 8, offset: Offset(0, 2)),
               ],
             ),
             child: SafeArea(
@@ -153,9 +153,9 @@ class _CustomerSupportScreenState extends State<CustomerSupportScreen> {
         child: Container(
           padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
-            color: dark ? const Color(0xFF374151) : Colors.white,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(24),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 12, offset: const Offset(0, 4))],
+            boxShadow: [BoxShadow(color: Color(0x1A000000), blurRadius: 12, offset: const Offset(0, 4))],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,

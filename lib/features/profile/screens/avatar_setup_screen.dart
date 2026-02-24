@@ -237,7 +237,7 @@ class _AvatarSetupScreenState extends State<AvatarSetupScreen> {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: Color(0x1A000000),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),

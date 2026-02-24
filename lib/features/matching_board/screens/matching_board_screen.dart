@@ -287,9 +287,9 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final surface = dark ? const Color(0xFF1F2937) : Colors.white;
-    final onSurface = dark ? Colors.white : const Color(0xFF111827);
-    final onSurfaceVariant = dark ? Colors.grey.shade400 : Colors.grey.shade600;
+    final surface = Colors.white;
+    final onSurface = const Color(0xFF111827);
+    final onSurfaceVariant = Colors.grey.shade600;
 
     return FutureBuilder<Map<String, dynamic>>(
       future: AuthRepository().getProfile(),
@@ -305,7 +305,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
             : null;
 
         return Scaffold(
-          backgroundColor: dark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
+          backgroundColor: Colors.white,
           body: _loading
               ? const Center(child: CircularProgressIndicator())
               : Stack(
@@ -319,7 +319,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                             color: surface,
                             borderRadius: BorderRadius.circular(16),
                             elevation: 2,
-                            shadowColor: Colors.black.withOpacity(0.06),
+                            shadowColor: Color(0x1A000000),
                             child: Padding(
                               padding: const EdgeInsets.all(16),
                               child: Row(
@@ -331,7 +331,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                                       decoration: BoxDecoration(
                                         shape: BoxShape.circle,
                                         border: Border.all(color: const Color(0xFFFECDD3), width: 2),
-                                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 4)],
+                                        boxShadow: [BoxShadow(color: Color(0x1A000000), blurRadius: 4)],
                                       ),
                                       child: ClipOval(
                                         child: FittedBox(
@@ -1208,10 +1208,10 @@ class _MatchCompleteOnlyOverlayState extends State<_MatchCompleteOnlyOverlay> {
           margin: const EdgeInsets.symmetric(horizontal: 24),
           padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
-            color: dark ? const Color(0xFF1F2937) : Colors.white,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.25), blurRadius: 24, offset: const Offset(0, 8)),
+              BoxShadow(color: Colors.grey.withOpacity(0.15), blurRadius: 24, offset: const Offset(0, 8)),
             ],
           ),
           child: Column(
@@ -1224,7 +1224,7 @@ class _MatchCompleteOnlyOverlayState extends State<_MatchCompleteOnlyOverlay> {
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: dark ? Colors.white : const Color(0xFF111827),
+                  color: const Color(0xFF111827),
                 ),
               ),
               const SizedBox(height: 8),
@@ -1233,7 +1233,7 @@ class _MatchCompleteOnlyOverlayState extends State<_MatchCompleteOnlyOverlay> {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
-                  color: dark ? Colors.grey : const Color(0xFF6B7280),
+                  color: const Color(0xFF6B7280),
                   height: 1.4,
                 ),
               ),
@@ -1307,7 +1307,7 @@ class _MatchCelebrationOverlayState extends State<_MatchCelebrationOverlay> with
     final dark = Theme.of(context).brightness == Brightness.dark;
     const cardW = 256.0;
     const cardH = 320.0;
-    final cardBg = Colors.grey.shade300;
+    final cardBg = Colors.white;
 
     if (_showSuccess) {
       return _buildSuccessPhase(dark, nickname);
@@ -1342,7 +1342,7 @@ class _MatchCelebrationOverlayState extends State<_MatchCelebrationOverlay> with
                             color: cardBg,
                             borderRadius: BorderRadius.circular(16),
                             boxShadow: [
-                              BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 24, offset: const Offset(0, 8)),
+                              BoxShadow(color: Colors.grey.withOpacity(0.15), blurRadius: 24, offset: const Offset(0, 8)),
                             ],
                           ),
                           child: ClipRRect(
@@ -1369,7 +1369,7 @@ class _MatchCelebrationOverlayState extends State<_MatchCelebrationOverlay> with
                                           shape: BoxShape.circle,
                                           border: Border.all(color: Colors.white, width: 4),
                                           boxShadow: [
-                                            BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 2)),
+                                            BoxShadow(color: Colors.grey.withOpacity(0.15), blurRadius: 8, offset: const Offset(0, 2)),
                                           ],
                                         ),
                                         child: ClipOval(
@@ -1436,10 +1436,10 @@ class _MatchCelebrationOverlayState extends State<_MatchCelebrationOverlay> with
             margin: const EdgeInsets.symmetric(horizontal: 24),
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              color: dark ? const Color(0xFF1F2937) : Colors.white,
+              color: Colors.white,
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.25), blurRadius: 24, offset: const Offset(0, 8)),
+                BoxShadow(color: Colors.grey.withOpacity(0.15), blurRadius: 24, offset: const Offset(0, 8)),
               ],
             ),
             child: Column(
@@ -1466,7 +1466,7 @@ class _MatchCelebrationOverlayState extends State<_MatchCelebrationOverlay> with
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: dark ? Colors.white : const Color(0xFF111827),
+                    color: const Color(0xFF111827),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -1477,7 +1477,7 @@ class _MatchCelebrationOverlayState extends State<_MatchCelebrationOverlay> with
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
-                    color: dark ? Colors.grey.shade300 : const Color(0xFF6B7280),
+                    color: const Color(0xFF6B7280),
                     height: 1.4,
                   ),
                 ),

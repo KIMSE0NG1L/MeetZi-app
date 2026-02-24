@@ -93,14 +93,12 @@ class _UniversityRankingScreenState extends State<UniversityRankingScreen> with 
     final dark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        gradient: dark
-            ? null
-            : const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFFFAF5FF), Colors.white, Color(0xFFF5F0FF)],
-              ),
-        color: dark ? const Color(0xFF111827) : null,
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFFAF5FF), Colors.white, Color(0xFFF5F0FF)],
+        ),
+        color: Colors.white,
       ),
       child: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -115,7 +113,7 @@ class _UniversityRankingScreenState extends State<UniversityRankingScreen> with 
                         width: 80,
                         height: 80,
                         decoration: BoxDecoration(
-                          color: dark ? _purple.withOpacity(0.3) : const Color(0xFFF3E8FF),
+                          color: const Color(0xFFF3E8FF),
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Icon(LucideIcons.trophy, size: 48, color: dark ? const Color(0xFFC084FC) : _purple),
@@ -127,7 +125,7 @@ class _UniversityRankingScreenState extends State<UniversityRankingScreen> with 
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
-                          color: dark ? Colors.white : const Color(0xFF111827),
+                          color: const Color(0xFF111827),
                           height: 1.3,
                         ),
                       ),
@@ -136,7 +134,7 @@ class _UniversityRankingScreenState extends State<UniversityRankingScreen> with 
                         '실시간 활성 유저 랭킹',
                         style: TextStyle(
                           fontSize: 14,
-                          color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                          color: Colors.grey.shade600,
                         ),
                       ),
                     ],
@@ -147,7 +145,7 @@ class _UniversityRankingScreenState extends State<UniversityRankingScreen> with 
                   Center(
                     child: Text(
                       '랭킹 데이터가 없습니다.',
-                      style: TextStyle(color: dark ? Colors.grey.shade400 : Colors.grey.shade600),
+                      style: TextStyle(color: Colors.grey.shade600),
                     ),
                   )
                 else
@@ -160,7 +158,7 @@ class _UniversityRankingScreenState extends State<UniversityRankingScreen> with 
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: Material(
-                        color: dark ? const Color(0xFF1F2937) : Colors.white,
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
                         shadowColor: Colors.black.withOpacity(0.06),
                         elevation: 2,
@@ -172,9 +170,9 @@ class _UniversityRankingScreenState extends State<UniversityRankingScreen> with 
                                 width: 48,
                                 height: 48,
                                 decoration: BoxDecoration(
-                                  color: isTop3
-                                      ? (dark ? _purple.withOpacity(0.3) : _purple.withOpacity(0.2))
-                                      : (dark ? const Color(0xFF374151) : const Color(0xFFF3F4F6)),
+                                    color: isTop3
+                                      ? _purple.withOpacity(0.2)
+                                      : const Color(0xFFF3F4F6),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 alignment: Alignment.center,
@@ -183,7 +181,7 @@ class _UniversityRankingScreenState extends State<UniversityRankingScreen> with 
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 20,
-                                    color: isTop3 ? _purple : (dark ? const Color(0xFF9CA3AF) : const Color(0xFF9CA3AF)),
+                                    color: isTop3 ? _purple : const Color(0xFF9CA3AF),
                                   ),
                                 ),
                               ),
@@ -197,7 +195,7 @@ class _UniversityRankingScreenState extends State<UniversityRankingScreen> with 
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 16,
-                                        color: dark ? Colors.white : const Color(0xFF111827),
+                                        color: const Color(0xFF111827),
                                       ),
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -212,7 +210,7 @@ class _UniversityRankingScreenState extends State<UniversityRankingScreen> with 
                                             '${users.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}명 활동중',
                                             style: TextStyle(
                                               fontSize: 14,
-                                              color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                                              color: Colors.grey.shade600,
                                               fontWeight: FontWeight.w500,
                                             ),
                                           ),

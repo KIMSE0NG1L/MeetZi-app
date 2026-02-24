@@ -169,12 +169,12 @@ class _MessagesScreenState extends State<MessagesScreen> {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final onSurface = dark ? Colors.white : const Color(0xFF111827);
-    final onSurfaceVariant = dark ? Colors.grey.shade400 : Colors.grey.shade600;
+    final onSurface = const Color(0xFF111827);
+    final onSurfaceVariant = Colors.grey.shade600;
     final primary = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
-      backgroundColor: dark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
+      backgroundColor: Colors.white,
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _rooms.isEmpty
@@ -277,7 +277,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     border: Border.all(color: Colors.white, width: 2),
-                                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 4)],
+                                    boxShadow: [BoxShadow(color: Color(0x1A000000), blurRadius: 4)],
                                   ),
                                   child: _buildAvatar(photoUrl, avatarSeed, avatarOptions, partner),
                                 ),

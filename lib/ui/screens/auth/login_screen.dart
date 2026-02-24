@@ -34,7 +34,7 @@ class LoginScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Color(0x1A000000),
                       blurRadius: 16,
                       offset: const Offset(0, 8),
                     ),

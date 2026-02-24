@@ -85,14 +85,14 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final surface = dark ? const Color(0xFF1F2937) : Colors.white;
-    final onSurface = dark ? Colors.white : const Color(0xFF111827);
-    final onSurfaceVariant = dark ? Colors.grey.shade400 : Colors.grey.shade600;
+    final surface = Colors.white;
+    final onSurface = const Color(0xFF111827);
+    final onSurfaceVariant = Colors.grey.shade600;
     final topInset = MediaQuery.of(context).padding.top;
     final headerHeight = (topInset > 0 ? topInset : 56.0) + 20 + 36;
 
     return Scaffold(
-      backgroundColor: dark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
+      backgroundColor: Colors.white,
       body: Column(
         children: [
           // AppDesign 헤더: 메시지함 등과 동일 높이 (pt + 20 + 36)
@@ -189,12 +189,12 @@ class SettingsScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
             decoration: BoxDecoration(
-              color: dark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
+              color: Colors.white,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Divider(height: 1, color: dark ? const Color(0xFF374151) : Colors.grey.shade300),
+                Divider(height: 1, color: Colors.grey.shade300),
                 const SizedBox(height: 16),
                 _SettingsCard(
                   surface: surface,

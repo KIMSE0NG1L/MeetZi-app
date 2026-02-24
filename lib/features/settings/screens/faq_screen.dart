@@ -39,14 +39,14 @@ class FaqScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final surfaceCard = dark ? const Color(0xFF374151) : Colors.white;
-    final onSurface = dark ? Colors.white : const Color(0xFF111827);
-    final onSurfaceVariant = dark ? Colors.grey.shade400 : Colors.grey.shade600;
+    final surfaceCard = Colors.white;
+    final onSurface = const Color(0xFF111827);
+    final onSurfaceVariant = Colors.grey.shade600;
     final topInset = MediaQuery.of(context).padding.top;
     final headerHeight = (topInset > 0 ? topInset : 56.0) + 20 + 36;
 
     return Scaffold(
-      backgroundColor: dark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
+      backgroundColor: Colors.white,
       body: Column(
         children: [
           Container(
@@ -54,7 +54,7 @@ class FaqScreen extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: ThemeController.gradientFromPrimary(Theme.of(context).colorScheme.primary),
               boxShadow: const [
-                BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2)),
+                BoxShadow(color: Color(0x1A000000), blurRadius: 8, offset: Offset(0, 2)),
               ],
             ),
             child: SafeArea(

@@ -460,6 +460,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   );
   static const _labelStyle = TextStyle(fontSize: 14, color: Color(0xFF6B7280));
   static const _sectionLabelStyle = TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF111827));
+  // 이미 연회색/흰색 계열로 통일됨
 
   @override
   Widget build(BuildContext context) {
@@ -471,7 +472,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         children: [
           Material(
             elevation: 1,
-            shadowColor: Colors.black.withOpacity(0.06),
+            shadowColor: Color(0x1A000000),
             color: Colors.white,
             child: _buildAppDesignHeader(context),
           ),
@@ -778,7 +779,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   child: Text(
                     _schoolListLoaded ? _affiliation : '로딩 중...',
                     style: TextStyle(
-                      color: _schoolListLoaded ? Colors.black87 : Colors.grey,
+                      color: _schoolListLoaded ? Color(0xFF111827) : Colors.grey,
                     ),
                   ),
                 ),
@@ -1008,7 +1009,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               const SizedBox(height: 24),
               Material(
                 elevation: 4,
-                shadowColor: Colors.black.withOpacity(0.2),
+                shadowColor: Color(0x1A000000),
                 borderRadius: BorderRadius.circular(16),
                 child: InkWell(
                   onTap: _isLoading ? null : _submit,

@@ -84,13 +84,13 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final surface = dark ? const Color(0xFF1F2937) : Colors.white;
-    final onSurface = dark ? Colors.white : const Color(0xFF111827);
-    final onSurfaceVariant = dark ? Colors.grey.shade400 : Colors.grey.shade600;
+    final surface = Colors.white;
+    final onSurface = const Color(0xFF111827);
+    final onSurfaceVariant = Colors.grey.shade600;
     final primary = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
-      backgroundColor: dark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
+      backgroundColor: Colors.white,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
@@ -106,7 +106,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                             color: surface,
                             borderRadius: BorderRadius.circular(24),
                             elevation: 2,
-                            shadowColor: Colors.black.withOpacity(0.06),
+                            shadowColor: Colors.grey.withOpacity(0.06),
                             child: Padding(
                               padding: const EdgeInsets.all(24),
                               child: Column(
@@ -118,7 +118,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
                                           border: Border.all(color: const Color(0xFFFECDD3), width: 4),
-                                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 12)],
+                                          boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.08), blurRadius: 12)],
                                         ),
                                         child: _profile?['avatarSeed'] != null && (_profile!['avatarSeed'] as String).isNotEmpty
                                             ? CircleAvatar(
@@ -150,7 +150,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                       Container(
                                         width: 32,
                                         height: 32,
-                                        decoration: BoxDecoration(color: primary, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 4)]),
+                                        decoration: BoxDecoration(color: primary, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.2), blurRadius: 4)]),
                                         child: const Icon(LucideIcons.camera, color: Colors.white, size: 18),
                                       ),
                                     ],
