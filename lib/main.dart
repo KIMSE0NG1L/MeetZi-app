@@ -88,16 +88,26 @@ void main() async {
 
 
 
-  // 알림 히스토리 저장 (알람 확인 화면에서 조회용)
+  // 알림 히스토리 저장 (알람 확인 화면에서 조회용). 매칭(가져가기) 알림은 메일함으로만 감
   final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
   if (initialMessage != null && initialMessage.data.isNotEmpty) {
-    _saveNotificationToHistory(initialMessage);
+    final type = initialMessage.data['type']?.toString();
+    if (type == 'take_note_request') {
+      final requestId = initialMessage.data['requestId']?.toString();
+      if (requestId != null && requestId.isNotEmpty) {
+        Map<String, dynamic>? requesterProfile;
+        final rp = initialMessage.data['requesterProfile'];
+        if (rp is Map) requesterProfile = Map<String, dynamic>.from(rp);
+        PendingTakeNoteStore.instance.setPending(requestId, requesterProfile);
+      }
+    } else {
+      _saveNotificationToHistory(initialMessage);
+    }
   }
 
   // 3. 포그라운드(앱이 켜져있을 때) 알림 처리
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
     if (message.data.isNotEmpty || message.notification != null) {
-      _saveNotificationToHistory(message);
       final data = message.data;
       final type = data['type']?.toString();
       if (type == 'take_note_request') {
@@ -108,6 +118,9 @@ void main() async {
           if (rp is Map) requesterProfile = Map<String, dynamic>.from(rp);
           PendingTakeNoteStore.instance.setPending(requestId, requesterProfile);
         }
+        // 매칭 알림은 메일함에만 (알림 목록에 저장 안 함)
+      } else {
+        _saveNotificationToHistory(message);
       }
     }
     // 앱이 포그라운드일 때는 FCM 푸시 무시(로컬 알림만 표시)
@@ -135,11 +148,22 @@ void main() async {
     // FCM 푸시 무시: 아무 동작도 하지 않음
   });
 
-  // 4. 알림 클릭 시 앱 오픈 핸들러
+  // 4. 알림 클릭 시 앱 오픈 핸들러 (가져가기 요청이면 메일함용으로만 처리, 알림 목록에는 안 넣음)
   FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
     print('알림 클릭으로 앱 오픈: ${message.data}');
     if (message.data.isNotEmpty || message.notification != null) {
-      _saveNotificationToHistory(message);
+      final type = message.data['type']?.toString();
+      if (type == 'take_note_request') {
+        final requestId = message.data['requestId']?.toString();
+        if (requestId != null && requestId.isNotEmpty) {
+          Map<String, dynamic>? requesterProfile;
+          final rp = message.data['requesterProfile'];
+          if (rp is Map) requesterProfile = Map<String, dynamic>.from(rp);
+          PendingTakeNoteStore.instance.setPending(requestId, requesterProfile);
+        }
+      } else {
+        _saveNotificationToHistory(message);
+      }
     }
   });
 

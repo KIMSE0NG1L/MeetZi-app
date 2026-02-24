@@ -38,6 +38,10 @@ class ApiClient {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
+          // ngrok 경고 페이지 스킵 (매 요청마다 확실히 붙임)
+          if (AppConfig.baseUrl.contains('ngrok')) {
+            options.headers['ngrok-skip-browser-warning'] = 'true';
+          }
           final token = await _tokenStorage.readAccessToken();
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';

@@ -5,6 +5,7 @@ import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
+import 'package:nearo_app/shared/utils/photo_url.dart';
 
 class MyProfileScreen extends StatefulWidget {
   const MyProfileScreen({super.key});
@@ -81,6 +82,61 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     }
   }
 
+  /// 프로필 방식(사진/아바타)에 따라 내 프로필 이미지 위젯
+  Widget _buildMyProfileAvatar() {
+    final displayType = _profile?['boardDisplayType']?.toString();
+    final photos = _profile?['photos'];
+    if (displayType == 'photo' && photos is List && photos.isNotEmpty && photos[0] is Map) {
+      final first = photos[0] as Map<String, dynamic>;
+      final storageKey = first['storageKey']?.toString();
+      final photoUrl = storageKey != null && storageKey.isNotEmpty
+          ? photoUrlFromStorageKey(storageKey)
+          : null;
+      if (photoUrl != null && photoUrl.isNotEmpty) {
+        return CircleAvatar(
+          radius: 48,
+          backgroundColor: Colors.white,
+          child: ClipOval(
+            child: Image.network(
+              photoUrl,
+              width: 96,
+              height: 96,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Icon(LucideIcons.user, size: 64, color: Theme.of(context).colorScheme.primary),
+            ),
+          ),
+        );
+      }
+    }
+    if (_profile?['avatarSeed'] != null && (_profile!['avatarSeed'] as String).isNotEmpty) {
+      return CircleAvatar(
+        radius: 48,
+        backgroundColor: Colors.white,
+        child: ClipOval(
+          child: SizedBox(
+            width: 96,
+            height: 96,
+            child: SvgPicture.network(
+              diceBearAvatarUrl(
+                _profile!['avatarSeed'] as String,
+                options: _profile?['avatarOptions'] is Map<String, dynamic>
+                    ? (_profile!['avatarOptions'] as Map<String, dynamic>).map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''))
+                    : null,
+              ),
+              fit: BoxFit.cover,
+              placeholderBuilder: (context) => Icon(LucideIcons.user, size: 64, color: Theme.of(context).colorScheme.primary),
+            ),
+          ),
+        ),
+      );
+    }
+    return CircleAvatar(
+      radius: 48,
+      backgroundColor: Colors.white,
+      child: Icon(LucideIcons.user, size: 64, color: Theme.of(context).colorScheme.primary),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
@@ -120,32 +176,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                           border: Border.all(color: const Color(0xFFFECDD3), width: 4),
                                           boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 12)],
                                         ),
-                                        child: _profile?['avatarSeed'] != null && (_profile!['avatarSeed'] as String).isNotEmpty
-                                            ? CircleAvatar(
-                                                radius: 48,
-                                                backgroundColor: Colors.white,
-                                                child: ClipOval(
-                                                  child: SizedBox(
-                                                    width: 96,
-                                                    height: 96,
-                                                    child: SvgPicture.network(
-                                                      diceBearAvatarUrl(
-                                                        _profile!['avatarSeed'] as String,
-                                                        options: _profile?['avatarOptions'] is Map<String, dynamic>
-                                                            ? (_profile!['avatarOptions'] as Map<String, dynamic>).map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''))
-                                                            : null,
-                                                      ),
-                                                      fit: BoxFit.cover,
-                                                      placeholderBuilder: (context) => Icon(LucideIcons.user, size: 64, color: Theme.of(context).colorScheme.primary),
-                                                    ),
-                                                  ),
-                                                ),
-                                              )
-                                            : CircleAvatar(
-                                                radius: 48,
-                                                backgroundColor: Colors.white,
-                                                child: Icon(LucideIcons.user, size: 64, color: Theme.of(context).colorScheme.primary),
-                                              ),
+                                        child: _buildMyProfileAvatar(),
                                       ),
                                       Container(
                                         width: 32,

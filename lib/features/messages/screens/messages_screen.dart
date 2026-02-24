@@ -1,7 +1,7 @@
 import 'package:nearo_app/features/messages/data/chat_repository.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
-import 'package:nearo_app/shared/utils/app_config.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
+import 'package:nearo_app/shared/utils/photo_url.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -80,8 +80,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   String? _resolvePhotoUrl(String? photoKey) {
-    if (photoKey == null || photoKey.isEmpty) return null;
-    return '${AppConfig.baseUrl}/files/$photoKey';
+    return photoUrlFromStorageKey(photoKey);
   }
 
   Widget _buildAvatar(String? photoUrl, String? avatarSeed, Map<String, String> avatarOptions, String partner) {

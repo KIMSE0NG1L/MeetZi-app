@@ -24,7 +24,6 @@ class _ConsentPreviewScreenState extends State<ConsentPreviewScreen> {
     'heightCm': 160,
     'smoking': '비흡연',
     'mbti': 'INFP',
-    'instagram': '@dck',
     'bio': '세종대 컴공과에요!',
   };
   final _matchIdController = TextEditingController();
