@@ -156,11 +156,12 @@ class NearoTheme {
   static const Color textSecondary = Color(0xFF5F5F6E);
 
   static ThemeData light({Color? seedColor}) {
+    final base = seedColor ?? primary;
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: seedColor ?? primary,
+      seedColor: base,
       brightness: Brightness.light,
       background: background,
-    );
+    ).copyWith(primary: base);
 
     return ThemeData(
       useMaterial3: true,
