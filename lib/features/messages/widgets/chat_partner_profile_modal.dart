@@ -5,6 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
+import 'package:nearo_app/shared/utils/photo_url.dart';
 
 /// AppDesign ProfileDetailModal 스타일: 3D 플립·스프링·스테거드 효과 + 그라데이션 헤더·InfoRow·태그·닫기만 (채팅용)
 class ChatPartnerProfileModal {
@@ -249,13 +250,14 @@ class _ModalCard extends StatelessWidget {
   Widget _buildAvatar(BuildContext context) {
     const double size = 96;
     final u = _user;
-    if (partnerPhotoStorageKey != null && partnerPhotoStorageKey!.isNotEmpty) {
+    final photoUrl = photoUrlFromStorageKey(partnerPhotoStorageKey);
+    if (photoUrl != null && photoUrl.isNotEmpty) {
       return SizedBox(
         width: size,
         height: size,
         child: ClipOval(
           child: Image.network(
-            'https://nearo-image.s3.ap-northeast-2.amazonaws.com/$partnerPhotoStorageKey',
+            photoUrl,
             width: size,
             height: size,
             fit: BoxFit.cover,

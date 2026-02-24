@@ -6,9 +6,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/matching_board/data/matching_board_repository.dart';
+import 'package:nearo_app/features/matching_board/screens/mailbox_screen.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
+import 'package:nearo_app/shared/utils/photo_url.dart';
 
 /// 채팅 등 외부에서 프로필 시트만 볼 때 사용 (hideActionButtons: true → 넘기기/가져가기 비표시)
 Future<void> showBoardNoteSheet(
@@ -233,8 +235,6 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     return {};
   }
 
-  static const String _photoBaseUrl = 'https://nearo-image.s3.ap-northeast-2.amazonaws.com';
-
   Widget _buildBoardAvatar(BuildContext context, Map<String, dynamic> profile) {
     final user = profile['user'] as Map<String, dynamic>?;
     final displayType = user?['boardDisplayType']?.toString();
@@ -243,13 +243,14 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     if (photos is List && photos.isNotEmpty && photos[0] is Map) {
       primaryPhotoKey = (photos[0] as Map<String, dynamic>)['storageKey']?.toString();
     }
-    if (displayType == 'photo' && primaryPhotoKey != null && primaryPhotoKey.isNotEmpty) {
+    final photoUrl = primaryPhotoKey != null ? photoUrlFromStorageKey(primaryPhotoKey) : null;
+    if (displayType == 'photo' && photoUrl != null && photoUrl.isNotEmpty) {
       return CircleAvatar(
         radius: 32,
         backgroundColor: Colors.white,
         child: ClipOval(
           child: Image.network(
-            '$_photoBaseUrl/$primaryPhotoKey',
+            photoUrl,
             width: 64,
             height: 64,
             fit: BoxFit.cover,
@@ -347,13 +348,37 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                                   else
                                     CircleAvatar(radius: 24, backgroundColor: Colors.grey.shade300, child: Icon(LucideIcons.user, color: Colors.grey.shade600)),
                                   const SizedBox(width: 12),
-                                  Expanded(
+                                  Flexible(
                                     child: Text(
                                       myNickname,
                                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: onSurface),
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
+                                  const SizedBox(width: 8),
+                                  Material(
+                                    color: (dark ? Colors.grey.shade800 : Colors.grey.shade100).withOpacity(0.9),
+                                    borderRadius: BorderRadius.circular(20),
+                                    child: InkWell(
+                                      onTap: () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute<void>(
+                                            builder: (_) => const MailboxScreen(),
+                                          ),
+                                        );
+                                      },
+                                      borderRadius: BorderRadius.circular(20),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                        child: Icon(
+                                          LucideIcons.mail,
+                                          size: 24,
+                                          color: dark ? Colors.grey.shade300 : const Color(0xFF4B5563),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
                                   _TicketChip(
                                     icon: LucideIcons.clipboardList,
                                     count: _myTickets?.registerTicket ?? 0,

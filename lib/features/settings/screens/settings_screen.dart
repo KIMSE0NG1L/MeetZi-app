@@ -76,8 +76,17 @@ class SettingsScreen extends StatelessWidget {
       );
     } catch (e) {
       if (!context.mounted) return;
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      final isNoLogin = msg.contains('로그인 정보가 없습니다') || msg.contains('다시 로그인');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('계정 삭제 실패: $e')),
+        SnackBar(
+          content: Text(
+            isNoLogin
+                ? '로그인 세션이 만료되었습니다. 다시 로그인한 뒤 계정 삭제를 시도해 주세요.'
+                : '계정 삭제 실패: $msg',
+          ),
+          duration: const Duration(seconds: 4),
+        ),
       );
     }
   }

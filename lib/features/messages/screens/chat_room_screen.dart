@@ -8,6 +8,7 @@ import 'package:nearo_app/features/matching/data/matching_repository.dart';
 import 'package:nearo_app/features/messages/data/chat_repository.dart';
 import 'package:nearo_app/features/messages/data/partner_profile_repository.dart';
 import 'package:nearo_app/shared/notification_utils.dart';
+import 'package:nearo_app/shared/utils/photo_url.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/core/auth/auth_repository.dart';
 import 'package:nearo_app/features/matching_board/screens/matching_board_screen.dart';
@@ -106,7 +107,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
   String? _matchId;
 
   final ScrollController _scrollController = ScrollController();
-  Timer? _readAtPollTimer;
 
   @override
   void initState() {
@@ -144,8 +144,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
         await _loadMessages();
         _sendReadReceipts();
         _scrollToBottom();
-        _readAtPollTimer?.cancel();
-        _readAtPollTimer = Timer.periodic(const Duration(seconds: 1), (_) => _syncReadAt());
       } else {
         _myUserId = null;
         setState(() => _loading = false);
@@ -547,7 +545,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
     if (_socket != null && _socket!.connected && _roomId != null) {
       _socket!.emit('outRoom', {'roomId': _roomId});
     }
-    _readAtPollTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _controller.dispose();
     super.dispose();
@@ -1074,12 +1071,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
 
   Widget _buildPartnerAvatar(BuildContext context) {
     Widget avatar;
-    if (_partnerPhotoStorageKey != null && _partnerPhotoStorageKey!.isNotEmpty) {
+    final partnerPhotoUrl = photoUrlFromStorageKey(_partnerPhotoStorageKey);
+    if (partnerPhotoUrl != null && partnerPhotoUrl.isNotEmpty) {
       avatar = CircleAvatar(
         radius: _partnerAvatarRadius,
-        backgroundImage: NetworkImage(
-          'https://nearo-image.s3.ap-northeast-2.amazonaws.com/$_partnerPhotoStorageKey',
-        ),
+        backgroundImage: NetworkImage(partnerPhotoUrl),
       );
     } else {
       final seed = _partnerProfile?['avatarSeed']?.toString() ?? _partnerProfile?['userId']?.toString() ?? _partnerAvatarSeed;
