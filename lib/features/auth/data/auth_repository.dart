@@ -25,6 +25,12 @@ class AuthRepository {
     return response.data as Map<String, dynamic>;
   }
 
+  /// 게시판에 보일 프로필: avatar(아바타) | photo(본인 사진)
+  Future<Map<String, dynamic>> setBoardDisplayType(String boardDisplayType) async {
+    final response = await _client.dio.patch('/users/me/board-display', data: {'boardDisplayType': boardDisplayType});
+    return response.data as Map<String, dynamic>;
+  }
+
   /// 대학 인증 성공 후 아바타 초기 생성(seed 발급)
   Future<Map<String, dynamic>> initAvatar() async {
     final response = await _client.dio.post(ApiEndpoints.avatarInit);

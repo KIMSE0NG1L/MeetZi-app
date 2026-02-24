@@ -150,10 +150,22 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     }
   }
 
+  /// 내 성별의 반대만 게시판에 노출 (남자 계정 → 여자만, 여자 계정 → 남자만)
   Future<void> _fetchProfiles() async {
     setState(() => _loading = true);
     try {
-      final profiles = await _repository.fetchProfiles();
+      String? preferredGender;
+      try {
+        final profile = await AuthRepository().getProfile();
+        final raw = profile['user'] is Map ? profile['user'] as Map : profile;
+        final g = raw['gender']?.toString().trim().toLowerCase();
+        if (g == 'male' || g == '남성') {
+          preferredGender = 'female';
+        } else if (g == 'female' || g == '여성') {
+          preferredGender = 'male';
+        }
+      } catch (_) {}
+      final profiles = await _repository.fetchProfiles(preferredGender: preferredGender);
       setState(() => _profiles = profiles);
     } catch (_) {
       setState(() => _profiles = []);
@@ -221,8 +233,33 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     return {};
   }
 
+  static const String _photoBaseUrl = 'https://nearo-image.s3.ap-northeast-2.amazonaws.com';
+
   Widget _buildBoardAvatar(BuildContext context, Map<String, dynamic> profile) {
     final user = profile['user'] as Map<String, dynamic>?;
+    final displayType = user?['boardDisplayType']?.toString();
+    final photos = user?['photos'];
+    String? primaryPhotoKey;
+    if (photos is List && photos.isNotEmpty && photos[0] is Map) {
+      primaryPhotoKey = (photos[0] as Map<String, dynamic>)['storageKey']?.toString();
+    }
+    if (displayType == 'photo' && primaryPhotoKey != null && primaryPhotoKey.isNotEmpty) {
+      return CircleAvatar(
+        radius: 32,
+        backgroundColor: Colors.white,
+        child: ClipOval(
+          child: Image.network(
+            '$_photoBaseUrl/$primaryPhotoKey',
+            width: 64,
+            height: 64,
+            fit: BoxFit.cover,
+            loadingBuilder: (_, child, progress) =>
+                progress == null ? child : Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, value: progress.expectedTotalBytes != null ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes! : null))),
+            errorBuilder: (_, __, ___) => Icon(LucideIcons.user, size: 40, color: Theme.of(context).colorScheme.primary),
+          ),
+        ),
+      );
+    }
     final seed = user?['avatarSeed']?.toString() ?? profile['userId']?.toString();
     final options = _parseAvatarOptions(user?['avatarOptions']);
     if (seed != null && seed.isNotEmpty) {

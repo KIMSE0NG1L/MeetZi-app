@@ -19,8 +19,13 @@ class MatchingBoardRepository {
 
   MatchingBoardRepository({ApiClient? client}) : _client = client ?? ApiClient();
 
-  Future<List<Map<String, dynamic>>> fetchProfiles() async {
-    final response = await _client.dio.get('/matching-board');
+  /// 게시판 프로필 목록. preferredGender: 보여줄 상대 성별 (남자 계정이면 'female', 여자 계정이면 'male')
+  Future<List<Map<String, dynamic>>> fetchProfiles({String? preferredGender}) async {
+    final query = <String, dynamic>{};
+    if (preferredGender != null && preferredGender.isNotEmpty) {
+      query['gender'] = preferredGender;
+    }
+    final response = await _client.dio.get('/matching-board', queryParameters: query);
     return List<Map<String, dynamic>>.from(response.data);
   }
 

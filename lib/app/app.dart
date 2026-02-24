@@ -27,6 +27,7 @@ import 'package:nearo_app/features/users/screens/users_screen.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/auth/data/environment_status_repository.dart';
 import 'package:nearo_app/features/home/screens/home_shell_screen.dart';
+import 'package:nearo_app/features/matching_board/screens/take_note_request_response_screen.dart';
 import 'dart:async';
 import 'package:nearo_app/features/profile/screens/avatar_setup_screen.dart';
 import 'package:nearo_app/features/settings/screens/customer_support_screen.dart';
@@ -124,6 +125,23 @@ class _NearoAppState extends State<NearoApp> {
     final type = data['type']?.toString();
     if (type == 'support_reply' || type == 'support_submitted') {
       _navigatorKey.currentState?.pushNamed(AppRoutes.customerSupport);
+      return;
+    }
+    if (type == 'take_note_request') {
+      final requestId = data['requestId']?.toString();
+      if (requestId != null && requestId.isNotEmpty) {
+        Map<String, dynamic>? requesterProfile;
+        final rp = data['requesterProfile'];
+        if (rp is Map) requesterProfile = Map<String, dynamic>.from(rp);
+        _navigatorKey.currentState?.push(
+          MaterialPageRoute<void>(
+            builder: (_) => TakeNoteRequestResponseScreen(
+              requestId: requestId,
+              requesterProfile: requesterProfile,
+            ),
+          ),
+        );
+      }
       return;
     }
     final roomId = data['roomId']?.toString();

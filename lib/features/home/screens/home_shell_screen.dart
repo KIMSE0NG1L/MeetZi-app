@@ -7,6 +7,8 @@ import 'package:nearo_app/features/home/screens/university_ranking_screen.dart';
 import 'package:nearo_app/features/matching_board/screens/matching_board_screen.dart';
 import 'package:nearo_app/features/messages/screens/messages_screen.dart';
 import 'package:nearo_app/features/notifications/screens/notifications_screen.dart';
+import 'package:nearo_app/features/notifications/data/pending_take_note_store.dart';
+import 'package:nearo_app/features/matching_board/screens/take_note_request_response_screen.dart';
 import 'package:nearo_app/features/profile/screens/my_profile_screen.dart';
 import 'package:nearo_app/features/ratings/screens/ratings_screen.dart';
 import 'package:nearo_app/features/settings/screens/settings_screen.dart';
@@ -29,6 +31,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
   bool _profileLoading = true;
   final ValueNotifier<int> _boardRefreshTrigger = ValueNotifier<int>(0);
   bool _routeObserverSubscribed = false;
+  bool _takeNoteDialogShown = false;
 
   List<Widget> get _pages => [
     const UniversityRankingScreen(),
@@ -48,6 +51,55 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
   void initState() {
     super.initState();
     _loadThemeAndProfile();
+    PendingTakeNoteStore.instance.pending.addListener(_onPendingTakeNote);
+  }
+
+  void _onPendingTakeNote() {
+    final req = PendingTakeNoteStore.instance.pending.value;
+    if (req == null || _takeNoteDialogShown || !mounted) return;
+    _takeNoteDialogShown = true;
+    PendingTakeNoteStore.instance.clear();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _showTakeNoteDialog(requestId: req.requestId, requesterProfile: req.requesterProfile);
+    });
+  }
+
+  void _showTakeNoteDialog({required String requestId, Map<String, dynamic>? requesterProfile}) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('가져가기 요청'),
+          content: const Text('누군가 내 카드를 가져가려고 해요.\n지금 확인해 볼까요?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                _takeNoteDialogShown = false;
+              },
+              child: const Text('나중에'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                _takeNoteDialogShown = false;
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => TakeNoteRequestResponseScreen(
+                      requestId: requestId,
+                      requesterProfile: requesterProfile,
+                    ),
+                  ),
+                );
+              },
+              child: const Text('보기'),
+            ),
+          ],
+        );
+      },
+    ).then((_) => _takeNoteDialogShown = false);
   }
 
   @override
@@ -64,6 +116,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
 
   @override
   void dispose() {
+    PendingTakeNoteStore.instance.pending.removeListener(_onPendingTakeNote);
     routeObserver.unsubscribe(this);
     _boardRefreshTrigger.dispose();
     _pageController.dispose();
