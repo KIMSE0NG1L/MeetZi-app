@@ -75,6 +75,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   List<dynamic> _photos = [];
   bool _isUploadingPhoto = false;
   String? _photoError;
+  String _boardDisplayType = 'avatar'; // avatar | photo — 게시판에 아바타 vs 본인 사진
 
   @override
   void didChangeDependencies() {
@@ -224,6 +225,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
           }
         } catch (_) {}
       }
+      final boardDisplay = user['boardDisplayType']?.toString();
+      if (boardDisplay == 'photo' || boardDisplay == 'avatar') _boardDisplayType = boardDisplay!;
 
       setState(() {
         _isEditing = _forceEdit || (affiliation != null && affiliation.isNotEmpty);
@@ -285,6 +288,45 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     if (storageKey.startsWith('http')) return storageKey;
     if (storageKey.startsWith('/')) return '${AppConfig.baseUrl}$storageKey';
     return '${AppConfig.baseUrl}/$storageKey';
+  }
+
+  Widget _boardDisplayChip({required String label, required String value, required IconData icon}) {
+    final selected = _boardDisplayType == value;
+    return Material(
+      color: selected ? Theme.of(context).colorScheme.primary.withOpacity(0.12) : Theme.of(context).colorScheme.surface,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: () async {
+          if (_boardDisplayType == value) return;
+          final prev = _boardDisplayType;
+          setState(() => _boardDisplayType = value);
+          try {
+            await _repository.setBoardDisplayType(value);
+          } catch (_) {
+            if (mounted) setState(() => _boardDisplayType = prev);
+          }
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: selected ? Theme.of(context).colorScheme.primary : Colors.grey.shade300,
+              width: selected ? 2 : 1,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 28, color: selected ? Theme.of(context).colorScheme.primary : Colors.grey.shade600),
+              const SizedBox(height: 6),
+              Text(label, style: TextStyle(fontSize: 13, fontWeight: selected ? FontWeight.w600 : FontWeight.w500, color: selected ? Theme.of(context).colorScheme.primary : Colors.grey.shade700)),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   /// 닉네임: 2~8자, 한글/영문/숫자만, 특수문자·공백 불가
@@ -622,6 +664,28 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   ),
                 ),
               ],
+              const SizedBox(height: 16),
+              const Text('게시판에 보일 프로필', style: _labelStyle),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: _boardDisplayChip(
+                      label: '아바타',
+                      value: 'avatar',
+                      icon: LucideIcons.smile,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _boardDisplayChip(
+                      label: '내 사진',
+                      value: 'photo',
+                      icon: LucideIcons.image,
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 16),
               const Text('닉네임 (2~8자, 한글/영문/숫자)', style: _labelStyle),
               const SizedBox(height: 8),

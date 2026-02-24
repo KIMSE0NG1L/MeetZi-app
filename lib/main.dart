@@ -4,6 +4,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:nearo_app/app/app.dart';
 import 'package:nearo_app/features/notifications/data/notification_history_store.dart';
+import 'package:nearo_app/features/notifications/data/pending_take_note_store.dart';
 import 'package:nearo_app/shared/api/api_client.dart';
 import 'package:app_badge_plus/app_badge_plus.dart';
 
@@ -97,8 +98,19 @@ void main() async {
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
     if (message.data.isNotEmpty || message.notification != null) {
       _saveNotificationToHistory(message);
+      final data = message.data;
+      final type = data['type']?.toString();
+      if (type == 'take_note_request') {
+        final requestId = data['requestId']?.toString();
+        if (requestId != null && requestId.isNotEmpty) {
+          Map<String, dynamic>? requesterProfile;
+          final rp = data['requesterProfile'];
+          if (rp is Map) requesterProfile = Map<String, dynamic>.from(rp);
+          PendingTakeNoteStore.instance.setPending(requestId, requesterProfile);
+        }
+      }
     }
-    // 앱이 포그라운드일 때는 FCM 푸시를 무시(로컬 알림만 표시)
+    // 앱이 포그라운드일 때는 FCM 푸시 무시(로컬 알림만 표시)
     // (아래 코드를 주석 처리하거나, 조건문으로 분기 가능)
     // RemoteNotification? notification = message.notification;
     // AndroidNotification? android = message.notification?.android;
