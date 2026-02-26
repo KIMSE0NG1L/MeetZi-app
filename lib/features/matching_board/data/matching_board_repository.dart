@@ -75,7 +75,7 @@ class MatchingBoardRepository {
     await _client.dio.post('/matching-board/take-note-requests/$requestId/accept');
   }
 
-  /// 가져가기 요청 거절 → 요청자 매칭권 환불. [rejectionMessage] 10자 이상 필수.
+  /// 가져가기 요청 거절 → 요청자 매칭권 환불. [rejectionMessage] 5자 이상 필수.
   Future<void> rejectTakeNoteRequest(String requestId, String rejectionMessage) async {
     await _client.dio.post(
       '/matching-board/take-note-requests/$requestId/reject',

@@ -308,63 +308,246 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
         itemCount: _sentRequests.length,
         itemBuilder: (context, index) {
           final req = _sentRequests[index];
+          final requestId = req['id']?.toString() ?? '';
+          final status = req['status']?.toString() ?? 'pending';
           final recipient = req['recipient'] as Map<String, dynamic>?;
           final profile = req['profile'] as Map<String, dynamic>?;
           final nickname = recipient?['nickname']?.toString() ?? profile?['nickname']?.toString() ?? '알 수 없음';
           final read = _isRead(req);
+          final rejectionMessage = req['rejectionMessage'] as String?;
+          final isRejected = status == 'rejected';
+          final statusLabel = status == 'accepted'
+              ? '수락됨'
+              : status == 'rejected'
+                  ? '거절됨'
+                  : '대기 중';
           return Card(
             margin: const EdgeInsets.only(bottom: 12),
             color: surface,
             elevation: 0,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  _buildRecipientAvatar(context, recipient),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '가져가기 요청 보냄',
-                          style: TextStyle(fontSize: 12, color: onSurfaceVariant),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '$nickname님에게',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: onSurface),
-                        ),
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: read
-                                ? (dark ? Colors.green.shade900 : Colors.green.shade50)
-                                : (dark ? Colors.grey.shade700 : Colors.grey.shade200),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            read ? '읽음' : '안 읽음',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: read
-                                  ? (dark ? Colors.green.shade200 : Colors.green.shade700)
-                                  : onSurfaceVariant,
-                            ),
-                          ),
-                        ),
-                      ],
+            child: InkWell(
+              onTap: () async {
+                final result = await Navigator.of(context).push<bool>(
+                  MaterialPageRoute(
+                    builder: (_) => TakeNoteSentDetailScreen(
+                      requestId: requestId,
+                      recipientNickname: nickname,
+                      recipient: recipient,
+                      profile: profile,
+                      status: status,
+                      senderMessage: req['senderMessage'] as String?,
+                      rejectionMessage: rejectionMessage,
                     ),
                   ),
-                ],
+                );
+                if (result == true) _load();
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildRecipientAvatar(context, recipient),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '가져가기 요청 보냄',
+                            style: TextStyle(fontSize: 12, color: onSurfaceVariant),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '$nickname님에게',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: onSurface),
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: isRejected
+                                      ? (dark ? Colors.red.shade900 : Colors.red.shade50)
+                                      : read
+                                          ? (dark ? Colors.green.shade900 : Colors.green.shade50)
+                                          : (dark ? Colors.grey.shade700 : Colors.grey.shade200),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  statusLabel,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: isRejected
+                                        ? (dark ? Colors.red.shade200 : Colors.red.shade700)
+                                        : read
+                                            ? (dark ? Colors.green.shade200 : Colors.green.shade700)
+                                            : onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (isRejected && rejectionMessage != null && rejectionMessage.trim().isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: (dark ? Colors.white : const Color(0xFF111827)).withOpacity(0.06),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '상대방 거절 사유',
+                                    style: TextStyle(fontSize: 11, color: onSurfaceVariant),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    rejectionMessage.trim(),
+                                    style: TextStyle(fontSize: 14, color: onSurface),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    Icon(LucideIcons.chevronRight, color: onSurfaceVariant),
+                  ],
+                ),
               ),
             ),
           );
         },
       ),
+    );
+  }
+}
+
+/// 내가 보낸 가져가기 요청 상세 (상태 + 거절 시 상대방 거절 사유 표시)
+class TakeNoteSentDetailScreen extends StatelessWidget {
+  const TakeNoteSentDetailScreen({
+    super.key,
+    required this.requestId,
+    required this.recipientNickname,
+    this.recipient,
+    this.profile,
+    required this.status,
+    this.senderMessage,
+    this.rejectionMessage,
+  });
+
+  final String requestId;
+  final String recipientNickname;
+  final Map<String, dynamic>? recipient;
+  final Map<String, dynamic>? profile;
+  final String status;
+  final String? senderMessage;
+  final String? rejectionMessage;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = dark ? Colors.white : const Color(0xFF111827);
+    final onSurfaceVariant = dark ? Colors.grey.shade400 : Colors.grey.shade600;
+    final statusLabel = status == 'accepted'
+        ? '수락됨'
+        : status == 'rejected'
+            ? '거절됨'
+            : '대기 중';
+    final isRejected = status == 'rejected';
+
+    return Scaffold(
+      backgroundColor: dark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
+      appBar: AppBar(
+        title: const Text('보낸 가져가기 요청'),
+        centerTitle: true,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              '$recipientNickname님에게 가져가기를 보냈어요.',
+              style: TextStyle(fontSize: 16, color: onSurfaceVariant),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: isRejected
+                    ? (dark ? Colors.red.shade900 : Colors.red.shade50)
+                    : (dark ? Colors.grey.shade700 : Colors.grey.shade200),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                statusLabel,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: isRejected
+                      ? (dark ? Colors.red.shade200 : Colors.red.shade700)
+                      : onSurfaceVariant,
+                ),
+              ),
+            ),
+            if (senderMessage != null && senderMessage!.trim().isNotEmpty) ...[
+              const SizedBox(height: 20),
+              _sectionLabel('내가 보낸 멘트', onSurfaceVariant),
+              const SizedBox(height: 6),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: (dark ? Colors.white : const Color(0xFF111827)).withOpacity(0.06),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  senderMessage!.trim(),
+                  style: TextStyle(fontSize: 15, color: onSurface),
+                ),
+              ),
+            ],
+            if (isRejected && rejectionMessage != null && rejectionMessage!.trim().isNotEmpty) ...[
+              const SizedBox(height: 20),
+              _sectionLabel('상대방 거절 사유', onSurfaceVariant),
+              const SizedBox(height: 6),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: (dark ? Colors.red.shade900 : Colors.red.shade50).withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: dark ? Colors.red.shade700 : Colors.red.shade200,
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  rejectionMessage!.trim(),
+                  style: TextStyle(fontSize: 15, color: onSurface),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _sectionLabel(String label, Color color) {
+    return Text(
+      label,
+      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: color),
     );
   }
 }

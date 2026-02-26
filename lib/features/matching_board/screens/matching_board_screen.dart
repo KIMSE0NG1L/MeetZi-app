@@ -679,7 +679,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     if (!mounted) return false;
     if (message == null) return false; // 취소 시 요청 안 보냄
     final trimmed = message.trim();
-    if (trimmed.length < 10 || trimmed.length > 20) return false;
+    if (trimmed.length < 5) return false;
     try {
       await _repository.takeNote(profileId, message: trimmed);
       await _fetchProfiles();
@@ -695,7 +695,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   }
 }
 
-/// 가져가기 요청 시 상대에게 보낼 멘트 입력 다이얼로그. 10~20자 필수. 확인 시 입력 텍스트 반환, 취소 시 null.
+/// 가져가기 요청 시 상대에게 보낼 멘트 입력 다이얼로그. 5자 이상. 확인 시 입력 텍스트 반환, 취소 시 null.
 class _TakeNoteMessageDialog extends StatefulWidget {
   @override
   State<_TakeNoteMessageDialog> createState() => _TakeNoteMessageDialogState();
@@ -705,10 +705,7 @@ class _TakeNoteMessageDialogState extends State<_TakeNoteMessageDialog> {
   final _controller = TextEditingController();
   final _focus = FocusNode();
 
-  bool get _isValid {
-    final len = _controller.text.trim().length;
-    return len >= 10 && len <= 20;
-  }
+  bool get _isValid => _controller.text.trim().length >= 5;
 
   @override
   void dispose() {
@@ -728,15 +725,12 @@ class _TakeNoteMessageDialogState extends State<_TakeNoteMessageDialog> {
           focusNode: _focus,
           autofocus: true,
           maxLines: 3,
-          maxLength: 20,
           decoration: InputDecoration(
-            hintText: '상대에게 보낼 말 (10~20자)',
+            hintText: '상대에게 보낼 말 (5자 이상)',
             border: const OutlineInputBorder(),
             helperText: _controller.text.trim().isNotEmpty && !_isValid
-                ? (_controller.text.trim().length < 10
-                    ? '10자 이상 입력해 주세요'
-                    : '20자 이하로 입력해 주세요')
-                : '10자에서 20자 사이로 입력해 주세요',
+                ? '5자 이상 입력해 주세요'
+                : '5자 이상 입력해 주세요',
             helperStyle: TextStyle(
               color: _controller.text.trim().isNotEmpty && !_isValid ? theme.colorScheme.error : theme.colorScheme.onSurfaceVariant,
             ),

@@ -270,7 +270,7 @@ class _TakeNoteRequestResponseScreenState extends State<TakeNoteRequestResponseS
   }
 }
 
-/// 거절 시 10~20자 사유 입력 다이얼로그. 확인 시 입력 텍스트 반환, 취소 시 null.
+/// 거절 시 5자 이상 사유 입력 다이얼로그. 확인 시 입력 텍스트 반환, 취소 시 null.
 class _RejectMessageDialog extends StatefulWidget {
   @override
   State<_RejectMessageDialog> createState() => _RejectMessageDialogState();
@@ -280,10 +280,7 @@ class _RejectMessageDialogState extends State<_RejectMessageDialog> {
   final _controller = TextEditingController();
   final _focus = FocusNode();
 
-  bool get _isValid {
-    final len = _controller.text.trim().length;
-    return len >= 10 && len <= 20;
-  }
+  bool get _isValid => _controller.text.trim().length >= 5;
 
   @override
   void dispose() {
@@ -296,14 +293,9 @@ class _RejectMessageDialogState extends State<_RejectMessageDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final len = _controller.text.trim().length;
-    String? helperText;
-    if (len > 0 && len < 10) {
-      helperText = '10자 이상 입력해 주세요';
-    } else if (len > 20) {
-      helperText = '20자 이하로 입력해 주세요';
-    } else {
-      helperText = '10자에서 20자 사이로 입력해 주세요. 요청자에게 전달돼요.';
-    }
+    final String helperText = len > 0 && len < 5
+        ? '5자 이상 입력해 주세요'
+        : '5자 이상 적어 주세요. 요청자에게 전달돼요.';
     return AlertDialog(
       title: const Text('거절 사유'),
       content: SingleChildScrollView(
@@ -312,7 +304,7 @@ class _RejectMessageDialogState extends State<_RejectMessageDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '거절하려면 10~20자로 적어 주세요. 요청자에게 전달돼요.',
+              '거절하려면 5자 이상 적어 주세요. 요청자에게 전달돼요.',
               style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 12),
@@ -321,7 +313,6 @@ class _RejectMessageDialogState extends State<_RejectMessageDialog> {
               focusNode: _focus,
               autofocus: true,
               maxLines: 3,
-              maxLength: 20,
               decoration: InputDecoration(
                 hintText: '예: 지금은 만날 생각이 없어요',
                 border: const OutlineInputBorder(),
