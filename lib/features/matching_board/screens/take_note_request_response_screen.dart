@@ -23,6 +23,7 @@ class TakeNoteRequestResponseScreen extends StatefulWidget {
 class _TakeNoteRequestResponseScreenState extends State<TakeNoteRequestResponseScreen> {
   final MatchingBoardRepository _repository = MatchingBoardRepository();
   Map<String, dynamic>? _profile;
+  String? _senderMessage; // 요청자가 보낸 멘트 (상대에게 보임)
   bool _loading = true;
   String? _error;
   bool _actionLoading = false;
@@ -44,9 +45,11 @@ class _TakeNoteRequestResponseScreenState extends State<TakeNoteRequestResponseS
     try {
       final data = await _repository.fetchTakeNoteRequest(widget.requestId);
       final requester = data['requester'] as Map<String, dynamic>?;
+      final senderMessage = data['senderMessage'] as String?;
       if (!mounted) return;
       setState(() {
         _profile = requester;
+        _senderMessage = senderMessage != null && senderMessage.trim().isNotEmpty ? senderMessage.trim() : null;
         _loading = false;
         _error = requester == null ? '요청 정보를 불러올 수 없어요' : null;
       });
@@ -80,9 +83,14 @@ class _TakeNoteRequestResponseScreenState extends State<TakeNoteRequestResponseS
 
   Future<void> _reject() async {
     if (_actionLoading) return;
+    final rejectionMessage = await showDialog<String>(
+      context: context,
+      builder: (ctx) => _RejectMessageDialog(),
+    );
+    if (rejectionMessage == null || !mounted) return;
     setState(() => _actionLoading = true);
     try {
-      await _repository.rejectTakeNoteRequest(widget.requestId);
+      await _repository.rejectTakeNoteRequest(widget.requestId, rejectionMessage);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('거절했어요. 상대 매칭권은 환불돼요.')));
       Navigator.of(context).pop(false);
@@ -142,6 +150,31 @@ class _TakeNoteRequestResponseScreenState extends State<TakeNoteRequestResponseS
                         '누가 당신의 프로필을 가져가고 싶어해요. 받을까요?',
                         style: theme.textTheme.bodyLarge?.copyWith(color: onSurfaceVariant),
                       ),
+                      if (_senderMessage != null && _senderMessage!.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: (dark ? Colors.white : const Color(0xFF111827)).withOpacity(0.06),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '보낸 멘트',
+                                style: theme.textTheme.labelMedium?.copyWith(color: onSurfaceVariant),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _senderMessage!,
+                                style: theme.textTheme.bodyMedium?.copyWith(color: onSurface),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 20),
                       Material(
                         color: surface,
@@ -233,6 +266,88 @@ class _TakeNoteRequestResponseScreenState extends State<TakeNoteRequestResponseS
           Expanded(child: Text(value, style: TextStyle(fontSize: 14, color: valueColor), maxLines: 3, overflow: TextOverflow.ellipsis)),
         ],
       ),
+    );
+  }
+}
+
+/// 거절 시 10~20자 사유 입력 다이얼로그. 확인 시 입력 텍스트 반환, 취소 시 null.
+class _RejectMessageDialog extends StatefulWidget {
+  @override
+  State<_RejectMessageDialog> createState() => _RejectMessageDialogState();
+}
+
+class _RejectMessageDialogState extends State<_RejectMessageDialog> {
+  final _controller = TextEditingController();
+  final _focus = FocusNode();
+
+  bool get _isValid {
+    final len = _controller.text.trim().length;
+    return len >= 10 && len <= 20;
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final len = _controller.text.trim().length;
+    String? helperText;
+    if (len > 0 && len < 10) {
+      helperText = '10자 이상 입력해 주세요';
+    } else if (len > 20) {
+      helperText = '20자 이하로 입력해 주세요';
+    } else {
+      helperText = '10자에서 20자 사이로 입력해 주세요. 요청자에게 전달돼요.';
+    }
+    return AlertDialog(
+      title: const Text('거절 사유'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '거절하려면 10~20자로 적어 주세요. 요청자에게 전달돼요.',
+              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _controller,
+              focusNode: _focus,
+              autofocus: true,
+              maxLines: 3,
+              maxLength: 20,
+              decoration: InputDecoration(
+                hintText: '예: 지금은 만날 생각이 없어요',
+                border: const OutlineInputBorder(),
+                helperText: helperText,
+                helperStyle: TextStyle(
+                  color: len > 0 && !_isValid ? theme.colorScheme.error : theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              onChanged: (_) => setState(() {}),
+              onSubmitted: (_) {
+                if (_isValid) Navigator.of(context).pop(_controller.text.trim());
+              },
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop<String?>(null),
+          child: const Text('취소'),
+        ),
+        FilledButton(
+          onPressed: _isValid ? () => Navigator.of(context).pop(_controller.text.trim()) : null,
+          child: const Text('거절하기'),
+        ),
+      ],
     );
   }
 }
