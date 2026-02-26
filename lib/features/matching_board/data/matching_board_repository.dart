@@ -45,9 +45,17 @@ class MatchingBoardRepository {
     await _client.dio.post('/matching-board/take-note', data: {'profileId': profileId});
   }
 
-  /// 내가 받은 가져가기 요청 목록 (메일함용, pending만)
+  /// 내가 받은 가져가기 요청 목록 (매칭대기함용, pending만)
   Future<List<Map<String, dynamic>>> fetchMyTakeNoteRequests() async {
     final response = await _client.dio.get('/matching-board/take-note-requests');
+    final list = response.data;
+    if (list is! List) return [];
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  /// 내가 보낸 가져가기 요청 목록 (상대방 읽음 여부 포함)
+  Future<List<Map<String, dynamic>>> fetchMySentTakeNoteRequests() async {
+    final response = await _client.dio.get('/matching-board/take-note-requests/sent');
     final list = response.data;
     if (list is! List) return [];
     return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();

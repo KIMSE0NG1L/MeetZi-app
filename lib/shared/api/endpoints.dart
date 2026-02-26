@@ -12,6 +12,7 @@ class ApiEndpoints {
       '/matching/$matchId/consent-status';
   static const String chatsRooms = '/chats/rooms';
   static String chatsRoom(String roomId) => '/chats/rooms/$roomId';
+  static String chatsRoomMute(String roomId) => '/chats/rooms/$roomId/mute';
   static String chatsMessages(String roomId) => '/chats/rooms/$roomId/messages';
   static String chatsMessageRead(String roomId, String messageId) =>
       '/chats/rooms/$roomId/messages/$messageId/read';
@@ -32,4 +33,14 @@ class ApiEndpoints {
       '/environments/$environmentId/email-verifications/confirm';
   static const String health = '/health';
   static String userBlock(String userId) => '/users/block/$userId';
+
+  // 커뮤니티 (학교별, 누구나 진입 가능)
+  static String community(String environmentId) => '/communities/$environmentId';
+  static String communityPosts(String environmentId) => '/communities/$environmentId/posts';
+  static String communityPost(String environmentId, String postId) =>
+      '/communities/$environmentId/posts/$postId';
+  static String communityPostComments(String environmentId, String postId) =>
+      '/communities/$environmentId/posts/$postId/comments';
+  static String communityPostLike(String environmentId, String postId) =>
+      '/communities/$environmentId/posts/$postId/like';
 }

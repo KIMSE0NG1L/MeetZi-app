@@ -20,6 +20,10 @@ class ChatRepository {
     return Map<String, dynamic>.from(response.data as Map);
   }
 
+  Future<void> setChatRoomMute({required String roomId, required bool muted}) async {
+    await _client.dio.post(ApiEndpoints.chatsRoomMute(roomId), data: {'muted': muted});
+  }
+
   Future<Map<String, dynamic>> createRoom({required String matchId}) async {
     final response = await _client.dio.post(
       ApiEndpoints.chatsRooms,

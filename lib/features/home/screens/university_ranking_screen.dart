@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/auth/data/environment_repository.dart';
+import 'package:nearo_app/features/community/screens/community_screen.dart';
 
 /// AppDesign RankingScreen: 보라 테마, 트로피 섹션, 카드형 랭킹 리스트
 class UniversityRankingScreen extends StatefulWidget {
@@ -168,6 +169,31 @@ class _UniversityRankingScreenState extends State<UniversityRankingScreen> with 
                           padding: const EdgeInsets.all(16),
                           child: Row(
                             children: [
+                              if (item['environmentId'] != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 12),
+                                  child: IconButton(
+                                    onPressed: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute<void>(
+                                          builder: (_) => CommunityScreen(
+                                            environmentId: item['environmentId'] as String,
+                                            schoolName: name,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    icon: Icon(
+                                      LucideIcons.messageCircle,
+                                      color: isTop3 ? _purple : (dark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280)),
+                                      size: 24,
+                                    ),
+                                    tooltip: '커뮤니티',
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: dark ? const Color(0xFF374151) : const Color(0xFFF3F4F6),
+                                    ),
+                                  ),
+                                ),
                               Container(
                                 width: 48,
                                 height: 48,
