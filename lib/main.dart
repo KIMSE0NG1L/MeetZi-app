@@ -88,7 +88,7 @@ void main() async {
 
 
 
-  // 알림 히스토리 저장 (알람 확인 화면에서 조회용). 매칭(가져가기) 알림은 메일함으로만 감
+  // 알림 히스토리 저장 (알람 확인 화면에서 조회용). 매칭(가져가기) 알림은 매칭대기함으로만 감
   final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
   if (initialMessage != null && initialMessage.data.isNotEmpty) {
     final type = initialMessage.data['type']?.toString();
@@ -101,6 +101,7 @@ void main() async {
         PendingTakeNoteStore.instance.setPending(requestId, requesterProfile);
       }
     } else {
+      // take_note_rejected 포함 기타 알림은 히스토리에 저장
       _saveNotificationToHistory(initialMessage);
     }
   }
@@ -118,37 +119,35 @@ void main() async {
           if (rp is Map) requesterProfile = Map<String, dynamic>.from(rp);
           PendingTakeNoteStore.instance.setPending(requestId, requesterProfile);
         }
-        // 매칭 알림은 메일함에만 (알림 목록에 저장 안 함)
+        // 매칭 알림은 매칭대기함에만 (알림 목록에 저장 안 함)
+      } else if (type == 'take_note_rejected') {
+        // 보낸 가져가기 요청이 거절됐을 때: 포그라운드에서도 로컬 알림 표시
+        final title = message.notification?.title ?? '가져가기 거절';
+        final body = message.notification?.body ?? '상대방이 가져가기 요청을 거절했어요.';
+        _saveNotificationToHistory(message);
+        flutterLocalNotificationsPlugin.show(
+          id: ('take_note_rejected_${message.messageId ?? DateTime.now().millisecondsSinceEpoch}').hashCode.abs(),
+          title: title,
+          body: body,
+          notificationDetails: NotificationDetails(
+            android: AndroidNotificationDetails(
+              channel.id,
+              channel.name,
+              channelDescription: channel.description,
+              importance: Importance.max,
+              priority: Priority.high,
+              icon: '@mipmap/ic_launcher',
+            ),
+          ),
+          payload: message.data.toString(),
+        );
       } else {
         _saveNotificationToHistory(message);
       }
     }
-    // 앱이 포그라운드일 때는 FCM 푸시 무시(로컬 알림만 표시)
-    // (아래 코드를 주석 처리하거나, 조건문으로 분기 가능)
-    // RemoteNotification? notification = message.notification;
-    // AndroidNotification? android = message.notification?.android;
-    // if (notification != null && android != null) {
-    //   flutterLocalNotificationsPlugin.show(
-    //     id: notification.hashCode,
-    //     title: notification.title,
-    //     body: notification.body,
-    //     notificationDetails: NotificationDetails(
-    //       android: AndroidNotificationDetails(
-    //         channel.id,
-    //         channel.name,
-    //         channelDescription: channel.description,
-    //         importance: Importance.max,
-    //         priority: Priority.high,
-    //         icon: '@mipmap/ic_launcher',
-    //       ),
-    //     ),
-    //     payload: message.data.toString(),
-    //   );
-    // }
-    // FCM 푸시 무시: 아무 동작도 하지 않음
   });
 
-  // 4. 알림 클릭 시 앱 오픈 핸들러 (가져가기 요청이면 메일함용으로만 처리, 알림 목록에는 안 넣음)
+  // 4. 알림 클릭 시 앱 오픈 핸들러 (가져가기 요청이면 매칭대기함용으로만 처리, 알림 목록에는 안 넣음)
   FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
     print('알림 클릭으로 앱 오픈: ${message.data}');
     if (message.data.isNotEmpty || message.notification != null) {

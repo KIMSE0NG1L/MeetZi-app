@@ -73,6 +73,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
         lastTimes[roomId] = null;
       }
     }
+    if (!mounted) return;
     setState(() {
       _unreadCounts = unreadCounts;
       _lastMessageTimes = lastTimes;
@@ -132,6 +133,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   Future<void> _loadRooms() async {
+    if (!mounted) return;
     setState(() => _loading = true);
     try {
       final rooms = await _repository.listRooms();

@@ -15,10 +15,7 @@ class UsersRepository {
     String? smoking,
     String? drinking,
     String? mbti,
-    String? bio,
     List<String>? preferredGenders,
-    int? minBirthYear,
-    int? maxBirthYear,
   }) async {
     final payload = <String, dynamic>{
       'nickname': nickname,
@@ -29,10 +26,7 @@ class UsersRepository {
       if (smoking != null) 'smoking': smoking,
       if (drinking != null) 'drinking': drinking,
       if (mbti != null) 'mbti': mbti,
-      if (bio != null) 'bio': bio,
       if (preferredGenders != null) 'preferredGenders': preferredGenders,
-      if (minBirthYear != null) 'minBirthYear': minBirthYear,
-      if (maxBirthYear != null) 'maxBirthYear': maxBirthYear,
     };
 
     final response = await _client.dio.post('/users/profile', data: payload);

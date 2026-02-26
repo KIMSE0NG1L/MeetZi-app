@@ -111,6 +111,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   final MatchingBoardRepository _repository = MatchingBoardRepository();
   List<Map<String, dynamic>> _profiles = [];
   bool _loading = false;
+  bool _isOpeningSheet = false; // 카드 연타 방지: 시트 열리는 동안 추가 탭 무시
   int? _myCredit;
   MyTickets? _myTickets;
 
@@ -427,7 +428,9 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                                   return Material(
                                     color: Colors.transparent,
                                     child: InkWell(
-                                      onTap: isMe ? null : () => _openNoteSheet(context, index, myUserId),
+                                      onTap: isMe || _isOpeningSheet
+                                          ? null
+                                          : () => _openNoteSheet(context, index, myUserId),
                                       borderRadius: BorderRadius.circular(16),
                                       child: Container(
                                         decoration: BoxDecoration(
@@ -522,97 +525,105 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   }
 
   Future<void> _openNoteSheet(BuildContext context, int startIndex, String? myUserId) async {
-    final others = myUserId != null
-        ? _profiles.where((p) => p['userId'] != myUserId).toList()
-        : List<Map<String, dynamic>>.from(_profiles);
-    final tappedProfile = startIndex < _profiles.length ? _profiles[startIndex] : null;
-    final startInOthers = tappedProfile != null ? others.indexWhere((p) => p['id'] == tappedProfile['id']) : 0;
-    final initialIndex = startInOthers >= 0 ? startInOthers : 0;
-    if (others.isEmpty) return;
-    // 열람권: 상세 보기 시 1장 소비
-    final viewTicket = _myTickets?.viewTicket ?? 0;
-    if (viewTicket <= 0) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('열람권이 부족해요. 열람권을 구매한 뒤 프로필을 확인해 주세요.')),
-      );
-      return;
-    }
-    final profileId = tappedProfile?['id']?.toString();
-    if (profileId == null || profileId.isEmpty) return;
+    if (_isOpeningSheet) return;
+    _isOpeningSheet = true;
+    if (mounted) setState(() {});
+
     try {
-      await _repository.consumeViewTicket(profileId);
-      await _fetchMyTickets();
-    } catch (e) {
+      final others = myUserId != null
+          ? _profiles.where((p) => p['userId'] != myUserId).toList()
+          : List<Map<String, dynamic>>.from(_profiles);
+      final tappedProfile = startIndex < _profiles.length ? _profiles[startIndex] : null;
+      final startInOthers = tappedProfile != null ? others.indexWhere((p) => p['id'] == tappedProfile['id']) : 0;
+      final initialIndex = startInOthers >= 0 ? startInOthers : 0;
+      if (others.isEmpty) return;
+      // 열람권: 상세 보기 시 1장 소비
+      final viewTicket = _myTickets?.viewTicket ?? 0;
+      if (viewTicket <= 0) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('열람권이 부족해요. 열람권을 구매한 뒤 프로필을 확인해 주세요.')),
+        );
+        return;
+      }
+      final profileId = tappedProfile?['id']?.toString();
+      if (profileId == null || profileId.isEmpty) return;
+      try {
+        await _repository.consumeViewTicket(profileId);
+        await _fetchMyTickets();
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        );
+        return;
+      }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      final sheetContent = _BoardNoteSheetContent(
+        profiles: others,
+        startIndex: initialIndex,
+        buildAvatar: _buildBoardAvatar,
+        onTakeNote: _takeNote,
+        onPop: () {
+          _fetchProfiles();
+          _fetchMyTickets();
+        },
+        myMatchingTicket: _myTickets?.matchingTicket ?? 0,
+        onRefreshTickets: _fetchMyTickets,
       );
-      return;
-    }
-    if (!mounted) return;
-    final sheetContent = _BoardNoteSheetContent(
-      profiles: others,
-      startIndex: initialIndex,
-      buildAvatar: _buildBoardAvatar,
-      onTakeNote: _takeNote,
-      onPop: () {
-        _fetchProfiles();
-        _fetchMyTickets();
-      },
-      myMatchingTicket: _myTickets?.matchingTicket ?? 0,
-      onRefreshTickets: _fetchMyTickets,
-    );
-    // AppDesign ProfileDetailModal: 열기/닫기 rotateY 플립, scale, opacity, perspective 1000px, spring
-    showGeneralDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: '닫기',
-      barrierColor: Colors.transparent,
-      transitionDuration: const Duration(milliseconds: 600),
-      pageBuilder: (_, __, ___) => const SizedBox.shrink(),
-      transitionBuilder: (ctx, animation, secondaryAnimation, child) {
-        return AnimatedBuilder(
-          animation: animation,
-          builder: (context, _) {
-            final t = Curves.easeOutBack.transform(animation.value);
-            final barrierOpacity = 0.6 * t;
-            final opacity = t;
-            final scale = 0.5 + 0.5 * t;
-            final isReverse = animation.status == AnimationStatus.reverse;
-            final rotateYDeg = isReverse ? 180.0 - 180.0 * t : -180.0 + 180.0 * t;
-            final rotateYRad = rotateYDeg * (3.14159265359 / 180.0);
-            return Stack(
-              children: [
-                GestureDetector(
-                  onTap: () => Navigator.of(ctx).pop(),
-                  child: Container(color: Colors.black.withOpacity(barrierOpacity)),
-                ),
-                Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 390),
-                    child: Transform(
-                      alignment: Alignment.center,
-                      transform: Matrix4.identity()
-                        ..setEntry(3, 2, 0.001)
-                        ..rotateY(rotateYRad),
-                      child: Transform.scale(
-                        scale: scale,
+      // AppDesign ProfileDetailModal: 열기/닫기 rotateY 플립, scale, opacity, perspective 1000px, spring
+      await showGeneralDialog<void>(
+        context: context,
+        barrierDismissible: true,
+        barrierLabel: '닫기',
+        barrierColor: Colors.transparent,
+        transitionDuration: const Duration(milliseconds: 600),
+        pageBuilder: (_, __, ___) => const SizedBox.shrink(),
+        transitionBuilder: (ctx, animation, secondaryAnimation, child) {
+          return AnimatedBuilder(
+            animation: animation,
+            builder: (context, _) {
+              final t = Curves.easeOutBack.transform(animation.value);
+              final barrierOpacity = 0.6 * t;
+              final opacity = t;
+              final scale = 0.5 + 0.5 * t;
+              final isReverse = animation.status == AnimationStatus.reverse;
+              final rotateYDeg = isReverse ? 180.0 - 180.0 * t : -180.0 + 180.0 * t;
+              final rotateYRad = rotateYDeg * (3.14159265359 / 180.0);
+              return Stack(
+                children: [
+                  GestureDetector(
+                    onTap: () => Navigator.of(ctx).pop(),
+                    child: Container(color: Colors.black.withOpacity(barrierOpacity)),
+                  ),
+                  Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 390),
+                      child: Transform(
                         alignment: Alignment.center,
-                        child: Opacity(
-                          opacity: opacity.clamp(0.0, 1.0),
-                          child: sheetContent,
+                        transform: Matrix4.identity()
+                          ..setEntry(3, 2, 0.001)
+                          ..rotateY(rotateYRad),
+                        child: Transform.scale(
+                          scale: scale,
+                          alignment: Alignment.center,
+                          child: Opacity(
+                            opacity: opacity.clamp(0.0, 1.0),
+                            child: sheetContent,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
+                ],
+              );
+            },
+          );
+        },
+      );
+    } finally {
+      if (mounted) setState(() => _isOpeningSheet = false);
+    }
   }
 
   Future<void> _takeNote(String profileId) async {

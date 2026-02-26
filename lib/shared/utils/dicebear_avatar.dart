@@ -1,5 +1,9 @@
 /// DiceBear 9.x notionists SVG, no API key.
 /// Same seed => same avatar. 옵션으로 사용자가 꾸미기 가능 (hair, eyes, glasses, backgroundColor 등).
+import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+
 const String _base = 'https://api.dicebear.com/9.x/notionists/svg';
 
 String diceBearAvatarUrl(
@@ -27,4 +31,38 @@ String diceBearAvatarUrl(
       .map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
       .join('&');
   return '$_base?$query';
+}
+
+/// 위젯: seed/style로 DiceBear 아바타 표시
+class DiceBearAvatar extends StatelessWidget {
+  final String seed;
+  final String style;
+  final Map<String, String>? options;
+  final double size;
+
+  const DiceBearAvatar({
+    super.key,
+    required this.seed,
+    this.style = 'notionists',
+    this.options,
+    this.size = 40,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final url = diceBearAvatarUrl(seed, style: style, options: options);
+    return CircleAvatar(
+      radius: size / 2,
+      backgroundColor: Colors.grey.shade300,
+      child: ClipOval(
+        child: SvgPicture.network(
+          url,
+          fit: BoxFit.cover,
+          width: size,
+          height: size,
+          placeholderBuilder: (_) => Icon(LucideIcons.user, size: size * 0.6, color: Colors.grey.shade600),
+        ),
+      ),
+    );
+  }
 }

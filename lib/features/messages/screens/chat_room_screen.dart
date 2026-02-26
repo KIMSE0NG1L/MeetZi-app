@@ -58,25 +58,41 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
   bool _isMuted = false;
   Future<void> _toggleMute() async {
     if (_roomId == null) return;
+    final newMute = !_isMuted;
+    try {
+      await _repository.setChatRoomMute(roomId: _roomId!, muted: newMute);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('알림 설정에 실패했어요. 다시 시도해 주세요.')),
+        );
+      }
+      return;
+    }
     final prefs = await SharedPreferences.getInstance();
     final key = 'chat_mute_${_roomId!}';
-    final newMute = !_isMuted;
     await prefs.setBool(key, newMute);
+    if (!mounted) return;
     setState(() {
       _isMuted = newMute;
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(_isMuted ? '채팅방 알람이 꺼졌습니다.' : '채팅방 알람이 켜졌습니다.')),
+      SnackBar(content: Text(_isMuted ? '채팅방 알림이 꺼졌습니다.' : '채팅방 알림이 켜졌습니다.')),
     );
   }
   Future<void> _loadMuteStatus() async {
     if (_roomId == null) return;
-    final prefs = await SharedPreferences.getInstance();
-    final key = 'chat_mute_${_roomId!}';
-    final muted = prefs.getBool(key) ?? false;
-    setState(() {
-      _isMuted = muted;
-    });
+    try {
+      final room = await _repository.getRoom(roomId: _roomId!);
+      final muted = room['muted'] == true;
+      if (mounted) setState(() => _isMuted = muted);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('chat_mute_${_roomId!}', muted);
+    } catch (_) {
+      final prefs = await SharedPreferences.getInstance();
+      final muted = prefs.getBool('chat_mute_${_roomId!}') ?? false;
+      if (mounted) setState(() => _isMuted = muted);
+    }
   }
 
   String _formatMessageTime(DateTime? dateTime) {
@@ -191,6 +207,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
     try {
       final room = await _repository.getRoom(roomId: _roomId!);
       if (!mounted) return;
+      // 서버의 알림 끔 상태 동기화
+      if (room['muted'] != null && (room['muted'] == true) != _isMuted) {
+        setState(() => _isMuted = room['muted'] == true);
+      }
       // 매칭 취소 시 서버에서 isActive=false로 오므로 주기적으로 반영해 입력 막기
       final isActiveFromServer = room['isActive'] == true;
       if (!isActiveFromServer && _isActive) {
