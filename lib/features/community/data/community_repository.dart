@@ -64,4 +64,9 @@ class CommunityRepository {
     );
     return Map<String, dynamic>.from(response.data as Map);
   }
+
+  /// 게시글 삭제 (본인 글만, 로그인 필요)
+  Future<void> deletePost(String environmentId, String postId) async {
+    await _client.dio.delete(ApiEndpoints.communityPostDelete(environmentId, postId));
+  }
 }

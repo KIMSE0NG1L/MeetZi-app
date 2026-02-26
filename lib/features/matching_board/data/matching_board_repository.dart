@@ -41,8 +41,11 @@ class MatchingBoardRepository {
   }
 
   /// 가져가기 요청 전송 (상대에게 알림 감, 수락 시에만 매칭 성사 / 거절 시 매칭권 환불)
-  Future<void> takeNote(String profileId) async {
-    await _client.dio.post('/matching-board/take-note', data: {'profileId': profileId});
+  /// [message]: 보낼 멘트 (선택). 상대방 요청 상세 화면에 표시됨.
+  Future<void> takeNote(String profileId, {String? message}) async {
+    final body = <String, dynamic>{'profileId': profileId};
+    if (message != null && message.trim().isNotEmpty) body['message'] = message.trim();
+    await _client.dio.post('/matching-board/take-note', data: body);
   }
 
   /// 내가 받은 가져가기 요청 목록 (매칭대기함용, pending만)
@@ -72,9 +75,12 @@ class MatchingBoardRepository {
     await _client.dio.post('/matching-board/take-note-requests/$requestId/accept');
   }
 
-  /// 가져가기 요청 거절 → 요청자 매칭권 환불
-  Future<void> rejectTakeNoteRequest(String requestId) async {
-    await _client.dio.post('/matching-board/take-note-requests/$requestId/reject');
+  /// 가져가기 요청 거절 → 요청자 매칭권 환불. [rejectionMessage] 10자 이상 필수.
+  Future<void> rejectTakeNoteRequest(String requestId, String rejectionMessage) async {
+    await _client.dio.post(
+      '/matching-board/take-note-requests/$requestId/reject',
+      data: {'message': rejectionMessage.trim()},
+    );
   }
 
   /// 열람권 1장 소비 후 프로필 상세 열람 (카드 탭 시 호출)

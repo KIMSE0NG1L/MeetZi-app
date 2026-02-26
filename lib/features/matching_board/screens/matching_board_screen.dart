@@ -21,7 +21,7 @@ Future<void> showBoardNoteSheet(
   VoidCallback? onPop,
   int myMatchingTicket = 0,
   Future<void> Function()? onRefreshTickets,
-  Future<void> Function(String profileId)? onTakeNote,
+  Future<bool> Function(String profileId)? onTakeNote,
   /// true면 넘기기/가져가기 버튼 숨김 (채팅방에서 프로필 보기용)
   bool hideActionButtons = false,
 }) async {
@@ -29,7 +29,7 @@ Future<void> showBoardNoteSheet(
     profiles: profiles,
     startIndex: startIndex,
     buildAvatar: buildAvatar,
-    onTakeNote: onTakeNote ?? (_) async {},
+    onTakeNote: onTakeNote ?? (_) async => false,
     onPop: onPop ?? () {},
     myMatchingTicket: myMatchingTicket,
     onRefreshTickets: onRefreshTickets,
@@ -111,6 +111,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   final MatchingBoardRepository _repository = MatchingBoardRepository();
   List<Map<String, dynamic>> _profiles = [];
   bool _loading = false;
+  bool _isRegistering = false;
   bool _isOpeningSheet = false; // 카드 연타 방지: 시트 열리는 동안 추가 탭 무시
   int? _myCredit;
   MyTickets? _myTickets;
@@ -178,6 +179,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   }
 
   Future<void> _registerProfile() async {
+    if (_isRegistering) return;
     final registerTicket = _myTickets?.registerTicket ?? 0;
     if (registerTicket <= 0) {
       if (!mounted) return;
@@ -186,6 +188,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       );
       return;
     }
+    setState(() => _isRegistering = true);
     try {
       final authRepo = AuthRepository();
       final profile = await authRepo.getProfile();
@@ -216,10 +219,13 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('프로필 등록 완료! 매칭권 1장이 지급됐어요.')));
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isRegistering = false);
     }
   }
 
@@ -413,7 +419,30 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                                 await _fetchProfiles();
                                 await _fetchMyTickets();
                               },
-                              child: GridView.builder(
+                              child: _profiles.isEmpty
+                                  ? ListView(
+                                      physics: const AlwaysScrollableScrollPhysics(),
+                                      padding: const EdgeInsets.only(top: 48),
+                                      children: [
+                                        Icon(LucideIcons.users, size: 56, color: onSurfaceVariant),
+                                        const SizedBox(height: 20),
+                                        Text(
+                                          '게시판이 비어 있어요',
+                                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: onSurface),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                                          child: Text(
+                                            '· 게시판에는 같은 학교 인증을 완료한 상대 성별 프로필만 보여요.\n· 나와 친구 모두 **같은 학교**를 선택하고, 이메일(또는 초대코드) 인증을 완료했는지 확인해 주세요.\n· 내가 올린 카드는 상대에게만 보이고, 내 화면에는 안 보여요.',
+                                            style: TextStyle(fontSize: 14, color: onSurfaceVariant, height: 1.5),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  : GridView.builder(
                                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                                   crossAxisCount: 3,
                                   childAspectRatio: 0.62,
@@ -495,23 +524,31 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                       bottom: 24,
                       child: Center(
                         child: Material(
-                          color: Theme.of(context).colorScheme.primary,
+                          color: _isRegistering
+                              ? Theme.of(context).colorScheme.primary.withOpacity(0.7)
+                              : Theme.of(context).colorScheme.primary,
                           borderRadius: BorderRadius.circular(999),
                           elevation: 8,
                           shadowColor: Colors.black.withOpacity(0.25),
                           child: InkWell(
-                            onTap: _registerProfile,
+                            onTap: _isRegistering ? null : _registerProfile,
                             borderRadius: BorderRadius.circular(999),
                             child: Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(LucideIcons.plus, color: Colors.white, size: 22),
-                                  const SizedBox(width: 8),
-                                  const Text('등록', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                                ],
-                              ),
+                              child: _isRegistering
+                                  ? const SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                    )
+                                  : Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(LucideIcons.plus, color: Colors.white, size: 22),
+                                        const SizedBox(width: 8),
+                                        const Text('등록', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                                      ],
+                                    ),
                             ),
                           ),
                         ),
@@ -626,25 +663,101 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     }
   }
 
-  Future<void> _takeNote(String profileId) async {
+  Future<bool> _takeNote(String profileId) async {
     final matchingTicket = _myTickets?.matchingTicket ?? 0;
     if (matchingTicket <= 0) {
-      if (!mounted) return;
+      if (!mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('매칭권이 부족해요. 매칭권을 구매한 뒤 가져가기를 시도해 주세요.')),
       );
-      return;
+      return false;
     }
+    final message = await showDialog<String?>(
+      context: context,
+      builder: (ctx) => _TakeNoteMessageDialog(),
+    );
+    if (!mounted) return false;
+    if (message == null) return false; // 취소 시 요청 안 보냄
+    final trimmed = message.trim();
+    if (trimmed.length < 10 || trimmed.length > 20) return false;
     try {
-      await _repository.takeNote(profileId);
+      await _repository.takeNote(profileId, message: trimmed);
       await _fetchProfiles();
       await _fetchMyTickets();
-      if (!mounted) return;
+      if (!mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('요청을 보냈어요. 상대가 수락하면 매칭돼요.')));
+      return true;
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+      return false;
     }
+  }
+}
+
+/// 가져가기 요청 시 상대에게 보낼 멘트 입력 다이얼로그. 10~20자 필수. 확인 시 입력 텍스트 반환, 취소 시 null.
+class _TakeNoteMessageDialog extends StatefulWidget {
+  @override
+  State<_TakeNoteMessageDialog> createState() => _TakeNoteMessageDialogState();
+}
+
+class _TakeNoteMessageDialogState extends State<_TakeNoteMessageDialog> {
+  final _controller = TextEditingController();
+  final _focus = FocusNode();
+
+  bool get _isValid {
+    final len = _controller.text.trim().length;
+    return len >= 10 && len <= 20;
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AlertDialog(
+      title: const Text('가져가기 멘트'),
+      content: SingleChildScrollView(
+        child: TextField(
+          controller: _controller,
+          focusNode: _focus,
+          autofocus: true,
+          maxLines: 3,
+          maxLength: 20,
+          decoration: InputDecoration(
+            hintText: '상대에게 보낼 말 (10~20자)',
+            border: const OutlineInputBorder(),
+            helperText: _controller.text.trim().isNotEmpty && !_isValid
+                ? (_controller.text.trim().length < 10
+                    ? '10자 이상 입력해 주세요'
+                    : '20자 이하로 입력해 주세요')
+                : '10자에서 20자 사이로 입력해 주세요',
+            helperStyle: TextStyle(
+              color: _controller.text.trim().isNotEmpty && !_isValid ? theme.colorScheme.error : theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          onChanged: (_) => setState(() {}),
+          onSubmitted: (_) {
+            if (_isValid) Navigator.of(context).pop(_controller.text.trim());
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop<String?>(null),
+          child: const Text('취소'),
+        ),
+        FilledButton(
+          onPressed: _isValid ? () => Navigator.of(context).pop(_controller.text.trim()) : null,
+          child: const Text('보내기'),
+        ),
+      ],
+    );
   }
 }
 
@@ -725,7 +838,7 @@ class _BoardNoteSheetContent extends StatefulWidget {
   final List<Map<String, dynamic>> profiles;
   final int startIndex;
   final Widget Function(BuildContext context, Map<String, dynamic> profile) buildAvatar;
-  final Future<void> Function(String profileId) onTakeNote;
+  final Future<bool> Function(String profileId) onTakeNote;
   final VoidCallback onPop;
   final int myMatchingTicket;
   final Future<void> Function()? onRefreshTickets;
@@ -776,10 +889,11 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
 
     setState(() => _taking = true);
     try {
-      await widget.onTakeNote(_profile['id'] as String);
+      final sent = await widget.onTakeNote(_profile['id'] as String);
       if (widget.onRefreshTickets != null) await widget.onRefreshTickets!();
       if (!mounted) return;
       setState(() => _taking = false);
+      if (!sent) return; // 취소했거나 실패 시 축하 안 함
       // AppDesign ProfileDetailModal: 카드 비행 1.5초 + 스파클 12 → 성공 문구 2초
       await showDialog<void>(
         context: context,

@@ -39,8 +39,13 @@ class ApiEndpoints {
   static String communityPosts(String environmentId) => '/communities/$environmentId/posts';
   static String communityPost(String environmentId, String postId) =>
       '/communities/$environmentId/posts/$postId';
+  static String communityPostDelete(String environmentId, String postId) =>
+      '/communities/$environmentId/posts/$postId';
   static String communityPostComments(String environmentId, String postId) =>
       '/communities/$environmentId/posts/$postId/comments';
   static String communityPostLike(String environmentId, String postId) =>
       '/communities/$environmentId/posts/$postId/like';
+
+  // 신고
+  static const String reportCommunityPost = '/report/community-post';
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/community/data/community_repository.dart';
 import 'package:nearo_app/features/community/screens/community_post_detail_screen.dart';
 import 'package:nearo_app/features/community/screens/community_post_write_screen.dart';
@@ -24,13 +25,26 @@ class _CommunityScreenState extends State<CommunityScreen> {
   final CommunityRepository _repo = CommunityRepository();
   List<Map<String, dynamic>> _posts = [];
   String? _nextCursor;
+  String? _myUserId;
   bool _loading = true;
   bool _loadingMore = false;
 
   @override
   void initState() {
     super.initState();
+    _loadMyUserId();
     _load();
+  }
+
+  Future<void> _loadMyUserId() async {
+    try {
+      final res = await AuthRepository().getProfile();
+      final user = res['user'] as Map<String, dynamic>?;
+      final id = user?['id']?.toString();
+      if (mounted) setState(() => _myUserId = id);
+    } catch (_) {
+      if (mounted) setState(() => _myUserId = null);
+    }
   }
 
   Future<void> _load() async {
@@ -80,16 +94,24 @@ class _CommunityScreenState extends State<CommunityScreen> {
   }
 
   void _openPost(Map<String, dynamic> post) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
+    Navigator.of(context).push<bool?>(
+      MaterialPageRoute<bool?>(
         builder: (_) => CommunityPostDetailScreen(
           environmentId: widget.environmentId,
           schoolName: widget.schoolName,
           postId: post['id'] as String,
           initialPost: post,
+          myUserId: _myUserId,
         ),
       ),
-    ).then((_) => _load());
+    ).then((deleted) {
+      _load();
+      if (deleted == true && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('글이 삭제되었어요.')),
+        );
+      }
+    });
   }
 
   @override
@@ -132,6 +154,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         final post = _posts[index];
                         final author = post['author'] as Map<String, dynamic>? ?? {};
                         final nickname = author['nickname']?.toString() ?? '알 수 없음';
+                        final authorId = author['id']?.toString();
+                        final isMe = _myUserId != null && authorId == _myUserId;
+                        final isDailyBest = post['isDailyBest'] == true;
                         final content = post['content']?.toString() ?? '';
                         final likeCount = (post['likeCount'] is int) ? post['likeCount'] as int : 0;
                         final commentCount = (post['commentCount'] is int) ? post['commentCount'] as int : 0;
@@ -154,10 +179,52 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                       ),
                                       const SizedBox(width: 12),
                                       Expanded(
-                                        child: Text(
-                                          nickname,
-                                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-                                          overflow: TextOverflow.ellipsis,
+                                        child: Row(
+                                          children: [
+                                            Flexible(
+                                              child: Text(
+                                                nickname,
+                                                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                            if (isMe) ...[
+                                              const SizedBox(width: 6),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: Text(
+                                                  '작성자',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Theme.of(context).colorScheme.primary,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                            if (isDailyBest) ...[
+                                              const SizedBox(width: 6),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.amber.withOpacity(0.3),
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: const Text(
+                                                  '일간 베스트',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Color(0xFFB45309),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ],
                                         ),
                                       ),
                                     ],
