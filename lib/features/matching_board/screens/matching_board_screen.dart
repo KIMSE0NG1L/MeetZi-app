@@ -191,18 +191,24 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     setState(() => _isRegistering = true);
     try {
       final authRepo = AuthRepository();
-      final profile = await authRepo.getProfile();
-      final nickname = profile['nickname'];
-      final gender = profile['gender'];
-      String school = profile['school'] ?? profile['affiliationText'] ?? '세종대';
-      final department = profile['department']?.toString();
-      final userEnvs = profile['userEnvironments'];
-      if (school.isEmpty && userEnvs != null && userEnvs is List && userEnvs.isNotEmpty) {
-        final env = userEnvs[0]['environment'];
-        if (env != null && env['name'] != null) school = env['name'];
+      final profileRaw = await authRepo.getProfile();
+      final profile = profileRaw is Map<String, dynamic> ? profileRaw : <String, dynamic>{};
+      // GET /users/me 는 user 객체 그대로 반환. nickname/gender 등은 profile 또는 profile['user']에 있을 수 있음.
+      final user = profile['user'] is Map ? profile['user'] as Map<String, dynamic> : profile;
+      final nickname = user['nickname']?.toString();
+      final gender = user['gender']?.toString();
+      String school = user['school']?.toString() ?? user['affiliationText']?.toString() ?? profile['affiliationText']?.toString() ?? '세종대';
+      final department = user['department']?.toString();
+      final userEnvs = profile['userEnvironments'] ?? user['userEnvironments'];
+      if ((school.isEmpty || school == 'null') && userEnvs != null && userEnvs is List && userEnvs.isNotEmpty) {
+        final first = userEnvs[0];
+        if (first is Map && first['environment'] is Map) {
+          final name = (first['environment'] as Map)['name']?.toString();
+          if (name != null && name.isNotEmpty) school = name;
+        }
       }
-      if (school.isEmpty) school = '세종대';
-      if (nickname == null || gender == null || school == null) {
+      if (school.isEmpty || school == 'null') school = '세종대';
+      if (nickname == null || nickname.isEmpty || gender == null || gender.isEmpty) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('프로필 정보가 없습니다.')));
         return;
