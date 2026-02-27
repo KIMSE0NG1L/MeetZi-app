@@ -6,6 +6,7 @@ import 'package:nearo_app/app/app.dart';
 import 'package:nearo_app/features/notifications/data/notification_history_store.dart';
 import 'package:nearo_app/features/notifications/data/pending_take_note_store.dart';
 import 'package:nearo_app/shared/api/api_client.dart';
+import 'package:nearo_app/shared/utils/app_config.dart';
 import 'package:app_badge_plus/app_badge_plus.dart';
 
 void _saveNotificationToHistory(RemoteMessage message) {
@@ -28,6 +29,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 void main() async {
   // 초기화 보장
   WidgetsFlutterBinding.ensureInitialized();
+  print('[NEARO] baseUrl = ${AppConfig.baseUrl}');
   await Firebase.initializeApp();
 
   // FCM 설정 및 권한 요청

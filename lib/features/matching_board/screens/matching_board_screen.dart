@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math' as math;
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -224,11 +225,32 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       await _fetchMyTickets();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('프로필 등록 완료! 매칭권 1장이 지급됐어요.')));
-    } catch (e) {
+    } catch (e, _) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-        );
+        String message = '등록 중 오류가 발생했어요.';
+        if (e is DioException) {
+          final res = e.response?.data;
+          final code = e.response?.statusCode;
+          if (res is Map && res['message'] != null) {
+            message = res['message'].toString();
+          } else if (code == 403) {
+            message = '등록권이 부족해요. 등록권을 구매한 뒤 등록해 주세요.';
+          } else if (code == 429) {
+            message = '요청이 너무 많아요. 잠시 후 다시 시도해 주세요.';
+          } else if (e.type == DioExceptionType.connectionError ||
+              e.type == DioExceptionType.connectionTimeout ||
+              e.type == DioExceptionType.sendTimeout ||
+              e.type == DioExceptionType.receiveTimeout) {
+            message = '서버에 연결할 수 없어요. 네트워크를 확인한 뒤 다시 시도해 주세요.';
+          } else if (code == 401) {
+            message = '로그인 정보가 만료됐어요. 다시 로그인해 주세요.';
+          } else if (e.message != null && e.message!.isNotEmpty) {
+            message = e.message!;
+          }
+        } else {
+          message = e.toString().replaceFirst('Exception: ', '');
+        }
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
       }
     } finally {
       if (mounted) setState(() => _isRegistering = false);

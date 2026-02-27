@@ -32,7 +32,8 @@ class ApiClient {
           final client = HttpClient(context: context);
           client.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
           client.connectionTimeout = const Duration(seconds: 25);
-          client.idleTimeout = const Duration(seconds: 15);
+          // 15초 기본값이면 유휴 후 연결 끊김 → ngrok 터널과 겹쳐 30초 내외에 데이터 못 받는 현상 발생 가능. 60초로 유지.
+          client.idleTimeout = const Duration(seconds: 60);
           return client;
         },
       );
