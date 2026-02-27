@@ -28,8 +28,11 @@ class ApiClient {
     if (AppConfig.baseUrl.contains('ngrok')) {
       _dio.httpClientAdapter = IOHttpClientAdapter(
         createHttpClient: () {
-          final client = HttpClient();
+          final context = SecurityContext(withTrustedRoots: false);
+          final client = HttpClient(context: context);
           client.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+          client.connectionTimeout = const Duration(seconds: 25);
+          client.idleTimeout = const Duration(seconds: 15);
           return client;
         },
       );

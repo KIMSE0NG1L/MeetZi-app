@@ -45,6 +45,8 @@ class ApiEndpoints {
       '/communities/$environmentId/posts/$postId/comments';
   static String communityPostLike(String environmentId, String postId) =>
       '/communities/$environmentId/posts/$postId/like';
+  static String communityPostVote(String environmentId, String postId) =>
+      '/communities/$environmentId/posts/$postId/vote';
 
   // 신고
   static const String reportCommunityPost = '/report/community-post';

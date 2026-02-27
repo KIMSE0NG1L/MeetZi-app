@@ -48,6 +48,31 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             case 'night_owl': return '야행성';
             default: return s;
           }
+        case 'preferredDateType':
+          switch (s.toLowerCase()) {
+            case 'cafe': return '카페 탐방';
+            case 'walk': return '산책';
+            case 'movie': return '영화';
+            case 'drink': return '술 한잔';
+            case 'exercise': return '운동';
+            case 'food_tour': return '맛집 투어';
+            case 'drive': return '드라이브';
+            default: return s;
+          }
+        case 'smoking':
+          switch (s.toLowerCase()) {
+            case 'none': return '비흡연';
+            case 'sometimes': return '가끔';
+            case 'often': return '자주';
+            default: return s;
+          }
+        case 'drinking':
+          switch (s.toLowerCase()) {
+            case 'none': return '안 함';
+            case 'sometimes': return '가끔';
+            case 'often': return '자주';
+            default: return s;
+          }
         default:
           return s;
       }
@@ -213,6 +238,14 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                   _InfoRow(label: '학년', value: _toLabel('gradeYear', _profile?['gradeYear']), onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
                                   _InfoRow(label: 'MBTI', value: _profile?['mbti']?.toString() ?? '-', onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
                                   _InfoRow(label: '한줄소개', value: _profile?['introOneLine']?.toString() ?? '-', onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
+                                  _InfoRow(label: '이상형', value: _profile?['idealType']?.toString() ?? '-', onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
+                                  _InfoRow(label: '좋아하는 음식', value: _profile?['favoriteFood']?.toString() ?? '-', onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
+                                  _InfoRow(label: '패션 스타일', value: _toLabel('fashionStyle', _profile?['fashionStyle']), onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
+                                  _InfoRow(label: '선호 데이트', value: _toLabel('preferredDateType', _profile?['preferredDateType']), onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
+                                  _InfoRow(label: '활동 시간대', value: _toLabel('activityTime', _profile?['activityTime']), onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
+                                  _InfoRow(label: '요즘 빠진 것', value: _profile?['intoLately']?.toString() ?? '-', onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
+                                  _InfoRow(label: '흡연', value: _toLabel('smoking', _profile?['smoking']), onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
+                                  _InfoRow(label: '음주', value: _toLabel('drinking', _profile?['drinking']), onSurface: onSurface, onSurfaceVariant: onSurfaceVariant),
                                   if (_profile?['idealTypeKeywords'] is List && (_profile!['idealTypeKeywords'] as List).isNotEmpty) ...[
                                     const SizedBox(height: 16),
                                     Divider(height: 1, color: dark ? Colors.grey.shade700 : Colors.grey.shade200),

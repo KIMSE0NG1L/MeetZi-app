@@ -5,6 +5,7 @@ import 'package:nearo_app/features/community/data/community_repository.dart';
 import 'package:nearo_app/features/community/screens/community_post_detail_screen.dart';
 import 'package:nearo_app/features/community/screens/community_post_write_screen.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
+import 'package:nearo_app/shared/utils/post_time_format.dart';
 
 /// 학교별 커뮤니티 피드. 누구나 진입 가능.
 class CommunityScreen extends StatefulWidget {
@@ -39,8 +40,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
   Future<void> _loadMyUserId() async {
     try {
       final res = await AuthRepository().getProfile();
-      final user = res['user'] as Map<String, dynamic>?;
-      final id = user?['id']?.toString();
+      // GET /users/me 는 user 객체 그대로 반환. GET /auth/profile 은 { user } 반환 가능.
+      final id = (res['user'] as Map<String, dynamic>?)?['id']?.toString() ?? res['id']?.toString();
       if (mounted) setState(() => _myUserId = id);
     } catch (_) {
       if (mounted) setState(() => _myUserId = null);
@@ -114,6 +115,79 @@ class _CommunityScreenState extends State<CommunityScreen> {
     });
   }
 
+  Future<void> _showDeleteConfirm(BuildContext context, Map<String, dynamic> post) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('글 삭제'),
+        content: const Text('이 글을 삭제할까요? 삭제된 글은 복구할 수 없어요.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+    try {
+      await _repo.deletePost(widget.environmentId, post['id'] as String);
+      if (!mounted) return;
+      _load();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('글이 삭제되었어요.')),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              e.toString().contains('403') || e.toString().contains('Forbidden')
+                  ? '본인 글만 삭제할 수 있어요.'
+                  : '삭제에 실패했어요. 잠시 후 다시 시도해 주세요.',
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _toggleLike(Map<String, dynamic> post, int index) async {
+    final postId = post['id'] as String?;
+    if (postId == null) return;
+    final prevLiked = post['liked'] == true;
+    final prevCount = (post['likeCount'] is int) ? post['likeCount'] as int : 0;
+    setState(() {
+      _posts[index] = Map<String, dynamic>.from(post)
+        ..['liked'] = !prevLiked
+        ..['likeCount'] = prevCount + (prevLiked ? -1 : 1);
+    });
+    try {
+      final res = await _repo.toggleLike(widget.environmentId, postId);
+      final liked = res['liked'] as bool? ?? !prevLiked;
+      if (mounted) {
+        setState(() {
+          _posts[index] = Map<String, dynamic>.from(_posts[index])
+            ..['liked'] = liked
+            ..['likeCount'] = (liked ? prevCount + 1 : prevCount - 1);
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _posts[index] = Map<String, dynamic>.from(_posts[index])
+            ..['liked'] = prevLiked
+            ..['likeCount'] = prevCount;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
@@ -160,6 +234,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         final content = post['content']?.toString() ?? '';
                         final likeCount = (post['likeCount'] is int) ? post['likeCount'] as int : 0;
                         final commentCount = (post['commentCount'] is int) ? post['commentCount'] as int : 0;
+                        final liked = post['liked'] == true;
                         return Card(
                           margin: const EdgeInsets.only(bottom: 12),
                           child: InkWell(
@@ -215,7 +290,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                                   borderRadius: BorderRadius.circular(4),
                                                 ),
                                                 child: const Text(
-                                                  '일간 베스트',
+                                                  'HOT',
                                                   style: TextStyle(
                                                     fontSize: 11,
                                                     fontWeight: FontWeight.w600,
@@ -224,6 +299,11 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                                 ),
                                               ),
                                             ],
+                                            const Spacer(),
+                                            Text(
+                                              formatPostTime(post['createdAt']),
+                                              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                            ),
                                           ],
                                         ),
                                       ),
@@ -236,12 +316,39 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                     maxLines: 4,
                                     overflow: TextOverflow.ellipsis,
                                   ),
+                                  if (post['poll'] != null) ...[
+                                    const SizedBox(height: 10),
+                                    _buildPollChip(context, post['poll'] as Map<String, dynamic>, dark),
+                                  ],
                                   const SizedBox(height: 12),
                                   Row(
                                     children: [
-                                      Icon(LucideIcons.heart, size: 18, color: Colors.grey.shade600),
-                                      const SizedBox(width: 4),
-                                      Text('$likeCount', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                                      InkWell(
+                                        onTap: () => _toggleLike(post, index),
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                LucideIcons.heart,
+                                                size: 18,
+                                                color: liked ? Colors.red : Colors.grey.shade600,
+                                                fill: liked ? 1.0 : 0,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                '$likeCount',
+                                                style: TextStyle(
+                                                  color: liked ? Colors.red : Colors.grey.shade600,
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
                                       const SizedBox(width: 16),
                                       Icon(LucideIcons.messageCircle, size: 18, color: Colors.grey.shade600),
                                       const SizedBox(width: 4),
@@ -259,6 +366,37 @@ class _CommunityScreenState extends State<CommunityScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: _openWrite,
         child: const Icon(LucideIcons.pencil),
+      ),
+    );
+  }
+
+  Widget _buildPollChip(BuildContext context, Map<String, dynamic> poll, bool dark) {
+    final question = poll['question']?.toString() ?? '투표';
+    final voteCounts = (poll['voteCounts'] as List<dynamic>?)?.map((e) => (e as num).toInt()).toList() ?? [];
+    final total = voteCounts.fold<int>(0, (a, b) => a + b);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: (dark ? Colors.grey.shade700 : Colors.grey.shade200).withOpacity(0.8),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(LucideIcons.vote, size: 16, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              question,
+              style: TextStyle(fontSize: 13, color: dark ? Colors.white70 : Colors.black87),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Text(
+            '$total명 참여',
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          ),
+        ],
       ),
     );
   }
