@@ -590,9 +590,14 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
         await _fetchMyTickets();
       } catch (e) {
         if (!mounted) return;
+        final msg = e.toString().replaceFirst('Exception: ', '');
+        final isTaken = msg.contains('열람할 수 없') || msg.contains('400');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+          SnackBar(
+            content: Text(isTaken ? '이미 다른 사람이 가져간 프로필이에요.' : msg),
+          ),
         );
+        if (isTaken) _fetchProfiles();
         return;
       }
       if (!mounted) return;

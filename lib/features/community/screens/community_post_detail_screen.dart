@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/community/data/community_repository.dart';
 import 'package:nearo_app/features/messages/data/report_repository.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:nearo_app/shared/utils/post_time_format.dart';
 
 class CommunityPostDetailScreen extends StatefulWidget {
   final String environmentId;
@@ -28,6 +29,7 @@ class CommunityPostDetailScreen extends StatefulWidget {
 class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
   final CommunityRepository _repo = CommunityRepository();
   Map<String, dynamic>? _post;
+  String? _myUserIdResolved; // 목록에서 안 넘어오면 프로필에서 로드
   bool _loading = true;
   final TextEditingController _commentController = TextEditingController();
   bool _sendingComment = false;
@@ -35,11 +37,24 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
   @override
   void initState() {
     super.initState();
+    _myUserIdResolved = widget.myUserId;
+    if (_myUserIdResolved == null) _loadMyUserId();
     if (widget.initialPost != null) {
       _post = Map<String, dynamic>.from(widget.initialPost!);
       _loading = false;
     }
     _load();
+  }
+
+  Future<void> _loadMyUserId() async {
+    try {
+      final res = await AuthRepository().getProfile();
+      // GET /users/me 는 user 객체를 그대로 반환. GET /auth/profile 은 { user } 반환 가능.
+      final id = (res['user'] as Map<String, dynamic>?)?['id']?.toString() ?? res['id']?.toString();
+      if (mounted) setState(() => _myUserIdResolved = id);
+    } catch (_) {
+      if (mounted) setState(() => _myUserIdResolved = null);
+    }
   }
 
   @override
@@ -72,21 +87,6 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
         });
       }
     } catch (_) {}
-  }
-
-  Future<void> _share() async {
-    try {
-      await Share.share(
-        (_post?['content']?.toString() ?? '').replaceAll('\n', ' '),
-        subject: '${widget.schoolName} 커뮤니티 글',
-      );
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('공유하기를 지원하지 않는 환경이에요.')),
-        );
-      }
-    }
   }
 
   Future<void> _deletePost() async {
@@ -239,6 +239,28 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
     }
   }
 
+  Future<void> _voteOption(int optionIndex) async {
+    final poll = _post?['poll'] as Map<String, dynamic>?;
+    if (poll == null) return;
+    if (poll['myVoteOptionIndex'] != null) return; // already voted
+    try {
+      final res = await _repo.votePost(widget.environmentId, widget.postId, optionIndex);
+      if (!mounted) return;
+      setState(() {
+        _post = Map<String, dynamic>.from(_post!)
+          ..['poll'] = Map<String, dynamic>.from(poll)
+            ..['myVoteOptionIndex'] = res['myVoteOptionIndex']
+            ..['voteCounts'] = res['voteCounts'];
+      });
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('투표에 실패했어요. 로그인 후 다시 시도해 주세요.')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
@@ -255,7 +277,7 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
     final author = post['author'] as Map<String, dynamic>? ?? {};
     final nickname = author['nickname']?.toString() ?? '알 수 없음';
     final authorId = author['id']?.toString();
-    final isPostAuthorMe = widget.myUserId != null && authorId == widget.myUserId;
+    final isPostAuthorMe = _myUserIdResolved != null && authorId != null && authorId == _myUserIdResolved;
     final content = post['content']?.toString() ?? '';
     final likeCount = (post['likeCount'] is int) ? post['likeCount'] as int : 0;
     final liked = post['liked'] == true;
@@ -266,23 +288,17 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
       appBar: AppBar(
         title: const Text('글'),
         actions: [
-          IconButton(
-            icon: const Icon(LucideIcons.share2),
-            onPressed: _share,
-            tooltip: '공유',
-          ),
           if (isPostAuthorMe)
             IconButton(
               icon: const Icon(LucideIcons.trash2),
               onPressed: _deletePost,
               tooltip: '삭제',
             ),
-          if (!isPostAuthorMe)
-            IconButton(
-              icon: const Icon(LucideIcons.flag),
-              onPressed: () => _showReportSheet(context),
-              tooltip: '신고',
-            ),
+          IconButton(
+            icon: const Icon(LucideIcons.flag),
+            onPressed: () => _showReportSheet(context),
+            tooltip: '신고',
+          ),
         ],
       ),
       body: Column(
@@ -338,7 +354,7 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: const Text(
-                                  '일간 베스트',
+                                  'HOT',
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
@@ -347,6 +363,11 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
                                 ),
                               ),
                             ],
+                            const Spacer(),
+                            Text(
+                              formatPostTime(post['createdAt']),
+                              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                            ),
                           ],
                         ),
                       ),
@@ -357,6 +378,10 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
                     content,
                     style: TextStyle(fontSize: 16, height: 1.5, color: dark ? Colors.white : Colors.black87),
                   ),
+                  if (post['poll'] != null) ...[
+                    const SizedBox(height: 20),
+                    _buildPoll(context, post['poll'] as Map<String, dynamic>, dark),
+                  ],
                   const SizedBox(height: 20),
                   Row(
                     children: [
@@ -481,6 +506,110 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPoll(BuildContext context, Map<String, dynamic> poll, bool dark) {
+    final question = poll['question']?.toString() ?? '';
+    final options = (poll['options'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [];
+    final voteCounts = (poll['voteCounts'] as List<dynamic>?)?.map((e) => (e as num).toInt()).toList() ?? List.filled(options.length, 0);
+    final myVote = poll['myVoteOptionIndex'];
+    final totalVotes = voteCounts.fold<int>(0, (a, b) => a + b);
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: dark ? Colors.grey.shade800 : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(LucideIcons.vote, size: 20, color: primary),
+              const SizedBox(width: 8),
+              Text(
+                question,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: dark ? Colors.white : Colors.black87,
+                ),
+              ),
+            ],
+          ),
+          if (totalVotes > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                '$totalVotes명 참여',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              ),
+            ),
+          const SizedBox(height: 12),
+          ...List.generate(options.length, (i) {
+            final count = i < voteCounts.length ? voteCounts[i] : 0;
+            final pct = totalVotes > 0 ? (count / totalVotes).clamp(0.0, 1.0) : 0.0;
+            final isMyVote = myVote != null && myVote == i;
+
+            if (myVote == null) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: OutlinedButton(
+                  onPressed: () => _voteOption(i),
+                  style: OutlinedButton.styleFrom(
+                    alignment: Alignment.centerLeft,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  ),
+                  child: Text(options[i]),
+                ),
+              );
+            }
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          options[i],
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: dark ? Colors.white : Colors.black87,
+                            fontWeight: isMyVote ? FontWeight.w600 : null,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '$count표',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isMyVote ? primary : Colors.grey.shade600,
+                          fontWeight: isMyVote ? FontWeight.w600 : null,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: pct,
+                      minHeight: 6,
+                      backgroundColor: dark ? Colors.grey.shade700 : Colors.grey.shade300,
+                      valueColor: AlwaysStoppedAnimation<Color>(isMyVote ? primary : Colors.grey.shade600),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );

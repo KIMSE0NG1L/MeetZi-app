@@ -35,11 +35,26 @@ class CommunityRepository {
     return response.data != null ? Map<String, dynamic>.from(response.data as Map) : null;
   }
 
-  /// 게시글 작성 (로그인 필요)
-  Future<Map<String, dynamic>> createPost(String environmentId, String content) async {
+  /// 게시글 작성 (로그인 필요). poll: 투표 추가 시 { question, options: [문자열 2~10개] }
+  Future<Map<String, dynamic>> createPost(
+    String environmentId,
+    String content, {
+    Map<String, dynamic>? poll,
+  }) async {
+    final data = <String, dynamic>{'content': content};
+    if (poll != null) {
+      final q = poll['question']?.toString()?.trim();
+      final opts = poll['options'];
+      if (q != null && q.isNotEmpty && opts is List && opts.length >= 2 && opts.length <= 10) {
+        data['poll'] = {
+          'question': q,
+          'options': opts.map((e) => e.toString().trim()).toList(),
+        };
+      }
+    }
     final response = await _client.dio.post(
       ApiEndpoints.communityPosts(environmentId),
-      data: {'content': content},
+      data: data,
     );
     return Map<String, dynamic>.from(response.data as Map);
   }
@@ -68,5 +83,18 @@ class CommunityRepository {
   /// 게시글 삭제 (본인 글만, 로그인 필요)
   Future<void> deletePost(String environmentId, String postId) async {
     await _client.dio.delete(ApiEndpoints.communityPostDelete(environmentId, postId));
+  }
+
+  /// 투표하기 (로그인 필요). optionIndex: 0부터 시작
+  Future<Map<String, dynamic>> votePost(
+    String environmentId,
+    String postId,
+    int optionIndex,
+  ) async {
+    final response = await _client.dio.post(
+      ApiEndpoints.communityPostVote(environmentId, postId),
+      data: {'optionIndex': optionIndex},
+    );
+    return Map<String, dynamic>.from(response.data as Map);
   }
 }
