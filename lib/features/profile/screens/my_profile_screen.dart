@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -15,6 +17,22 @@ class MyProfileScreen extends StatefulWidget {
 }
 
 class _MyProfileScreenState extends State<MyProfileScreen> {
+  Map<String, String> _parseAvatarOptions(dynamic raw) {
+    if (raw == null) return {};
+    if (raw is Map) {
+      return raw.map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
+    }
+    final s = raw.toString();
+    if (s.isEmpty) return {};
+    try {
+      final decoded = jsonDecode(s);
+      if (decoded is Map) {
+        return decoded.map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
+      }
+    } catch (_) {}
+    return {};
+  }
+
     String _toLabel(String field, dynamic value) {
       final s = value?.toString().trim();
       if (s == null || s.isEmpty) return '-';
@@ -133,7 +151,9 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
         );
       }
     }
-    if (_profile?['avatarSeed'] != null && (_profile!['avatarSeed'] as String).isNotEmpty) {
+    final seed = _profile?['avatarSeed']?.toString() ?? _profile?['id']?.toString();
+    final options = _parseAvatarOptions(_profile?['avatarOptions']);
+    if (seed != null && seed.isNotEmpty) {
       return CircleAvatar(
         radius: 48,
         backgroundColor: Colors.white,
@@ -143,10 +163,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             height: 96,
             child: SvgPicture.network(
               diceBearAvatarUrl(
-                _profile!['avatarSeed'] as String,
-                options: _profile?['avatarOptions'] is Map<String, dynamic>
-                    ? (_profile!['avatarOptions'] as Map<String, dynamic>).map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''))
-                    : null,
+                seed,
+                options: options.isNotEmpty ? options : null,
               ),
               fit: BoxFit.cover,
               placeholderBuilder: (context) => Icon(LucideIcons.user, size: 64, color: Theme.of(context).colorScheme.primary),
