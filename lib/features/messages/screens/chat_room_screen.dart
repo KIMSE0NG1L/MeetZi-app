@@ -10,6 +10,7 @@ import 'package:nearo_app/features/messages/data/partner_profile_repository.dart
 import 'package:nearo_app/shared/notification_utils.dart';
 import 'package:nearo_app/shared/utils/app_config.dart';
 import 'package:nearo_app/shared/utils/photo_url.dart';
+import 'package:nearo_app/shared/utils/app_config.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/core/auth/auth_repository.dart';
 import 'package:nearo_app/features/matching_board/screens/matching_board_screen.dart';

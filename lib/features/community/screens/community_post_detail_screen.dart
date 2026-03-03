@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/community/data/community_repository.dart';
 import 'package:nearo_app/features/messages/data/report_repository.dart';
+import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/shared/utils/post_time_format.dart';
 
@@ -285,23 +286,59 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
     final comments = (post['comments'] as List<dynamic>?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? [];
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: const Text('글'),
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          '게시글',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        leading: IconButton(
+          icon: const Icon(LucideIcons.arrowLeft, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         actions: [
-          if (isPostAuthorMe)
-            IconButton(
-              icon: const Icon(LucideIcons.trash2),
-              onPressed: _deletePost,
-              tooltip: '삭제',
-            ),
-          IconButton(
-            icon: const Icon(LucideIcons.flag),
-            onPressed: () => _showReportSheet(context),
-            tooltip: '신고',
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, color: Colors.white),
+            onSelected: (value) {
+              if (value == 'delete') {
+                _deletePost();
+              } else if (value == 'report') {
+                _showReportSheet(context);
+              }
+            },
+            itemBuilder: (ctx) => [
+              if (isPostAuthorMe)
+                const PopupMenuItem<String>(
+                  value: 'delete',
+                  child: Text('삭제'),
+                ),
+              const PopupMenuItem<String>(
+                value: 'report',
+                child: Text('신고'),
+              ),
+            ],
           ),
         ],
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              colors: [Color(0xFFA855F7), Color(0xFF6366F1)],
+            ),
+          ),
+        ),
       ),
-      body: Column(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: dark ? null : NearoTheme.designScreenBgGradientLight,
+          color: dark ? NearoTheme.designScreenBgDark : null,
+        ),
+        child: Column(
         children: [
           Expanded(
             child: SingleChildScrollView(
@@ -508,6 +545,7 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 
