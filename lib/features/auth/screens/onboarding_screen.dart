@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/auth/data/environment_repository.dart';
 import 'package:nearo_app/features/auth/screens/login_screen.dart';
+import 'package:nearo_app/shared/theme/nearo_theme.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -81,7 +82,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       title: '보드 위의 프로필이\n당신의 현실 로맨스로!',
         description: 'Meetzi가 두 분의 새로운 시작을 연결해 드립니다',
       icon: Icons.auto_awesome,
-      color: Color(0xFFEC4899),
+      color: NearoTheme.designPink500,
       bgColor: Color(0xFFFFF7FB),
     ),
   ];
