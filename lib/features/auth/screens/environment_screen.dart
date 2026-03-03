@@ -16,7 +16,6 @@ class EnvironmentScreen extends StatefulWidget {
 class _EnvironmentScreenState extends State<EnvironmentScreen> {
   final _environmentIdController = TextEditingController();
   final _emailController = TextEditingController();
-  final _studentIdController = TextEditingController();
   final _codeController = TextEditingController();
   final _repository = EnvironmentRepository();
   final _authRepository = AuthRepository();
@@ -32,7 +31,6 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
   void dispose() {
     _environmentIdController.dispose();
     _emailController.dispose();
-    _studentIdController.dispose();
     _codeController.dispose();
     super.dispose();
   }
@@ -97,12 +95,6 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
   }
 
   String? _resolvedEmail() {
-    if (_isUniversitySelected) {
-      final studentId = _studentIdController.text.trim();
-      final domain = _selectedEnvironmentEmailDomain?.trim();
-      if (studentId.isEmpty || domain == null || domain.isEmpty) return null;
-      return '$studentId@$domain';
-    }
     final email = _emailController.text.trim();
     return email.isEmpty ? null : email;
   }
@@ -195,27 +187,17 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 8),
-              if (_isUniversitySelected)
-                TextField(
-                  controller: _studentIdController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: '학번',
-                    suffixText: _selectedEnvironmentEmailDomain == null
-                        ? null
-                        : '@${_selectedEnvironmentEmailDomain!}',
-                    border: const OutlineInputBorder(),
-                  ),
-                )
-              else
-                TextField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: '학교 이메일',
-                    border: OutlineInputBorder(),
-                  ),
+              TextField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: InputDecoration(
+                  labelText: '학교 이메일',
+                  hintText: _isUniversitySelected && _selectedEnvironmentEmailDomain != null
+                      ? '예: 학번@${_selectedEnvironmentEmailDomain!}'
+                      : null,
+                  border: const OutlineInputBorder(),
                 ),
+              ),
               const SizedBox(height: 12),
               PrimaryButton(
                 label: '인증 코드 요청',

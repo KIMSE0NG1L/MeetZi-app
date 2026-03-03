@@ -8,6 +8,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/matching_board/data/matching_board_repository.dart';
 import 'package:nearo_app/features/matching_board/screens/mailbox_screen.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
+import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/shared/utils/photo_url.dart';
@@ -218,18 +219,23 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     }
     setState(() => _isRegistering = true);
     try {
-      final profile = await _myProfileFuture;
-      final nickname = profile['nickname'];
-      final gender = profile['gender'];
-      String school = profile['school'] ?? profile['affiliationText'] ?? '세종대';
-      final department = profile['department']?.toString();
-      final userEnvs = profile['userEnvironments'];
-      if (school.isEmpty && userEnvs != null && userEnvs is List && userEnvs.isNotEmpty) {
-        final env = userEnvs[0]['environment'];
-        if (env != null && env['name'] != null) school = env['name'];
+      final profileRaw = await _myProfileFuture;
+      final profile = profileRaw is Map<String, dynamic> ? profileRaw : <String, dynamic>{};
+      final user = profile['user'] is Map ? profile['user'] as Map<String, dynamic> : profile;
+      final nickname = user['nickname']?.toString();
+      final gender = user['gender']?.toString();
+      String school = user['school']?.toString() ?? user['affiliationText']?.toString() ?? profile['affiliationText']?.toString() ?? '세종대';
+      final department = user['department']?.toString();
+      final userEnvs = profile['userEnvironments'] ?? user['userEnvironments'];
+      if ((school.isEmpty || school == 'null') && userEnvs != null && userEnvs is List && userEnvs.isNotEmpty) {
+        final first = userEnvs[0];
+        if (first is Map && first['environment'] is Map) {
+          final name = (first['environment'] as Map)['name']?.toString();
+          if (name != null && name.isNotEmpty) school = name;
+        }
       }
-      if (school.isEmpty) school = '세종대';
-      if (nickname == null || gender == null || school == null) {
+      if (school.isEmpty || school == 'null') school = '세종대';
+      if (nickname == null || nickname.isEmpty || gender == null || gender.isEmpty) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('프로필 정보가 없습니다.')));
         return;
@@ -342,100 +348,117 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
             : null;
 
         return Scaffold(
-          backgroundColor: dark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
-          body: _loading
+          backgroundColor: Colors.transparent,
+          body: Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: BoxDecoration(
+              gradient: dark
+                  ? null
+                  : NearoTheme.designScreenBgGradientLight,
+              color: dark ? NearoTheme.designScreenBgDark : null,
+            ),
+            child: _loading
               ? const Center(child: CircularProgressIndicator())
               : Stack(
                   children: [
                     Column(
                       children: [
-                        // 내 아바타 + 닉네임 + 등록/열람/매칭권
+                        // Design MeetZyBoard: 내 프로필 + 열람권/등록권/매칭권
                         Padding(
                           padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
                           child: Material(
                             color: surface,
                             borderRadius: BorderRadius.circular(16),
-                            elevation: 2,
-                            shadowColor: Colors.black.withOpacity(0.06),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Row(
-                                children: [
-                                  if (meProfile != null)
-                                    Container(
-                                      width: 48,
-                                      height: 48,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        border: Border.all(color: const Color(0xFFFECDD3), width: 2),
-                                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 4)],
-                                      ),
-                                      child: ClipOval(
-                                        child: FittedBox(
-                                          fit: BoxFit.cover,
-                                          child: SizedBox(
-                                            width: 64,
-                                            height: 64,
-                                            child: _buildBoardAvatar(context, meProfile),
-                                          ),
-                                        ),
-                                      ),
-                                    )
-                                  else
-                                    CircleAvatar(radius: 24, backgroundColor: Colors.grey.shade300, child: Icon(LucideIcons.user, color: Colors.grey.shade600)),
-                                  const SizedBox(width: 12),
-                                  Flexible(
-                                    child: Text(
-                                      myNickname,
-                                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: onSurface),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Material(
-                                    color: (dark ? Colors.grey.shade800 : Colors.grey.shade100).withOpacity(0.9),
-                                    borderRadius: BorderRadius.circular(20),
-                                    child: InkWell(
-                                      onTap: () {
-                                        Navigator.of(context).push(
-                                          MaterialPageRoute<void>(
-                                            builder: (_) => const MailboxScreen(),
-                                          ),
-                                        );
-                                      },
-                                      borderRadius: BorderRadius.circular(20),
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                        child: Icon(
-                                          LucideIcons.mail,
-                                          size: 24,
-                                          color: dark ? Colors.grey.shade300 : const Color(0xFF4B5563),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  _TicketChip(
-                                    icon: LucideIcons.clipboardList,
-                                    count: _myTickets?.registerTicket ?? 0,
-                                    color: const Color(0xFF10B981),
-                                    dark: dark,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  _TicketChip(
-                                    icon: LucideIcons.eye,
-                                    count: _myTickets?.viewTicket ?? 0,
-                                    color: const Color(0xFF6366F1),
-                                    dark: dark,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  _TicketChip(
-                                    icon: LucideIcons.heart,
-                                    count: _myTickets?.matchingTicket ?? 0,
-                                    color: Theme.of(context).colorScheme.primary,
-                                    dark: dark,
+                            elevation: 4,
+                            shadowColor: Colors.black.withOpacity(0.1),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.amber.withOpacity(0.08),
+                                    blurRadius: 15,
+                                    offset: const Offset(0, 4),
                                   ),
                                 ],
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Row(
+                                  children: [
+                                    if (meProfile != null)
+                                      Container(
+                                        width: 48,
+                                        height: 48,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: const Color(0xFFFBBF24).withOpacity(0.5), width: 2),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.amber.withOpacity(0.3),
+                                              blurRadius: 15,
+                                            ),
+                                          ],
+                                        ),
+                                        child: ClipOval(
+                                          child: FittedBox(
+                                            fit: BoxFit.cover,
+                                            child: SizedBox(
+                                              width: 64,
+                                              height: 64,
+                                              child: _buildBoardAvatar(context, meProfile),
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                    else
+                                      CircleAvatar(
+                                        radius: 24,
+                                        backgroundColor: Colors.grey.shade300,
+                                        child: Icon(LucideIcons.user, color: Colors.grey.shade600),
+                                      ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        myNickname,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: onSurface,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    // 열람권
+                                    _DesignTicketChip(
+                                      label: '열람권',
+                                      emoji: '👀',
+                                      count: _myTickets?.viewTicket ?? 0,
+                                      color: const Color(0xFF3B82F6),
+                                      dark: dark,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    // 등록권
+                                    _DesignTicketChip(
+                                      label: '등록권',
+                                      emoji: '📝',
+                                      count: _myTickets?.registerTicket ?? 0,
+                                      color: NearoTheme.designPink500,
+                                      dark: dark,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    // 매칭권
+                                    _DesignTicketChip(
+                                      label: '매칭권',
+                                      emoji: '💝',
+                                      count: _myTickets?.matchingTicket ?? 0,
+                                      color: const Color(0xFFA855F7),
+                                      dark: dark,
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -472,6 +495,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                                       ],
                                     )
                                   : GridView.builder(
+                                padding: const EdgeInsets.only(bottom: 120),
                                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                                   crossAxisCount: 3,
                                   childAspectRatio: 0.62,
@@ -483,61 +507,139 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                                   final profile = _profiles[index];
                                   final isMe = myUserId != null && profile['userId'] == myUserId;
                                   final tag = isMe ? '' : ((profile['idealType'] ?? (profile['user'] as Map<String, dynamic>?)?['idealType'])?.toString() ?? '-');
-                                  return Material(
+                                  final displayName = profile['nickname']?.toString().trim().isNotEmpty == true
+                                      ? profile['nickname'].toString().trim()
+                                      : (profile['user'] as Map<String, dynamic>?)?['nickname']?.toString().trim() ?? '';
+                                  return KeyedSubtree(
+                                    key: ValueKey(profile['id']?.toString() ?? '${profile['userId']}_$index'),
+                                    child: Material(
                                     color: Colors.transparent,
                                     child: InkWell(
                                       onTap: isMe || _isOpeningSheet
                                           ? null
                                           : () => _openNoteSheet(context, index, myUserId),
-                                      borderRadius: BorderRadius.circular(16),
-                                      child: Container(
+                                      borderRadius: BorderRadius.circular(20),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(20),
+                                        child: Container(
                                         decoration: BoxDecoration(
-                                          color: surface,
-                                          borderRadius: BorderRadius.circular(16),
+                                          borderRadius: BorderRadius.circular(20),
+                                          gradient: LinearGradient(
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                            colors: [
+                                              Theme.of(context).colorScheme.primary,
+                                              const Color(0xFF6366F1),
+                                            ],
+                                          ),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: Colors.black.withOpacity(0.08),
+                                              color: Theme.of(context).colorScheme.primary.withOpacity(0.25),
                                               blurRadius: 12,
                                               offset: const Offset(0, 4),
                                             ),
                                           ],
                                         ),
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-                                          child: Column(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: [
-                                              Container(
+                                        child: Stack(
+                                          clipBehavior: Clip.none,
+                                          children: [
+                                            Padding(
+                                              padding: const EdgeInsets.all(3),
+                                              child: ClipRRect(
+                                                borderRadius: BorderRadius.circular(17),
+                                                child: Container(
                                                 decoration: BoxDecoration(
-                                                  shape: BoxShape.circle,
-                                                  border: Border.all(color: dark ? Colors.grey.shade700 : const Color(0xFFF3F4F6), width: 2),
-                                                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 4)],
+                                                  color: surface,
+                                                  borderRadius: BorderRadius.circular(17),
                                                 ),
-                                                child: _buildBoardAvatar(context, profile),
-                                              ),
-                                              const SizedBox(height: 10),
-                                              Text(
-                                                isMe ? '나' : (profile['nickname'] ?? ''),
-                                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: onSurface),
-                                                textAlign: TextAlign.center,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                              if (tag.isNotEmpty) ...[
-                                                const SizedBox(height: 2),
-                                                Text(
-                                                  tag,
-                                                  style: TextStyle(fontSize: 11, color: onSurfaceVariant),
-                                                  textAlign: TextAlign.center,
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
+                                                child: Padding(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                                                  child: Column(
+                                                    mainAxisAlignment: MainAxisAlignment.center,
+                                                    children: [
+                                                      Container(
+                                                        decoration: BoxDecoration(
+                                                          shape: BoxShape.circle,
+                                                          border: Border.all(
+                                                            color: dark ? Colors.grey.shade700 : const Color(0xFFF3F4F6),
+                                                            width: 2,
+                                                          ),
+                                                          boxShadow: [
+                                                            BoxShadow(
+                                                              color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                                                              blurRadius: 8,
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        child: _buildBoardAvatar(context, profile),
+                                                      ),
+                                                      const SizedBox(height: 10),
+                                                      Text(
+                                                        isMe ? '나' : (displayName.isEmpty ? '-' : displayName),
+                                                        style: TextStyle(
+                                                          fontWeight: FontWeight.bold,
+                                                          fontSize: 14,
+                                                          color: onSurface,
+                                                        ),
+                                                        textAlign: TextAlign.center,
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow.ellipsis,
+                                                      ),
+                                                      if (tag.isNotEmpty) ...[
+                                                        const SizedBox(height: 2),
+                                                        Text(
+                                                          tag,
+                                                          style: TextStyle(fontSize: 11, color: onSurfaceVariant),
+                                                          textAlign: TextAlign.center,
+                                                          maxLines: 1,
+                                                          overflow: TextOverflow.ellipsis,
+                                                        ),
+                                                      ],
+                                                    ],
+                                                  ),
                                                 ),
-                                              ],
-                                            ],
-                                          ),
+                                              ),
+                                            ),
+                                            if (!isMe && index < 6)
+                                              Positioned(
+                                                top: 6,
+                                                right: 6,
+                                                child: Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                  decoration: BoxDecoration(
+                                                    gradient: const LinearGradient(
+                                                      colors: [Color(0xFF34D399), Color(0xFF10B981)],
+                                                    ),
+                                                    borderRadius: BorderRadius.circular(999),
+                                                    boxShadow: [
+                                                      BoxShadow(
+                                                        color: const Color(0xFF10B981).withOpacity(0.5),
+                                                        blurRadius: 8,
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  child: const Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      Text('✨', style: TextStyle(fontSize: 10)),
+                                                      SizedBox(width: 4),
+                                                      Text(
+                                                        'NEW',
+                                                        style: TextStyle(
+                                                          fontSize: 10,
+                                                          fontWeight: FontWeight.bold,
+                                                          color: Colors.white,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
                                         ),
                                       ),
                                     ),
+                                  ),
                                   );
                                 },
                               ),
@@ -582,9 +684,10 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                           ),
                         ),
                       ),
-                    ),
-                  ],
                 ),
+              ],
+            ),
+          ),
         );
       },
     );
@@ -785,6 +888,76 @@ class _TakeNoteMessageDialogState extends State<_TakeNoteMessageDialog> {
           child: const Text('보내기'),
         ),
       ],
+    );
+  }
+}
+
+/// Design MeetZyBoard 스타일: 열람권/등록권/매칭권 (라벨 + 이모지 + 개수)
+class _DesignTicketChip extends StatelessWidget {
+  const _DesignTicketChip({
+    required this.label,
+    required this.emoji,
+    required this.count,
+    required this.color,
+    required this.dark,
+  });
+
+  final String label;
+  final String emoji;
+  final int count;
+  final Color color;
+  final bool dark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: dark
+              ? [color.withOpacity(0.2), color.withOpacity(0.15)]
+              : [color.withOpacity(0.25), color.withOpacity(0.15)],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.15),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w600,
+              color: dark ? color.withOpacity(0.9) : color,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 12)),
+              const SizedBox(width: 4),
+              Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: dark ? color.withOpacity(0.9) : color,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

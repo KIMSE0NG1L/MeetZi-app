@@ -3,6 +3,7 @@ import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/shared/utils/photo_url.dart';
 import 'package:nearo_app/app/app_routes.dart';
+import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -176,8 +177,15 @@ class _MessagesScreenState extends State<MessagesScreen> {
     final primary = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
-      backgroundColor: dark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
-      body: _loading
+      backgroundColor: Colors.transparent,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: dark ? null : NearoTheme.designScreenBgGradientLight,
+          color: dark ? NearoTheme.designScreenBgDark : null,
+        ),
+        child: _loading
           ? const Center(child: CircularProgressIndicator())
           : _rooms.isEmpty
               ? Center(
@@ -342,6 +350,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   },
                 ),
               ),
+      ),
     );
   }
 }

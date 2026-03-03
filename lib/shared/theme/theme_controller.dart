@@ -1,7 +1,50 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
 
 class ThemeController {
+  /// Design 폴더 pink 테마 메인 색상 (colorThemes.ts pink-500)
+  static Color get designPink => NearoTheme.designPink500;
+
+  static const _keyThemeColorMode = 'theme_color_mode';
+  static const _valuePink = 'pink';
+  static const _valueSchool = 'school';
+
+  /// 'pink' = 핑크색, 'school' = DB 교색(primaryColor)
+  static final ValueNotifier<String> themeColorMode = ValueNotifier<String>(_valueSchool);
+
+  /// 저장된 테마 색상 모드 로드. 앱/홈 진입 시 한 번 호출.
+  static Future<void> loadThemeColorMode() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final mode = prefs.getString(_keyThemeColorMode) ?? _valueSchool;
+      themeColorMode.value = mode;
+      if (mode == _valuePink) {
+        setSeedColor(designPink);
+      }
+    } catch (_) {}
+  }
+
+  /// 핑크색 선택 시: seedColor를 Design 핑크로 설정 후 저장.
+  static Future<void> setThemeColorModePink() async {
+    themeColorMode.value = _valuePink;
+    setSeedColor(designPink);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_keyThemeColorMode, _valuePink);
+    } catch (_) {}
+  }
+
+  /// 교색 선택 시: seedColor는 호출측에서 DB primary로 설정. 모드만 저장.
+  static Future<void> setThemeColorModeSchool(Color schoolPrimary) async {
+    themeColorMode.value = _valueSchool;
+    setSeedColor(schoolPrimary);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_keyThemeColorMode, _valueSchool);
+    } catch (_) {}
+  }
+
   /// DB primaryColor(hex, e.g. "#003380") → Color. null/empty면 null.
   static Color? parsePrimaryColor(String? hex) {
     if (hex == null || hex.isEmpty) return null;

@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/matching_board/data/matching_board_repository.dart';
+import 'package:nearo_app/shared/theme/nearo_theme.dart';
 
 /// AppDesign ShopScreen: 보유 코인 박스 + 패키지 카드 (로즈/다크 스타일)
 class RatingsScreen extends StatefulWidget {
@@ -146,8 +147,15 @@ class _RatingsScreenState extends State<RatingsScreen> {
     final primary = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
-      backgroundColor: dark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
-      body: Column(
+      backgroundColor: Colors.transparent,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: dark ? null : NearoTheme.designScreenBgGradientLight,
+          color: dark ? NearoTheme.designScreenBgDark : null,
+        ),
+        child: Column(
         children: [
           // 보유 코인 (로즈 헤더 아래 흰색 반투명 스타일)
           Padding(
@@ -305,6 +313,7 @@ class _RatingsScreenState extends State<RatingsScreen> {
                   ),
           ),
         ],
+        ),
       ),
     );
   }

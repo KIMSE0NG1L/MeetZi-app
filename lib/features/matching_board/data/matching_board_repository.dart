@@ -43,8 +43,12 @@ class MatchingBoardRepository {
 
   Future<void> registerProfile(Map<String, dynamic> profile) async {
     try {
-      await _client.dio.post('/matching-board/register', data: profile);
-    } on DioError catch (e) {
+      await _client.dio.post(
+        '/matching-board/register',
+        data: profile,
+        options: Options(sendTimeout: const Duration(seconds: 25), receiveTimeout: const Duration(seconds: 25)),
+      );
+    } on DioException catch (e) {
       final msg = e.response?.data is Map && e.response?.data['message'] != null
           ? e.response?.data['message'].toString()
           : e.message;
