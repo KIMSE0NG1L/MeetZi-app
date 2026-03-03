@@ -109,16 +109,19 @@ class _MatchingBoardScreenBody extends StatefulWidget {
 
 class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   final MatchingBoardRepository _repository = MatchingBoardRepository();
+  final AuthRepository _authRepository = AuthRepository();
   List<Map<String, dynamic>> _profiles = [];
   bool _loading = false;
   bool _isRegistering = false;
   bool _isOpeningSheet = false; // 카드 연타 방지: 시트 열리는 동안 추가 탭 무시
   int? _myCredit;
   MyTickets? _myTickets;
+  late Future<Map<String, dynamic>> _myProfileFuture;
 
   @override
   void initState() {
     super.initState();
+    _myProfileFuture = _authRepository.getProfile();
     _fetchProfiles();
     _fetchMyCredit();
     _fetchMyTickets();
@@ -160,7 +163,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     try {
       String? preferredGender;
       try {
-        final profile = await AuthRepository().getProfile();
+        final profile = await _authRepository.getProfile();
         final raw = profile['user'] is Map ? profile['user'] as Map : profile;
         final g = raw['gender']?.toString().trim().toLowerCase();
         if (g == 'male' || g == '남성') {
@@ -190,8 +193,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     }
     setState(() => _isRegistering = true);
     try {
-      final authRepo = AuthRepository();
-      final profile = await authRepo.getProfile();
+      final profile = await _authRepository.getProfile();
       final nickname = profile['nickname'];
       final gender = profile['gender'];
       String school = profile['school'] ?? profile['affiliationText'] ?? '세종대';
@@ -216,6 +218,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       await _repository.registerProfile(payload);
       await _fetchProfiles();
       await _fetchMyTickets();
+      _myProfileFuture = _authRepository.getProfile(forceRefresh: true);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('프로필 등록 완료! 매칭권 1장이 지급됐어요.')));
     } catch (e) {
@@ -300,7 +303,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     final onSurfaceVariant = dark ? Colors.grey.shade400 : Colors.grey.shade600;
 
     return FutureBuilder<Map<String, dynamic>>(
-      future: AuthRepository().getProfile(),
+      future: _myProfileFuture,
       builder: (context, snapshot) {
         final raw = snapshot.data;
         final Map<String, dynamic>? profileData = raw != null && raw is Map<String, dynamic>
