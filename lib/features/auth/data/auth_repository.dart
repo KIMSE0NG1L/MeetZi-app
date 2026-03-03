@@ -6,14 +6,39 @@ import 'package:nearo_app/shared/utils/token_storage.dart';
 class AuthRepository {
   final ApiClient _client;
   final TokenStorage _tokenStorage;
+  static Map<String, dynamic>? _cachedProfile;
+  static DateTime? _cachedProfileAt;
+  static Future<Map<String, dynamic>>? _inFlightProfileRequest;
+  static const Duration _profileCacheTtl = Duration(seconds: 10);
 
   AuthRepository({ApiClient? client, TokenStorage? tokenStorage})
       : _client = client ?? ApiClient(),
         _tokenStorage = tokenStorage ?? TokenStorage();
 
-  Future<Map<String, dynamic>> getProfile() async {
-    final response = await _client.dio.get('/users/me');
-    return response.data as Map<String, dynamic>;
+  Future<Map<String, dynamic>> getProfile({bool forceRefresh = false}) async {
+    final now = DateTime.now();
+    if (!forceRefresh &&
+        _cachedProfile != null &&
+        _cachedProfileAt != null &&
+        now.difference(_cachedProfileAt!) < _profileCacheTtl) {
+      return _cachedProfile!;
+    }
+
+    if (!forceRefresh && _inFlightProfileRequest != null) {
+      return _inFlightProfileRequest!;
+    }
+
+    final request = _client.dio.get('/users/me').then((response) {
+      final data = response.data as Map<String, dynamic>;
+      _cachedProfile = data;
+      _cachedProfileAt = DateTime.now();
+      return data;
+    }).whenComplete(() {
+      _inFlightProfileRequest = null;
+    });
+
+    _inFlightProfileRequest = request;
+    return request;
   }
 
   Future<Map<String, dynamic>> updateProfile(
@@ -22,18 +47,21 @@ class AuthRepository {
       ApiEndpoints.authProfile,
       data: payload,
     );
+    _invalidateProfileCache();
     return response.data as Map<String, dynamic>;
   }
 
   /// 게시판에 보일 프로필: avatar(아바타) | photo(본인 사진)
   Future<Map<String, dynamic>> setBoardDisplayType(String boardDisplayType) async {
     final response = await _client.dio.patch('/users/me/board-display', data: {'boardDisplayType': boardDisplayType});
+    _invalidateProfileCache();
     return response.data as Map<String, dynamic>;
   }
 
   /// 대학 인증 성공 후 아바타 초기 생성(seed 발급)
   Future<Map<String, dynamic>> initAvatar() async {
     final response = await _client.dio.post(ApiEndpoints.avatarInit);
+    _invalidateProfileCache();
     return response.data as Map<String, dynamic>;
   }
 
@@ -42,6 +70,7 @@ class AuthRepository {
   }
 
   Future<void> logout() {
+    _invalidateProfileCache();
     return _tokenStorage.clear();
   }
 
@@ -61,7 +90,14 @@ class AuthRepository {
         ),
       );
     } finally {
+      _invalidateProfileCache();
       await _tokenStorage.clear();
     }
+  }
+
+  static void _invalidateProfileCache() {
+    _cachedProfile = null;
+    _cachedProfileAt = null;
+    _inFlightProfileRequest = null;
   }
 }
