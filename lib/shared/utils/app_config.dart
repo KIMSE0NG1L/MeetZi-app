@@ -1,3 +1,3 @@
 class AppConfig {
-  static const String baseUrl = 'https://hurtlingly-blatant-tari.ngrok-free.dev';
+  static const String baseUrl = 'https://unstridulous-byron-unfederatively.ngrok-free.dev';
 }

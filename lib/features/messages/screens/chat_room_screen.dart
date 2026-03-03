@@ -8,6 +8,7 @@ import 'package:nearo_app/features/matching/data/matching_repository.dart';
 import 'package:nearo_app/features/messages/data/chat_repository.dart';
 import 'package:nearo_app/features/messages/data/partner_profile_repository.dart';
 import 'package:nearo_app/shared/notification_utils.dart';
+import 'package:nearo_app/shared/utils/app_config.dart';
 import 'package:nearo_app/shared/utils/photo_url.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/core/auth/auth_repository.dart';
@@ -306,7 +307,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
     final completer = Completer<void>();
     print('[소켓 연결 시도] roomId=$_roomId, myUserId=$_myUserId');
     _socket = IO.io(
-      'https://hurtlingly-blatant-tari.ngrok-free.dev/chat',
+      '${AppConfig.baseUrl}/chat',
       IO.OptionBuilder()
           .setTransports(['websocket'])
           .setAuth({'userId': _myUserId})
