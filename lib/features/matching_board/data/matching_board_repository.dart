@@ -14,6 +14,18 @@ class MyTickets {
   final int registerTicket;
 }
 
+class MySummary {
+  const MySummary({
+    required this.user,
+    required this.credit,
+    required this.tickets,
+  });
+
+  final Map<String, dynamic> user;
+  final int credit;
+  final MyTickets tickets;
+}
+
 class MatchingBoardRepository {
   final ApiClient _client;
 
@@ -106,6 +118,24 @@ class MatchingBoardRepository {
   Future<int> fetchMyCredit() async {
     final response = await _client.dio.get('/users/me/credit');
     return response.data['credit'] as int;
+  }
+
+  /// GET /users/me/summary -> { user, credit, tickets }
+  Future<MySummary> fetchMySummary() async {
+    final response = await _client.dio.get('/users/me/summary');
+    final data = Map<String, dynamic>.from(response.data as Map);
+    final user = Map<String, dynamic>.from((data['user'] as Map?) ?? const {});
+    final ticketsRaw = Map<String, dynamic>.from((data['tickets'] as Map?) ?? const {});
+    final tickets = MyTickets(
+      viewTicket: (ticketsRaw['viewTicket'] as num?)?.toInt() ?? 0,
+      matchingTicket: (ticketsRaw['matchingTicket'] as num?)?.toInt() ?? 0,
+      registerTicket: (ticketsRaw['registerTicket'] as num?)?.toInt() ?? 0,
+    );
+    return MySummary(
+      user: user,
+      credit: (data['credit'] as num?)?.toInt() ?? 0,
+      tickets: tickets,
+    );
   }
 
   Future<void> buyCredit(int coins) async {

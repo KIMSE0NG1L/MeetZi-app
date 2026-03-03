@@ -117,14 +117,15 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   int? _myCredit;
   MyTickets? _myTickets;
   late Future<Map<String, dynamic>> _myProfileFuture;
+  String? _preferredGender;
 
   @override
   void initState() {
     super.initState();
     _myProfileFuture = _authRepository.getProfile();
+    _primePreferredGender();
     _fetchProfiles();
-    _fetchMyCredit();
-    _fetchMyTickets();
+    _fetchMySummary();
     widget.refreshTrigger?.addListener(_onRefreshTriggered);
   }
 
@@ -136,24 +137,48 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
 
   void _onRefreshTriggered() {
     _fetchProfiles();
-    _fetchMyTickets();
+    _fetchMySummary();
   }
 
-  Future<void> _fetchMyCredit() async {
+  String? _normalizePreferredGender(dynamic rawGender) {
+    final g = rawGender?.toString().trim().toLowerCase();
+    if (g == 'male' || g == '남성') return 'female';
+    if (g == 'female' || g == '여성') return 'male';
+    return null;
+  }
+
+  Future<void> _primePreferredGender() async {
     try {
-      final credit = await _repository.fetchMyCredit();
-      setState(() => _myCredit = credit);
+      final profile = await _myProfileFuture;
+      final raw = profile['user'] is Map ? profile['user'] as Map : profile;
+      _preferredGender = _normalizePreferredGender(raw['gender']);
     } catch (_) {
-      setState(() => _myCredit = null);
+      _preferredGender = null;
     }
   }
 
+  Future<void> _fetchMyCredit() async {
+    await _fetchMySummary();
+  }
+
   Future<void> _fetchMyTickets() async {
+    await _fetchMySummary();
+  }
+
+  Future<void> _fetchMySummary() async {
     try {
-      final tickets = await _repository.fetchMyTickets();
-      setState(() => _myTickets = tickets);
+      final summary = await _repository.fetchMySummary();
+      _myProfileFuture = Future.value(summary.user);
+      _preferredGender = _normalizePreferredGender(summary.user['gender']);
+      setState(() {
+        _myCredit = summary.credit;
+        _myTickets = summary.tickets;
+      });
     } catch (_) {
-      setState(() => _myTickets = null);
+      setState(() {
+        _myCredit = null;
+        _myTickets = null;
+      });
     }
   }
 
@@ -161,9 +186,9 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   Future<void> _fetchProfiles() async {
     setState(() => _loading = true);
     try {
-      String? preferredGender;
+      String? preferredGender = _preferredGender;
       try {
-        final profile = await _authRepository.getProfile();
+        final profile = await _myProfileFuture;
         final raw = profile['user'] is Map ? profile['user'] as Map : profile;
         final g = raw['gender']?.toString().trim().toLowerCase();
         if (g == 'male' || g == '남성') {
@@ -193,7 +218,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     }
     setState(() => _isRegistering = true);
     try {
-      final profile = await _authRepository.getProfile();
+      final profile = await _myProfileFuture;
       final nickname = profile['nickname'];
       final gender = profile['gender'];
       String school = profile['school'] ?? profile['affiliationText'] ?? '세종대';
@@ -217,8 +242,9 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       if (department != null && department.isNotEmpty) payload['department'] = department;
       await _repository.registerProfile(payload);
       await _fetchProfiles();
-      await _fetchMyTickets();
+      await _fetchMySummary();
       _myProfileFuture = _authRepository.getProfile(forceRefresh: true);
+      await _primePreferredGender();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('프로필 등록 완료! 매칭권 1장이 지급됐어요.')));
     } catch (e) {
@@ -420,7 +446,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                             child: RefreshIndicator(
                               onRefresh: () async {
                                 await _fetchProfiles();
-                                await _fetchMyTickets();
+                                await _fetchMySummary();
                               },
                               child: _profiles.isEmpty
                                   ? ListView(
@@ -590,7 +616,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       if (profileId == null || profileId.isEmpty) return;
       try {
         await _repository.consumeViewTicket(profileId);
-        await _fetchMyTickets();
+        await _fetchMySummary();
       } catch (e) {
         if (!mounted) return;
         final msg = e.toString().replaceFirst('Exception: ', '');
@@ -611,10 +637,10 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
         onTakeNote: _takeNote,
         onPop: () {
           _fetchProfiles();
-          _fetchMyTickets();
+          _fetchMySummary();
         },
         myMatchingTicket: _myTickets?.matchingTicket ?? 0,
-        onRefreshTickets: _fetchMyTickets,
+        onRefreshTickets: _fetchMySummary,
       );
       // AppDesign ProfileDetailModal: 열기/닫기 rotateY 플립, scale, opacity, perspective 1000px, spring
       await showGeneralDialog<void>(
@@ -691,7 +717,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     try {
       await _repository.takeNote(profileId, message: trimmed);
       await _fetchProfiles();
-      await _fetchMyTickets();
+      await _fetchMySummary();
       if (!mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('요청을 보냈어요. 상대가 수락하면 매칭돼요.')));
       return true;

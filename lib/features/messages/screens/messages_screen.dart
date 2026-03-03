@@ -17,6 +17,7 @@ class MessagesScreen extends StatefulWidget {
 
 class _MessagesScreenState extends State<MessagesScreen> {
   final _repository = ChatRepository();
+  final _authRepository = AuthRepository();
   bool _loading = true;
   List<Map<String, dynamic>> _rooms = [];
   Map<String, int> _unreadCounts = {}; // roomId -> unread count
@@ -31,7 +32,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
 
   Future<void> _initAndLoad() async {
     try {
-      final res = await AuthRepository().getProfile();
+      final res = await _authRepository.getProfile();
       final user = res['user'] as Map<String, dynamic>?;
       final id = user?['id']?.toString() ?? res['id']?.toString();
       if (mounted) setState(() => _myUserId = id);
