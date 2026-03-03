@@ -57,6 +57,7 @@ class ChatRoomScreen extends StatefulWidget {
 
 class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObserver {
   bool _isMuted = false;
+  final _authRepository = AuthRepository();
   Future<void> _toggleMute() async {
     if (_roomId == null) return;
     final newMute = !_isMuted;
@@ -153,7 +154,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
 
   Future<void> _fetchMyUserIdAndInitSocketAndLoadMessages() async {
     try {
-      final profile = await AuthRepository().getProfile();
+      final profile = await _authRepository.getProfile();
       final userId = profile['id']?.toString();
       if (userId != null && userId.isNotEmpty) {
         _myUserId = userId;
