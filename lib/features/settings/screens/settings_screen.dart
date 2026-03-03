@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
+import 'package:nearo_app/features/auth/data/environment_status_repository.dart';
 import 'package:nearo_app/features/messages/data/chat_history_store.dart';
 import 'package:nearo_app/shared/utils/token_storage.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
@@ -144,7 +145,64 @@ class SettingsScreen extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
               children: [
-                // AppDesign: 테마 행
+                // 테마 색상: 핑크색 / 교색
+                ValueListenableBuilder<String>(
+                  valueListenable: ThemeController.themeColorMode,
+                  builder: (context, colorMode, _) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4, bottom: 8),
+                          child: Text(
+                            '테마 색상',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                        _ThemeColorRow(
+                          surface: surface,
+                          onSurface: onSurface,
+                          label: '핑크색',
+                          color: ThemeController.designPink,
+                          selected: colorMode == 'pink',
+                          onTap: () async {
+                            await ThemeController.setThemeColorModePink();
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        _ThemeColorRow(
+                          surface: surface,
+                          onSurface: onSurface,
+                          label: '교색',
+                          color: Theme.of(context).colorScheme.primary,
+                          selected: colorMode == 'school',
+                          onTap: () async {
+                            try {
+                              final status = await EnvironmentStatusRepository().getMyEnvironmentStatus();
+                              final primaryHex = (status['environment'] as Map?)?['primaryColor']?.toString();
+                              final primary = ThemeController.parsePrimaryColor(primaryHex);
+                              if (primary != null && context.mounted) {
+                                await ThemeController.setThemeColorModeSchool(primary);
+                              }
+                            } catch (_) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('교색을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')),
+                                );
+                              }
+                            }
+                          },
+                        ),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 24),
+                // 일반 / 다크 모드
                 ValueListenableBuilder<ThemeMode>(
                   valueListenable: ThemeController.themeMode,
                   builder: (context, mode, _) {
@@ -303,6 +361,89 @@ class _ThemeModeRow extends StatelessWidget {
                           height: 10,
                           child: DecoratedBox(
                             decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
+                          ),
+                        ),
+                      )
+                    : null,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 테마 색상 행: 색상 원 + 라벨(핑크색/교색), 선택 시 라디오 표시
+class _ThemeColorRow extends StatelessWidget {
+  const _ThemeColorRow({
+    required this.surface,
+    required this.onSurface,
+    required this.label,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final Color surface;
+  final Color onSurface;
+  final String label;
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: surface,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: selected ? Border.all(color: color, width: 2) : null,
+            boxShadow: selected ? [BoxShadow(color: color.withOpacity(0.2), blurRadius: 8, spreadRadius: 0)] : null,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: color,
+                  border: Border.all(color: Colors.white, width: 2),
+                  boxShadow: [BoxShadow(color: color.withOpacity(0.4), blurRadius: 6)],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: onSurface),
+                ),
+              ),
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: selected ? color : (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF4B5563) : const Color(0xFFD1D5DB)),
+                    width: 2,
+                  ),
+                  color: selected ? color : null,
+                ),
+                child: selected
+                    ? const Center(
+                        child: SizedBox(
+                          width: 10,
+                          height: 10,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white),
                           ),
                         ),
                       )

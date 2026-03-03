@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/community/data/community_repository.dart';
+import 'package:nearo_app/shared/theme/nearo_theme.dart';
 
 class CommunityPostWriteScreen extends StatefulWidget {
   final String environmentId;
@@ -27,9 +28,19 @@ class _CommunityPostWriteScreenState extends State<CommunityPostWriteScreen> {
   ];
   bool _sending = false;
   bool _addPoll = false;
+  bool _isAnonymous = true;
+
+  static const _maxLength = 1000;
+
+  @override
+  void initState() {
+    super.initState();
+    _contentController.addListener(() => setState(() {}));
+  }
 
   @override
   void dispose() {
+    _contentController.removeListener(() => setState(() {}));
     _contentController.dispose();
     _pollQuestionController.dispose();
     for (final c in _optionControllers) {
@@ -95,59 +106,229 @@ class _CommunityPostWriteScreenState extends State<CommunityPostWriteScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final contentLength = _contentController.text.length;
+    final canSubmit = _contentController.text.trim().isNotEmpty;
+
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: const Text('글쓰기'),
-        actions: [
-          TextButton(
-            onPressed: _sending ? null : _submit,
-            child: _sending
-                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('등록'),
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          '글쓰기',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
           ),
-        ],
+        ),
+        leading: IconButton(
+          icon: const Icon(LucideIcons.arrowLeft, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: NearoTheme.designPinkGradientBar,
+          ),
+        ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: dark ? null : NearoTheme.designScreenBgGradientLight,
+          color: dark ? NearoTheme.designScreenBgDark : null,
+        ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            TextField(
-              controller: _contentController,
-              maxLines: null,
-              minLines: 6,
-              decoration: const InputDecoration(
-                hintText: '무슨 생각을 하고 있나요?',
-                border: OutlineInputBorder(),
-                alignLabelWithHint: true,
-              ),
-              autofocus: true,
-            ),
-            const SizedBox(height: 20),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+            // Author Info (Design: 익명 아바타 + 이름 + 학교 + 익명/실명 토글)
             Row(
               children: [
-                Icon(LucideIcons.vote, size: 22, color: Theme.of(context).colorScheme.primary),
-                const SizedBox(width: 8),
-                Text('투표 추가', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                const Spacer(),
-                Switch(
-                  value: _addPoll,
-                  onChanged: (v) => setState(() => _addPoll = v),
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _isAnonymous ? const Color(0xFFE5E5E5) : const Color(0xFFFFE5E5),
+                    border: Border.all(
+                      color: dark ? Colors.grey.shade600 : Colors.grey.shade300,
+                      width: 2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.06),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  alignment: Alignment.center,
+                  child: _isAnonymous
+                      ? Text(
+                          '?',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade600,
+                          ),
+                        )
+                      : Icon(LucideIcons.user, size: 24, color: Colors.grey.shade600),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _isAnonymous ? '익명' : '내 이름',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: dark ? Colors.white : const Color(0xFF111827),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        widget.schoolName,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Material(
+                  color: _isAnonymous
+                      ? NearoTheme.designPink500
+                      : (dark ? Colors.grey.shade700 : Colors.grey.shade200),
+                  borderRadius: BorderRadius.circular(12),
+                  child: InkWell(
+                    onTap: () => setState(() => _isAnonymous = !_isAnonymous),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      child: Text(
+                        _isAnonymous ? '익명' : '실명',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: _isAnonymous ? Colors.white : (dark ? Colors.grey.shade300 : Colors.grey.shade700),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
+            const SizedBox(height: 16),
+
+            // Text Input (Design: rounded, placeholder, 0/1000)
+            Container(
+              decoration: BoxDecoration(
+                color: dark ? Colors.grey.shade800.withOpacity(0.6) : Colors.white.withOpacity(0.9),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: dark ? Colors.grey.shade700 : Colors.grey.shade200,
+                ),
+              ),
+              child: TextField(
+                controller: _contentController,
+                maxLines: null,
+                minLines: 6,
+                maxLength: _maxLength,
+                decoration: InputDecoration(
+                  hintText: '무슨 생각을 하고 계신가요?',
+                  hintStyle: TextStyle(
+                    color: dark ? Colors.grey.shade500 : Colors.grey.shade500,
+                    fontSize: 16,
+                  ),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.all(16),
+                  counterText: '',
+                ),
+                style: TextStyle(
+                  fontSize: 16,
+                  height: 1.5,
+                  color: dark ? Colors.white : Colors.black87,
+                ),
+                autofocus: true,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                '$contentLength / $_maxLength',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: dark ? Colors.grey.shade500 : Colors.grey.shade500,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Community Guidelines (Design: 📌 커뮤니티 가이드라인)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: dark ? Colors.grey.shade800.withOpacity(0.4) : Colors.white.withOpacity(0.6),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        '📌',
+                        style: TextStyle(fontSize: 14, color: dark ? Colors.grey.shade400 : Colors.grey.shade700),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '커뮤니티 가이드라인',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: dark ? Colors.grey.shade300 : Colors.grey.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  _guideline('타인을 존중하는 표현을 사용해주세요'),
+                  _guideline('개인정보 노출에 주의해주세요'),
+                  _guideline('허위사실 유포는 삼가주세요'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
             if (_addPoll) ...[
               const SizedBox(height: 12),
               TextField(
                 controller: _pollQuestionController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: '투표 질문',
                   hintText: '예: 오늘 점심 뭐 먹을까요?',
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
+                  filled: true,
+                  fillColor: dark ? Colors.grey.shade800 : Colors.grey.shade100,
                 ),
+                style: TextStyle(color: dark ? Colors.white : Colors.black87),
               ),
               const SizedBox(height: 12),
-              const Text('선택지 (2~10개)', style: TextStyle(fontSize: 13, color: Colors.grey)),
+              Text(
+                '선택지 (2~10개)',
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+              ),
               const SizedBox(height: 8),
               ...List.generate(_optionControllers.length, (index) {
                 return Padding(
@@ -161,7 +342,10 @@ class _CommunityPostWriteScreenState extends State<CommunityPostWriteScreen> {
                             hintText: '선택지 ${index + 1}',
                             border: const OutlineInputBorder(),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            filled: true,
+                            fillColor: dark ? Colors.grey.shade800 : Colors.grey.shade100,
                           ),
+                          style: TextStyle(color: dark ? Colors.white : Colors.black87),
                         ),
                       ),
                       if (_optionControllers.length > 2)
@@ -183,6 +367,134 @@ class _CommunityPostWriteScreenState extends State<CommunityPostWriteScreen> {
             ],
           ],
         ),
+      ),
+      ),
+            const SizedBox(height: 24),
+            // 하단 바: + 버튼 + 게시하기 버튼
+            SafeArea(
+              top: false,
+              child: Container(
+                margin: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: dark ? Colors.grey.shade800 : const Color(0xFFF3F4F6),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.06),
+                      blurRadius: 8,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    // 투표 추가 (+ 버튼으로 토글)
+                    Material(
+                      color: _addPoll
+                          ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
+                          : (dark ? Colors.grey.shade700 : Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(12),
+                      child: InkWell(
+                        onTap: () => setState(() => _addPoll = !_addPoll),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Tooltip(
+                          message: _addPoll ? '투표 제거' : '투표 추가',
+                          child: SizedBox(
+                            width: 48,
+                            height: 48,
+                            child: Center(
+                              child: Icon(
+                                _addPoll ? LucideIcons.vote : LucideIcons.plus,
+                                size: 24,
+                                color: _addPoll
+                                    ? Theme.of(context).colorScheme.primary
+                                    : const Color(0xFF4B5563),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Material(
+                        color: dark ? Colors.grey.shade700 : Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(12),
+                        child: InkWell(
+                          onTap: _sending || !canSubmit ? null : _submit,
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                if (_sending)
+                                  const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                else ...[
+                                  Icon(
+                                    LucideIcons.send,
+                                    size: 20,
+                                    color: canSubmit
+                                        ? (dark ? Colors.grey.shade200 : const Color(0xFF4B5563))
+                                        : (dark ? Colors.grey.shade500 : Colors.grey.shade400),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '게시하기',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: canSubmit
+                                          ? (dark ? Colors.grey.shade200 : const Color(0xFF4B5563))
+                                          : (dark ? Colors.grey.shade500 : Colors.grey.shade400),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _guideline(String text) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '• ',
+            style: TextStyle(
+              fontSize: 13,
+              color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 13,
+                color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/shared/utils/app_config.dart';
+import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -23,7 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
       'icon': LucideIcons.heart,
       'title': '실시간 매칭',
       'description': '즉시 대화 시작',
-      'color': Color(0xFFEC4899),
+      'color': NearoTheme.designPink500,
     },
     {
       'icon': LucideIcons.shieldCheck,
@@ -99,7 +100,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   child: const Icon(
                                     LucideIcons.heart,
                                     size: 56,
-                                    color: Color(0xFFEC4899),
+                                    color: NearoTheme.designPink500,
                                   ),
                                 ),
                               ),

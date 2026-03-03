@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
+import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/shared/utils/photo_url.dart';
@@ -171,8 +172,15 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     final primary = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
-      backgroundColor: dark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
-      body: _isLoading
+      backgroundColor: Colors.transparent,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: dark ? null : NearoTheme.designScreenBgGradientLight,
+          color: dark ? NearoTheme.designScreenBgDark : null,
+        ),
+        child: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? Center(child: Text(_error!, style: TextStyle(color: onSurfaceVariant)))
@@ -300,6 +308,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                         ],
                       ),
                     ),
+        ),
     );
   }
 }

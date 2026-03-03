@@ -155,6 +155,50 @@ class NearoTheme {
   static const Color textPrimary = Color(0xFF1B1B1F);
   static const Color textSecondary = Color(0xFF5F5F6E);
 
+  // ─── Design 폴더 colorThemes.ts pink 테마 (Tailwind rose/pink 팔레트 그대로) ───
+  static const Color designRose50 = Color(0xFFFFF1F2);
+  static const Color designRose100 = Color(0xFFFFE4E6);
+  static const Color designRose200 = Color(0xFFFECDD3);
+  static const Color designRose300 = Color(0xFFFDA4AF);
+  static const Color designRose400 = Color(0xFFFB7185);
+  static const Color designRose500 = Color(0xFFF43F5E);
+  static const Color designPink50 = Color(0xFFFDF2F8);
+  static const Color designPink300 = Color(0xFFF9A8D4);
+  static const Color designPink400 = Color(0xFFF472B6);
+  static const Color designPink500 = Color(0xFFEC4899);
+
+  /// gradient: from-rose-300 via-pink-300 to-rose-400
+  static const LinearGradient designPinkGradient = LinearGradient(
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [designRose300, designPink300, designRose400],
+  );
+  /// gradientAlt: from-rose-400 to-pink-400
+  static const LinearGradient designPinkGradientAlt = LinearGradient(
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [designRose400, designPink400],
+  );
+  /// 앱바/버튼용: rose-400 ~ pink-500 (Design에서 자주 쓰는 2색)
+  static const LinearGradient designPinkGradientBar = LinearGradient(
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [designRose500, designPink500],
+  );
+
+  /// Design colorThemes.ts pink bgGradient: from-rose-50 via-pink-50 to-rose-100
+  /// Use for screens that use bg-gradient-to-br in Design (Ranking, Board, Community, Profile, Shop, MessageList, PostDetail, WritePost)
+  static const LinearGradient designScreenBgGradientLight = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      designRose50,
+      designPink50,
+      designRose100,
+    ],
+  );
+  static const Color designScreenBgDark = Color(0xFF111827);
+
   static ThemeData light({Color? seedColor}) {
     final base = seedColor ?? primary;
     final colorScheme = ColorScheme.fromSeed(

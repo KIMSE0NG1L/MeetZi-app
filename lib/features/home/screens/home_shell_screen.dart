@@ -13,6 +13,7 @@ import 'package:nearo_app/features/profile/screens/my_profile_screen.dart';
 import 'package:nearo_app/features/ratings/screens/ratings_screen.dart';
 import 'package:nearo_app/features/settings/screens/settings_screen.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
+import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/features/auth/data/environment_status_repository.dart';
 
 /// AppDesign 기준: 탭별 헤더 그라데이션 + 하단 5탭 네비 (대학교 랭킹 / 메시지함 / 게시판 / 프로필 / 상점)
@@ -131,14 +132,17 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
 
   Future<void> _loadThemeAndProfile() async {
     try {
+      await ThemeController.loadThemeColorMode();
+      if (ThemeController.themeColorMode.value == 'school') {
+        try {
+          final status = await EnvironmentStatusRepository().getMyEnvironmentStatus();
+          final primaryHex = (status['environment'] as Map?)?['primaryColor']?.toString();
+          final primary = ThemeController.parsePrimaryColor(primaryHex);
+          if (primary != null) ThemeController.setSeedColor(primary);
+        } catch (_) {}
+      }
       final result = await _authRepository.getProfile();
       final user = (result['user'] as Map?)?.cast<String, dynamic>() ?? result as Map<String, dynamic>;
-      try {
-        final status = await EnvironmentStatusRepository().getMyEnvironmentStatus();
-        final primaryHex = (status['environment'] as Map?)?['primaryColor']?.toString();
-        final primary = ThemeController.parsePrimaryColor(primaryHex);
-        if (primary != null) ThemeController.setSeedColor(primary);
-      } catch (_) {}
       setState(() {
         _profile = user;
         _profileLoading = false;
@@ -265,8 +269,9 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
   }
 
   Widget _buildBottomNav() {
-    final activeColor = Theme.of(context).colorScheme.primary;
-    const inactiveColor = Color(0xFF9CA3AF); // gray-400
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    const inactiveColor = Color(0xFF9CA3AF); // grey
+    const activePink = NearoTheme.designPink500;
     final labels = ['대학교 랭킹', '메시지함', '게시판', '프로필', '상점'];
     final icons = [
       LucideIcons.trophy,
@@ -278,8 +283,8 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border(top: BorderSide(color: Colors.grey.shade300)),
+        color: dark ? const Color(0xFF1F2937) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         boxShadow: [
           BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8, offset: const Offset(0, -2)),
         ],
@@ -287,46 +292,53 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: List.generate(5, (i) {
               final active = _currentIndex == i;
               return Expanded(
-                child: InkWell(
-                  onTap: () {
-                    if (i == _currentIndex) return;
-                    setState(() => _currentIndex = i);
-                    _pageController.animateToPage(
-                      i,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(12),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          icons[i],
-                          size: 24,
-                          color: active ? activeColor : inactiveColor,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          labels[i],
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: active ? FontWeight.bold : FontWeight.w500,
-                            color: active ? activeColor : inactiveColor,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      if (i == _currentIndex) return;
+                      setState(() => _currentIndex = i);
+                      _pageController.animateToPage(
+                        i,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: active ? activePink : Colors.transparent,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            icons[i],
+                            size: 24,
+                            color: active ? Colors.white : inactiveColor,
                           ),
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
+                          const SizedBox(height: 4),
+                          Text(
+                            labels[i],
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: active ? FontWeight.bold : FontWeight.w500,
+                              color: active ? Colors.white : inactiveColor,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
