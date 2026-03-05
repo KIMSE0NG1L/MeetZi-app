@@ -1,13 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Launch splash screen background -->
+<!-- Launch splash: 흰 배경만. 로고+MeetZi+스피너는 Flutter SplashScreen에서만 표시. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Background: solid white to match design splash -->
     <item android:drawable="@android:color/white" />
-
-    <!-- Centered app icon -->
-    <item>
-        <bitmap
-            android:gravity="center"
-            android:src="@mipmap/ic_launcher" />
-    </item>
 </layer-list>

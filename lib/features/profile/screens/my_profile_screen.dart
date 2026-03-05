@@ -308,7 +308,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                 width: double.infinity,
                                 padding: const EdgeInsets.symmetric(vertical: 16),
                                 decoration: BoxDecoration(
-                                  gradient: ThemeController.gradientFromPrimary(primary),
+                                  gradient: ThemeController.getHeaderGradient(),
                                   borderRadius: BorderRadius.circular(16),
                                   boxShadow: [BoxShadow(color: primary.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4))],
                                 ),

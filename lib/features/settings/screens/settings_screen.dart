@@ -109,7 +109,7 @@ class SettingsScreen extends StatelessWidget {
           Container(
             height: headerHeight,
             decoration: BoxDecoration(
-              gradient: ThemeController.gradientFromPrimary(Theme.of(context).colorScheme.primary),
+              gradient: ThemeController.getHeaderGradient(),
               boxShadow: const [
                 BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2)),
               ],
