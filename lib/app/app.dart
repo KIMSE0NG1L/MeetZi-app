@@ -9,6 +9,7 @@ import 'package:nearo_app/shared/utils/token_storage.dart';
 import 'package:nearo_app/features/auth/screens/environment_screen.dart';
 import 'package:nearo_app/features/auth/screens/login_screen.dart';
 import 'package:nearo_app/features/auth/screens/onboarding_screen.dart';
+import 'package:nearo_app/presentation/pages/meetzy_onboarding_page.dart';
 import 'package:nearo_app/features/consent/screens/consent_decision_screen.dart';
 import 'package:nearo_app/features/consent/screens/consent_preview_screen.dart';
 import 'package:nearo_app/features/consent/screens/consent_success_screen.dart';
@@ -273,7 +274,13 @@ class _NearoAppState extends State<NearoApp> {
                   initialRoute: _initialRoute,
                   builder: (context, child) => child ?? const SizedBox.shrink(),
                   routes: {
-                    AppRoutes.onboarding: (_) => const OnboardingScreen(),
+                    AppRoutes.onboarding: (context) => MeetzyOnboardingPage(
+                      onComplete: () {
+                        if (context.mounted) {
+                          Navigator.of(context).pushReplacementNamed(AppRoutes.login);
+                        }
+                      },
+                    ),
                     AppRoutes.login: (_) => const LoginScreen(),
                     AppRoutes.environment: (_) => const EnvironmentScreen(),
                     AppRoutes.matchingResult: (_) => const MatchingResultScreen(),

@@ -15,6 +15,7 @@ import 'package:nearo_app/features/settings/screens/settings_screen.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/features/auth/data/environment_status_repository.dart';
+import 'package:nearo_app/presentation/widgets/meetzy_coach_mark.dart';
 
 /// AppDesign 기준: 탭별 헤더 그라데이션 + 하단 5탭 네비 (대학교 랭킹 / 메시지함 / 게시판 / 프로필 / 상점)
 class HomeShellScreen extends StatefulWidget {
@@ -33,6 +34,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
   final ValueNotifier<int> _boardRefreshTrigger = ValueNotifier<int>(0);
   bool _routeObserverSubscribed = false;
   bool _takeNoteDialogShown = false;
+  bool _showCoachMark = false;
 
   List<Widget> get _pages => [
     const UniversityRankingScreen(),
@@ -53,6 +55,12 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
     super.initState();
     _loadThemeAndProfile();
     PendingTakeNoteStore.instance.pending.addListener(_onPendingTakeNote);
+    _checkCoachMark();
+  }
+
+  Future<void> _checkCoachMark() async {
+    final shouldShow = await MeetzyCoachMark.shouldShow();
+    if (mounted && shouldShow) setState(() => _showCoachMark = true);
   }
 
   void _onPendingTakeNote() {
@@ -269,8 +277,9 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
 
   Widget _buildBottomNav() {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    const inactiveColor = Color(0xFF9CA3AF); // grey
-    const activePink = NearoTheme.designPink500;
+    const inactiveColor = Color(0xFF9CA3AF); // gray-400 (last)
+    // last: active tab = bg-gradient-to-br themeColors.gradient (from-rose-300 via-pink-300 to-rose-400), text white
+    final activeGradient = NearoTheme.designPinkGradient;
     final labels = ['대학교 랭킹', '메시지함', '게시판', '프로필', '상점'];
     final icons = [
       LucideIcons.trophy,
@@ -313,8 +322,10 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       decoration: BoxDecoration(
-                        color: active ? activePink : Colors.transparent,
+                        gradient: active ? activeGradient : null,
+                        color: active ? null : Colors.transparent,
                         borderRadius: BorderRadius.circular(16),
+                        boxShadow: active ? [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 8, offset: const Offset(0, 2))] : null,
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -355,19 +366,28 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
       backgroundColor: Theme.of(context).brightness == Brightness.dark
           ? const Color(0xFF111827)
           : const Color(0xFFF9FAFB),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: Stack(
         children: [
-          _buildTopBar(),
-          Expanded(
-            child: PageView.builder(
-              controller: _pageController,
-              itemCount: _pages.length,
-              onPageChanged: (index) => setState(() => _currentIndex = index),
-              itemBuilder: (_, index) => _pages[index],
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildTopBar(),
+              Expanded(
+                child: PageView.builder(
+                  controller: _pageController,
+                  itemCount: _pages.length,
+                  onPageChanged: (index) => setState(() => _currentIndex = index),
+                  itemBuilder: (_, index) => _pages[index],
+                ),
+              ),
+              _buildBottomNav(),
+            ],
           ),
-          _buildBottomNav(),
+          if (_showCoachMark)
+            MeetzyCoachMark(
+              onComplete: () => setState(() => _showCoachMark = false),
+              onSkip: () => setState(() => _showCoachMark = false),
+            ),
         ],
       ),
     );

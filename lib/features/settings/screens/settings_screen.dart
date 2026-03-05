@@ -6,13 +6,34 @@ import 'package:nearo_app/features/auth/data/environment_status_repository.dart'
 import 'package:nearo_app/features/messages/data/chat_history_store.dart';
 import 'package:nearo_app/shared/utils/token_storage.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
+import 'package:nearo_app/core/theme/university_theme.dart';
 import 'package:nearo_app/features/settings/screens/customer_support_screen.dart';
 
 /// AppDesign SettingsScreen: 로즈 그라데이션 헤더 + 카드형 메뉴 (일반/다크 모드, 로그아웃, 계정 삭제)
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
 
+class _SettingsScreenState extends State<SettingsScreen> {
+  Color? _schoolColor;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSchoolColor();
+  }
+
+  Future<void> _loadSchoolColor() async {
+    try {
+      final status = await EnvironmentStatusRepository().getMyEnvironmentStatus();
+      final primaryHex = (status['environment'] as Map?)?['primaryColor']?.toString();
+      final primary = ThemeController.parsePrimaryColor(primaryHex);
+      if (mounted && primary != null) setState(() => _schoolColor = primary);
+    } catch (_) {}
+  }
   Future<void> _logout(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -149,6 +170,8 @@ class SettingsScreen extends StatelessWidget {
                 ValueListenableBuilder<String>(
                   valueListenable: ThemeController.themeColorMode,
                   builder: (context, colorMode, _) {
+                    // 교색 행의 원은 항상 DB 교색으로 표시 (핑크 선택 시에도 교색 유지)
+                    final schoolColorForDisplay = _schoolColor ?? UniversityTheme.sejongCrimson;
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -178,7 +201,7 @@ class SettingsScreen extends StatelessWidget {
                           surface: surface,
                           onSurface: onSurface,
                           label: '교색',
-                          color: Theme.of(context).colorScheme.primary,
+                          color: schoolColorForDisplay,
                           selected: colorMode == 'school',
                           onTap: () async {
                             try {
