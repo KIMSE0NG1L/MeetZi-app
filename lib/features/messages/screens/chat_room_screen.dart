@@ -608,7 +608,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                 bottom: 16,
               ),
               decoration: BoxDecoration(
-                gradient: ThemeController.gradientFromPrimary(theme.colorScheme.primary),
+                gradient: ThemeController.getHeaderGradient(),
                 boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2))],
               ),
               child: Row(

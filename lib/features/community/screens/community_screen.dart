@@ -407,43 +407,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          if (isBest && bestRank != null)
-            Positioned(
-              top: -8,
-              left: -8,
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: bestRank == 1
-                        ? [const Color(0xFFFACC15), const Color(0xFFEAB308)]
-                        : bestRank == 2
-                            ? [const Color(0xFFD1D5DB), const Color(0xFF9CA3AF)]
-                            : [const Color(0xFFFB923C), const Color(0xFFEA580C)],
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  '$bestRank',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
           Material(
             color: dark ? const Color(0xFF1F2937) : Colors.white,
             borderRadius: BorderRadius.circular(16),
@@ -605,6 +568,43 @@ class _CommunityScreenState extends State<CommunityScreen> {
               ),
             ),
           ),
+          if (isBest && bestRank != null)
+            Positioned(
+              top: -8,
+              left: -8,
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: bestRank == 1
+                        ? [const Color(0xFFFACC15), const Color(0xFFEAB308)]
+                        : bestRank == 2
+                            ? [const Color(0xFFD1D5DB), const Color(0xFF9CA3AF)]
+                            : [const Color(0xFFFB923C), const Color(0xFFEA580C)],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  '$bestRank',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

@@ -343,7 +343,7 @@ class _ModalCard extends StatelessWidget {
               height: 160,
               width: double.infinity,
               decoration: BoxDecoration(
-                gradient: ThemeController.gradientFromPrimaryDiagonal(Theme.of(context).colorScheme.primary),
+                gradient: ThemeController.getSheetGradient(),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(32),
                   topRight: Radius.circular(32),

@@ -186,6 +186,13 @@ class NearoTheme {
     colors: [designRose500, designPink500],
   );
 
+  /// Design ProfileDetailModal: from-rose-400 via-pink-400 to-rose-500 (시트/모달 헤더용)
+  static const LinearGradient designPinkGradientSheet = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [designRose400, designPink400, designRose500],
+  );
+
   /// Design colorThemes.ts pink bgGradient: from-rose-50 via-pink-50 to-rose-100
   /// Use for screens that use bg-gradient-to-br in Design (Ranking, Board, Community, Profile, Shop, MessageList, PostDetail, WritePost)
   static const LinearGradient designScreenBgGradientLight = LinearGradient(

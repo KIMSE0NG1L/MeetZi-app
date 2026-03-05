@@ -162,8 +162,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
 
   Widget _buildTopBar() {
     final isRanking = _currentIndex == 0;
-    final primary = Theme.of(context).colorScheme.primary;
-    final gradient = isRanking ? _purpleGradient : ThemeController.gradientFromPrimary(primary);
+    final gradient = isRanking ? _purpleGradient : ThemeController.getHeaderGradient();
     String title = '';
     String? subtitle;
     switch (_currentIndex) {

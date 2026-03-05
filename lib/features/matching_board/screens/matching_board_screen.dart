@@ -363,6 +363,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
               : Stack(
                   children: [
                     Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         // Design MeetZyBoard: 내 프로필 + 열람권/등록권/매칭권
                         Padding(
@@ -464,14 +465,19 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                           ),
                         ),
                         Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                            child: RefreshIndicator(
-                              onRefresh: () async {
-                                await _fetchProfiles();
-                                await _fetchMySummary();
-                              },
-                              child: _profiles.isEmpty
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final contentWidth = constraints.maxWidth;
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 20),
+                                child: SizedBox(
+                                  width: contentWidth,
+                                  child: RefreshIndicator(
+                                    onRefresh: () async {
+                                      await _fetchProfiles();
+                                      await _fetchMySummary();
+                                    },
+                                    child: _profiles.isEmpty
                                   ? ListView(
                                       physics: const AlwaysScrollableScrollPhysics(),
                                       padding: const EdgeInsets.only(top: 48),
@@ -498,7 +504,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                                 padding: const EdgeInsets.only(bottom: 120),
                                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                                   crossAxisCount: 3,
-                                  childAspectRatio: 0.62,
+                                  childAspectRatio: 0.52,
                                   crossAxisSpacing: 16,
                                   mainAxisSpacing: 16,
                                 ),
@@ -518,12 +524,12 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                                       onTap: isMe || _isOpeningSheet
                                           ? null
                                           : () => _openNoteSheet(context, index, myUserId),
-                                      borderRadius: BorderRadius.circular(20),
+                                      borderRadius: BorderRadius.circular(24),
                                       child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(20),
+                                        borderRadius: BorderRadius.circular(24),
                                         child: Container(
                                         decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(20),
+                                          borderRadius: BorderRadius.circular(24),
                                           gradient: LinearGradient(
                                             begin: Alignment.topLeft,
                                             end: Alignment.bottomRight,
@@ -544,16 +550,16 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                                           clipBehavior: Clip.none,
                                           children: [
                                             Padding(
-                                              padding: const EdgeInsets.all(3),
-                                              child: ClipRRect(
-                                                borderRadius: BorderRadius.circular(17),
+                                            padding: const EdgeInsets.all(3),
+                                            child: ClipRRect(
+                                                borderRadius: BorderRadius.circular(20),
                                                 child: Container(
                                                 decoration: BoxDecoration(
                                                   color: surface,
-                                                  borderRadius: BorderRadius.circular(17),
+                                                  borderRadius: BorderRadius.circular(20),
                                                 ),
                                                 child: Padding(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                                                   child: Column(
                                                     mainAxisAlignment: MainAxisAlignment.center,
                                                     children: [
@@ -600,6 +606,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                                                 ),
                                               ),
                                             ),
+                                            ),
                                             if (!isMe && index < 6)
                                               Positioned(
                                                 top: 6,
@@ -640,11 +647,13 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                                       ),
                                     ),
                                   ),
+                                  ),
                                   );
                                 },
                               ),
                             ),
                           ),
+                        ),
                         ),
                         const SizedBox(height: 100),
                       ],
@@ -1206,7 +1215,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
     }
 
     // AppDesign ProfileDetailModal: 테마 primary 그라데이션 헤더, 아바타+닉네임, 스크롤 정보+태그, 하단 닫기/가져가기
-    final primaryGradient = ThemeController.gradientFromPrimaryDiagonal(theme.colorScheme.primary);
+    final primaryGradient = ThemeController.getSheetGradient();
     final dark = theme.brightness == Brightness.dark;
     final listTags = <String>[];
     final kw = pluck(['idealTypeKeywords']) ?? user?['idealTypeKeywords'];

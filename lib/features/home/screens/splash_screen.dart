@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
 
-/// Design 폴더 SplashScreen 스타일: 로고, MeetZi 그라데이션 텍스트, 로딩 스피너.: 로고, MeetZi 그라데이션 텍스트, 로딩 스피너.
-/// 앱에서 최소 3.3초 표시 후 initialRoute로 전환.
-/// 핑크색은 Design colorThemes.ts pink 그대로 사용.
+/// MeetZi 스플래시: 흰 배경, 로고 이미지(assets/icon.png), MeetZi 텍스트, 하단 로딩 스피너.
+/// 이미지 로드 실패 시 해당 영역에 실패 문구와 디버그 로그를 표시함.
 class SplashScreen extends StatefulWidget {
   final VoidCallback onComplete;
 
@@ -13,176 +12,136 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _pulseController;
-
-  /// Design colorThemes.ts pink: gradient (rose-300 via pink-300 to rose-400)
-  static const _pinkGradient = NearoTheme.designPinkGradient;
-
-  @override
-  void initState() {
-    super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2500),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    super.dispose();
-  }
+class _SplashScreenState extends State<SplashScreen> {
+  /// 스플래시 로고 경로. 아래 순서로 있으면 사용됨: icon.png → images/logo.png
+  static const _splashLogoPath = 'assets/icon.png';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF111827),
-      body: Center(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 390, maxHeight: 844),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(48),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.25),
-                blurRadius: 24,
-                spreadRadius: 0,
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(48),
-            child: Stack(
-              children: [
-                // White background
-                const Positioned.fill(child: ColoredBox(color: Colors.white)),
-
-                // Content
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32),
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            // 로고 + MeetZi → 전체 영역을 채운 뒤 그 안에서 정중앙
+            Positioned.fill(
+              child: Center(
+                child: SizedBox(
+                  width: double.infinity,
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      const SizedBox(height: 40),
-
-                      // Logo + glow
-                      TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0, end: 1),
-                        duration: const Duration(milliseconds: 600),
-                        curve: Curves.elasticOut,
-                        builder: (context, value, child) {
-                          return Transform.scale(
-                            scale: value,
-                            child: child,
-                          );
-                        },
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            // Pulsing glow
-                            AnimatedBuilder(
-                              animation: _pulseController,
-                              builder: (context, child) {
-                                final scale =
-                                    1.0 + 0.15 * _pulseController.value;
-                                final opacity =
-                                    0.15 + 0.1 * _pulseController.value;
-                                return Transform.scale(
-                                  scale: scale,
-                                  child: Container(
-                                    width: 160,
-                                    height: 160,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: NearoTheme.designPink500
-                                              .withOpacity(opacity),
-                                          blurRadius: 40,
-                                          spreadRadius: 0,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                            // Logo placeholder (앱 아이콘 또는 AssetImage 사용 가능)
-                            Container(
-                              width: 160,
-                              height: 160,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: _pinkGradient,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: NearoTheme.designPink500.withOpacity(0.3),
-                                    blurRadius: 20,
-                                  ),
-                                ],
-                              ),
-                              child: const Icon(
-                                Icons.favorite_rounded,
-                                size: 80,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 40),
-
-                      // MeetZi gradient text
-                      TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0.9, end: 1),
-                        duration: const Duration(milliseconds: 500),
-                        curve: Curves.easeOut,
-                        builder: (context, value, child) {
-                          return Opacity(
-                            opacity: value,
-                            child: child,
-                          );
-                        },
-                        child: ShaderMask(
-                          shaderCallback: (bounds) => _pinkGradient
-                              .createShader(bounds),
-                          child: const Text(
-                            'MeetZi',
-                            style: TextStyle(
-                              fontSize: 56,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                              letterSpacing: -1.5,
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      const Spacer(),
-
-                      // Loading spinner
                       SizedBox(
-                        width: 40,
-                        height: 40,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Theme.of(context).colorScheme.primary,
+                        width: 140,
+                        height: 140,
+                        child: Center(
+                          child: Image.asset(
+                            _splashLogoPath,
+                            width: 140,
+                            height: 140,
+                            fit: BoxFit.contain,
+                            alignment: Alignment.center,
+                            errorBuilder: (context, error, stackTrace) {
+                              final errStr = error?.toString() ?? 'unknown';
+                              final stackStr = stackTrace?.toString().split('\n').take(3).join('\n') ?? '';
+                              return Container(
+                                width: 140,
+                                height: 140,
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.shade50,
+                                  border: Border.all(color: Colors.red.shade200),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: SingleChildScrollView(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '이미지 로드 실패',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.red.shade800,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text('path: $_splashLogoPath', style: const TextStyle(fontSize: 10)),
+                                      const SizedBox(height: 2),
+                                      Text('error: $errStr', style: const TextStyle(fontSize: 9), maxLines: 2, overflow: TextOverflow.ellipsis),
+                                      if (stackStr.isNotEmpty) ...[
+                                        const SizedBox(height: 2),
+                                        Text('stack: $stackStr', style: const TextStyle(fontSize: 8), maxLines: 3, overflow: TextOverflow.ellipsis),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ),
                       ),
-
-                      const SizedBox(height: 96),
-                    ],
+                      const SizedBox(height: 32),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Meet',
+                            style: TextStyle(
+                              fontSize: 48,
+                              fontWeight: FontWeight.w800,
+                              color: NearoTheme.designPink500,
+                              letterSpacing: -1.2,
+                            ),
+                          ),
+                          ShaderMask(
+                            shaderCallback: (bounds) => const LinearGradient(
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                              colors: [
+                                NearoTheme.designPink500,
+                                Color(0xFF8B5CF6),
+                              ],
+                            ).createShader(bounds),
+                            child: const Text(
+                              'Zi',
+                              style: TextStyle(
+                                fontSize: 48,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                letterSpacing: -1.2,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            ),
+            // 스피너는 하단 고정
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 48,
+              child: Center(
+                child: SizedBox(
+                  width: 36,
+                  height: 36,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      NearoTheme.designPink500,
+                    ),
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );

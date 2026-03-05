@@ -394,7 +394,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     try {
       final response = await _repository.updateProfile({
         'nickname': nickname,
-        'gender': _gender,
+        if (!_isEditing) 'gender': _gender,
         'affiliationText': _affiliation,
         if (heightCm != null) 'heightCm': heightCm,
         if (_smoking != null) 'smoking': _smoking,
@@ -615,7 +615,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                                   decoration: BoxDecoration(
-                                    gradient: ThemeController.gradientFromPrimary(Theme.of(context).colorScheme.primary),
+                                    gradient: ThemeController.getHeaderGradient(),
                                     borderRadius: BorderRadius.circular(12),
                                     boxShadow: [BoxShadow(color: Theme.of(context).colorScheme.primary.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 2))],
                                   ),
@@ -766,6 +766,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               ),
               const SizedBox(height: 16),
               Text('성별', style: labelStyle),
+              if (_isEditing)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    '처음 설정한 성별은 변경할 수 없어요',
+                    style: TextStyle(fontSize: 12, color: onSurfaceVariant),
+                  ),
+                ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _gender,
@@ -781,10 +789,12 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   DropdownMenuItem(value: 'male', child: Text('남성', style: TextStyle(color: onSurface))),
                   DropdownMenuItem(value: 'female', child: Text('여성', style: TextStyle(color: onSurface))),
                 ],
-                onChanged: (value) {
-                  if (value == null) return;
-                  setState(() => _gender = value);
-                },
+                onChanged: _isEditing
+                    ? null
+                    : (value) {
+                        if (value == null) return;
+                        setState(() => _gender = value);
+                      },
               ),
               const SizedBox(height: 16),
               Text('소속 대학교', style: labelStyle),
@@ -1079,7 +1089,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     decoration: BoxDecoration(
-                      gradient: ThemeController.gradientFromPrimary(Theme.of(context).colorScheme.primary),
+                      gradient: ThemeController.getHeaderGradient(),
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [BoxShadow(color: Theme.of(context).colorScheme.primary.withOpacity(0.35), blurRadius: 12, offset: const Offset(0, 4))],
                     ),

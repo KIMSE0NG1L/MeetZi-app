@@ -66,6 +66,18 @@ class ThemeController {
     );
   }
 
+  /// Design pink 모드일 때 헤더용 그라데이션 (from-rose-300 via-pink-300 to-rose-400). 아니면 seed 기반.
+  static LinearGradient getHeaderGradient() {
+    if (themeColorMode.value == _valuePink) return NearoTheme.designPinkGradient;
+    return gradientFromPrimary(seedColor.value);
+  }
+
+  /// Design pink 모드일 때 시트/모달 헤더용 그라데이션 (rose-400 → pink-400 → rose-500). 아니면 seed 기반 대각.
+  static LinearGradient getSheetGradient() {
+    if (themeColorMode.value == _valuePink) return NearoTheme.designPinkGradientSheet;
+    return gradientFromPrimaryDiagonal(seedColor.value);
+  }
+
   /// 위와 동일 3색, 방향만 topLeft → bottomRight (프로필 시트·모달 헤더용)
   static LinearGradient gradientFromPrimaryDiagonal(Color primary) {
     final lighter = Color.lerp(primary, Colors.white, 0.22)!;

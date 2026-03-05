@@ -155,7 +155,7 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
         scrolledUnderElevation: 0,
         flexibleSpace: Container(
           decoration: BoxDecoration(
-            gradient: ThemeController.gradientFromPrimary(Theme.of(context).colorScheme.primary),
+            gradient: ThemeController.getHeaderGradient(),
           ),
         ),
         foregroundColor: Colors.white,

@@ -38,7 +38,33 @@ class MatchingBoardRepository {
       query['gender'] = preferredGender;
     }
     final response = await _client.dio.get('/matching-board', queryParameters: query);
-    return List<Map<String, dynamic>>.from(response.data);
+    final rawList = response.data;
+    if (rawList is! List) return [];
+    final list = <Map<String, dynamic>>[];
+    for (final e in rawList) {
+      if (e is! Map) continue;
+      list.add(_normalizeBoardProfile(Map<String, dynamic>.from(e as Map)));
+    }
+    return list;
+  }
+
+  /// 서버 응답이 Profile+user 형태여도 카드에서 nickname/userId/idealType을 항상 읽을 수 있도록 보강
+  static Map<String, dynamic> _normalizeBoardProfile(Map<String, dynamic> p) {
+    final user = p['user'] is Map ? p['user'] as Map<String, dynamic> : null;
+    final out = Map<String, dynamic>.from(p);
+    if (out['nickname'] == null || out['nickname'].toString().trim().isEmpty) {
+      final n = user?['nickname']?.toString().trim();
+      if (n != null && n.isNotEmpty) out['nickname'] = n;
+    }
+    if (out['userId'] == null && user != null) {
+      final id = user['id']?.toString();
+      if (id != null) out['userId'] = id;
+    }
+    if (out['idealType'] == null || out['idealType'].toString().trim().isEmpty) {
+      final t = user?['idealType']?.toString().trim();
+      if (t != null && t.isNotEmpty) out['idealType'] = t;
+    }
+    return out;
   }
 
   Future<void> registerProfile(Map<String, dynamic> profile) async {
