@@ -283,7 +283,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                 ),
-              // 하단: 카카오 / 네이버 로그인 버튼
+              // 하단: 카카오 로그인 버튼
               Padding(
                 padding: const EdgeInsets.fromLTRB(32, 8, 32, 0),
                 child: Column(
@@ -315,43 +315,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.black,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TweenAnimationBuilder<double>(
-                      tween: Tween(begin: 0.0, end: 1.0),
-                      duration: const Duration(milliseconds: 550),
-                      builder: (context, value, child) {
-                        return Opacity(
-                          opacity: value.clamp(0.0, 1.0),
-                          child: Transform.translate(
-                            offset: Offset(0, 20 * (1 - value)),
-                            child: Material(
-                              color: const Color(0xFF03C75A),
-                              borderRadius: BorderRadius.circular(24),
-                              elevation: 8,
-                              shadowColor: Colors.black.withOpacity(0.2),
-                              child: InkWell(
-                                onTap: _handleNaverLogin,
-                                borderRadius: BorderRadius.circular(24),
-                                child: Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 20),
-                                  alignment: Alignment.center,
-                                  child: const Text(
-                                    '네이버로 3초만에 시작하기',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
                                     ),
                                   ),
                                 ),
@@ -411,19 +374,6 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!launched && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('카카오 로그인 연결 실패')),
-      );
-    }
-  }
-
-  Future<void> _handleNaverLogin() async {
-    final uri = Uri.parse('${AppConfig.baseUrl}/auth/naver');
-    final launched = await launchUrl(
-      uri,
-      mode: LaunchMode.externalApplication,
-    );
-    if (!launched && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('네이버 로그인 연결 실패')),
       );
     }
   }

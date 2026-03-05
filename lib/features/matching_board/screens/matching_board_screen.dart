@@ -12,6 +12,119 @@ import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/shared/utils/photo_url.dart';
+import 'package:nearo_app/presentation/pages/meetzy_board_page.dart';
+import 'package:nearo_app/presentation/widgets/meetzy_profile_detail_modal.dart';
+
+/// 프로필 맵 → MeetzyProfileDetailData (last 상세 모달용)
+MeetzyProfileDetailData _profileMapToDetailData(Map<String, dynamic> profile) {
+  final user = profile['user'] as Map<String, dynamic>?;
+  dynamic pluck(List<String> keys) {
+    for (final k in keys) {
+      final v1 = profile[k];
+      if (v1 != null && v1.toString().trim().isNotEmpty) return v1;
+      final v2 = user?[k];
+      if (v2 != null && v2.toString().trim().isNotEmpty) return v2;
+    }
+    return null;
+  }
+  String str(dynamic v) => v?.toString().trim() ?? '';
+  String toLabel(String? field, dynamic v) {
+    final s = v?.toString().trim();
+    if (s == null || s.isEmpty) return '';
+    switch (field) {
+      case 'gender':
+        switch (s.toLowerCase()) {
+          case 'male': return '남성';
+          case 'female': return '여성';
+          default: return s;
+        }
+      case 'gradeYear':
+        switch (s.toLowerCase()) {
+          case 'one': return '1';
+          case 'two': return '2';
+          case 'three': return '3';
+          case 'four': return '4';
+          case 'five': return '5';
+          case 'graduation_deferred': return '졸업유예';
+          default: return s;
+        }
+      case 'smoking':
+        switch (s.toLowerCase()) {
+          case 'none': return '비흡연';
+          case 'sometimes': return '가끔';
+          case 'often': return '자주';
+          default: return s;
+        }
+      case 'drinking':
+        switch (s.toLowerCase()) {
+          case 'none': return '안 함';
+          case 'sometimes': return '가끔';
+          case 'often': return '자주';
+          default: return s;
+        }
+      case 'fashionStyle':
+        switch (s.toLowerCase()) {
+          case 'hood_casual': return '후드/캐주얼';
+          case 'shirt_neat': return '셔츠/단정';
+          case 'street': return '스트릿';
+          case 'knit': return '니트/감성';
+          case 'sporty': return '체육복/스포티';
+          case 'minimal': return '미니멀';
+          case 'hip': return '힙한';
+          default: return s;
+        }
+      case 'preferredDateType':
+        switch (s.toLowerCase()) {
+          case 'cafe': return '카페 탐방';
+          case 'walk': return '산책';
+          case 'movie': return '영화';
+          case 'drink': return '술 한잔';
+          case 'exercise': return '운동';
+          case 'food_tour': return '맛집 투어';
+          case 'drive': return '드라이브';
+          default: return s;
+        }
+      case 'activityTime':
+        switch (s.toLowerCase()) {
+          case 'morning': return '아침형';
+          case 'daytime': return '낮 활동형';
+          case 'evening': return '저녁형';
+          case 'night_owl': return '야행성';
+          default: return s;
+        }
+      default:
+        return s;
+    }
+  }
+  final heightVal = pluck(['heightCm', 'height']);
+  final heightStr = heightVal != null ? '${heightVal} cm' : '';
+  final listTags = <String>[];
+  final kw = pluck(['idealTypeKeywords']) ?? user?['idealTypeKeywords'];
+  if (kw is List) {
+    for (final e in kw) {
+      final s = e?.toString().trim();
+      if (s != null && s.isNotEmpty) listTags.add(s);
+    }
+  }
+  return MeetzyProfileDetailData(
+    nickname: str(pluck(['nickname']) ?? user?['nickname']).isEmpty ? '-' : str(pluck(['nickname']) ?? user?['nickname']),
+    major: str(pluck(['department', 'major', 'departmentName'])),
+    gender: toLabel('gender', pluck(['gender', 'sex'])),
+    school: str(pluck(['affiliation', 'school', 'affiliationText', 'organization'])),
+    height: heightStr,
+    grade: toLabel('gradeYear', pluck(['grade', 'year', 'schoolYear', 'class'])),
+    mbti: str(pluck(['mbti', 'mbtiType'])),
+    smoking: toLabel('smoking', pluck(['smoking', 'smoke'])),
+    drinking: toLabel('drinking', pluck(['drinking', 'alcohol'])),
+    intro: str(pluck(['oneLineIntroduce', 'introOneLine', 'bio', 'introduction'])),
+    interest: str(pluck(['intoLately', 'hobby', 'recentInterest'])),
+    idealType: str(pluck(['idealType', 'ideal'])),
+    fashionStyle: toLabel('fashionStyle', pluck(['fashionStyle', 'style'])),
+    datePreference: toLabel('preferredDateType', pluck(['preferredDateType', 'preferredDate'])),
+    activeTime: toLabel('activityTime', pluck(['activityTime', 'activeTime'])),
+    tags: listTags,
+  );
+}
 
 /// 채팅 등 외부에서 프로필 시트만 볼 때 사용 (hideActionButtons: true → 넘기기/가져가기 비표시)
 Future<void> showBoardNoteSheet(
@@ -346,375 +459,73 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
         final meProfile = profileData != null
             ? {'user': profileData, 'userId': myUserId, 'nickname': myNickname}
             : null;
+        // 내가 등록한 카드는 게시판에 보이지 않도록 제외
+        final displayProfiles = myUserId != null
+            ? _profiles.where((p) {
+                final uid = p['userId']?.toString() ?? (p['user'] as Map<String, dynamic>?)?['id']?.toString();
+                return uid != myUserId;
+              }).toList()
+            : List<Map<String, dynamic>>.from(_profiles);
 
         return Scaffold(
           backgroundColor: Colors.transparent,
-          body: Container(
-            width: double.infinity,
-            height: double.infinity,
-            decoration: BoxDecoration(
-              gradient: dark
-                  ? null
-                  : NearoTheme.designScreenBgGradientLight,
-              color: dark ? NearoTheme.designScreenBgDark : null,
-            ),
-            child: _loading
-              ? const Center(child: CircularProgressIndicator())
-              : Stack(
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Design MeetZyBoard: 내 프로필 + 열람권/등록권/매칭권
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-                          child: Material(
-                            color: surface,
-                            borderRadius: BorderRadius.circular(16),
-                            elevation: 4,
-                            shadowColor: Colors.black.withOpacity(0.1),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.amber.withOpacity(0.08),
-                                    blurRadius: 15,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Row(
-                                  children: [
-                                    if (meProfile != null)
-                                      Container(
-                                        width: 48,
-                                        height: 48,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          border: Border.all(color: const Color(0xFFFBBF24).withOpacity(0.5), width: 2),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.amber.withOpacity(0.3),
-                                              blurRadius: 15,
-                                            ),
-                                          ],
-                                        ),
-                                        child: ClipOval(
-                                          child: FittedBox(
-                                            fit: BoxFit.cover,
-                                            child: SizedBox(
-                                              width: 64,
-                                              height: 64,
-                                              child: _buildBoardAvatar(context, meProfile),
-                                            ),
-                                          ),
-                                        ),
-                                      )
-                                    else
-                                      CircleAvatar(
-                                        radius: 24,
-                                        backgroundColor: Colors.grey.shade300,
-                                        child: Icon(LucideIcons.user, color: Colors.grey.shade600),
-                                      ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(
-                                        myNickname,
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: onSurface,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    // 열람권
-                                    _DesignTicketChip(
-                                      label: '열람권',
-                                      emoji: '👀',
-                                      count: _myTickets?.viewTicket ?? 0,
-                                      color: const Color(0xFF3B82F6),
-                                      dark: dark,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    // 등록권
-                                    _DesignTicketChip(
-                                      label: '등록권',
-                                      emoji: '📝',
-                                      count: _myTickets?.registerTicket ?? 0,
-                                      color: NearoTheme.designPink500,
-                                      dark: dark,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    // 매칭권
-                                    _DesignTicketChip(
-                                      label: '매칭권',
-                                      emoji: '💝',
-                                      count: _myTickets?.matchingTicket ?? 0,
-                                      color: const Color(0xFFA855F7),
-                                      dark: dark,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              final contentWidth = constraints.maxWidth;
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 20),
-                                child: SizedBox(
-                                  width: contentWidth,
-                                  child: RefreshIndicator(
-                                    onRefresh: () async {
-                                      await _fetchProfiles();
-                                      await _fetchMySummary();
-                                    },
-                                    child: _profiles.isEmpty
-                                  ? ListView(
-                                      physics: const AlwaysScrollableScrollPhysics(),
-                                      padding: const EdgeInsets.only(top: 48),
-                                      children: [
-                                        Icon(LucideIcons.users, size: 56, color: onSurfaceVariant),
-                                        const SizedBox(height: 20),
-                                        Text(
-                                          '게시판이 비어 있어요',
-                                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: onSurface),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                        const SizedBox(height: 12),
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                                          child: Text(
-                                            '· 게시판에는 같은 학교 인증을 완료한 상대 성별 프로필만 보여요.\n· 나와 친구 모두 **같은 학교**를 선택하고, 이메일(또는 초대코드) 인증을 완료했는지 확인해 주세요.\n· 내가 올린 카드는 상대에게만 보이고, 내 화면에는 안 보여요.',
-                                            style: TextStyle(fontSize: 14, color: onSurfaceVariant, height: 1.5),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ),
-                                      ],
-                                    )
-                                  : GridView.builder(
-                                padding: const EdgeInsets.only(bottom: 120),
-                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 3,
-                                  childAspectRatio: 0.52,
-                                  crossAxisSpacing: 16,
-                                  mainAxisSpacing: 16,
-                                ),
-                                itemCount: _profiles.length,
-                                itemBuilder: (context, index) {
-                                  final profile = _profiles[index];
-                                  final isMe = myUserId != null && profile['userId'] == myUserId;
-                                  final tag = isMe ? '' : ((profile['idealType'] ?? (profile['user'] as Map<String, dynamic>?)?['idealType'])?.toString() ?? '-');
-                                  final displayName = profile['nickname']?.toString().trim().isNotEmpty == true
-                                      ? profile['nickname'].toString().trim()
-                                      : (profile['user'] as Map<String, dynamic>?)?['nickname']?.toString().trim() ?? '';
-                                  return KeyedSubtree(
-                                    key: ValueKey(profile['id']?.toString() ?? '${profile['userId']}_$index'),
-                                    child: Material(
-                                    color: Colors.transparent,
-                                    child: InkWell(
-                                      onTap: isMe || _isOpeningSheet
-                                          ? null
-                                          : () => _openNoteSheet(context, index, myUserId),
-                                      borderRadius: BorderRadius.circular(24),
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(24),
-                                        child: Container(
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(24),
-                                          gradient: LinearGradient(
-                                            begin: Alignment.topLeft,
-                                            end: Alignment.bottomRight,
-                                            colors: [
-                                              Theme.of(context).colorScheme.primary,
-                                              const Color(0xFF6366F1),
-                                            ],
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Theme.of(context).colorScheme.primary.withOpacity(0.25),
-                                              blurRadius: 12,
-                                              offset: const Offset(0, 4),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Stack(
-                                          clipBehavior: Clip.none,
-                                          children: [
-                                            Padding(
-                                            padding: const EdgeInsets.all(3),
-                                            child: ClipRRect(
-                                                borderRadius: BorderRadius.circular(20),
-                                                child: Container(
-                                                decoration: BoxDecoration(
-                                                  color: surface,
-                                                  borderRadius: BorderRadius.circular(20),
-                                                ),
-                                                child: Padding(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                                                  child: Column(
-                                                    mainAxisAlignment: MainAxisAlignment.center,
-                                                    children: [
-                                                      Container(
-                                                        decoration: BoxDecoration(
-                                                          shape: BoxShape.circle,
-                                                          border: Border.all(
-                                                            color: dark ? Colors.grey.shade700 : const Color(0xFFF3F4F6),
-                                                            width: 2,
-                                                          ),
-                                                          boxShadow: [
-                                                            BoxShadow(
-                                                              color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
-                                                              blurRadius: 8,
-                                                            ),
-                                                          ],
-                                                        ),
-                                                        child: _buildBoardAvatar(context, profile),
-                                                      ),
-                                                      const SizedBox(height: 10),
-                                                      Text(
-                                                        isMe ? '나' : (displayName.isEmpty ? '-' : displayName),
-                                                        style: TextStyle(
-                                                          fontWeight: FontWeight.bold,
-                                                          fontSize: 14,
-                                                          color: onSurface,
-                                                        ),
-                                                        textAlign: TextAlign.center,
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow.ellipsis,
-                                                      ),
-                                                      if (tag.isNotEmpty) ...[
-                                                        const SizedBox(height: 2),
-                                                        Text(
-                                                          tag,
-                                                          style: TextStyle(fontSize: 11, color: onSurfaceVariant),
-                                                          textAlign: TextAlign.center,
-                                                          maxLines: 1,
-                                                          overflow: TextOverflow.ellipsis,
-                                                        ),
-                                                      ],
-                                                    ],
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                            ),
-                                            if (!isMe && index < 6)
-                                              Positioned(
-                                                top: 6,
-                                                right: 6,
-                                                child: Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                                  decoration: BoxDecoration(
-                                                    gradient: const LinearGradient(
-                                                      colors: [Color(0xFF34D399), Color(0xFF10B981)],
-                                                    ),
-                                                    borderRadius: BorderRadius.circular(999),
-                                                    boxShadow: [
-                                                      BoxShadow(
-                                                        color: const Color(0xFF10B981).withOpacity(0.5),
-                                                        blurRadius: 8,
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  child: const Row(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: [
-                                                      Text('✨', style: TextStyle(fontSize: 10)),
-                                                      SizedBox(width: 4),
-                                                      Text(
-                                                        'NEW',
-                                                        style: TextStyle(
-                                                          fontSize: 10,
-                                                          fontWeight: FontWeight.bold,
-                                                          color: Colors.white,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                        ),
-                        ),
-                        const SizedBox(height: 100),
-                      ],
+          body: MeetzyBoardContent(
+            myNickname: myNickname,
+            myAvatarWidget: meProfile != null
+                ? FittedBox(
+                    fit: BoxFit.cover,
+                    child: SizedBox(
+                      width: 64,
+                      height: 64,
+                      child: _buildBoardAvatar(context, meProfile),
                     ),
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 24,
-                      child: Center(
-                        child: Material(
-                          color: _isRegistering
-                              ? Theme.of(context).colorScheme.primary.withOpacity(0.7)
-                              : Theme.of(context).colorScheme.primary,
-                          borderRadius: BorderRadius.circular(999),
-                          elevation: 8,
-                          shadowColor: Colors.black.withOpacity(0.25),
-                          child: InkWell(
-                            onTap: _isRegistering ? null : _registerProfile,
-                            borderRadius: BorderRadius.circular(999),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                              child: _isRegistering
-                                  ? const SizedBox(
-                                      width: 24,
-                                      height: 24,
-                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                    )
-                                  : Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(LucideIcons.plus, color: Colors.white, size: 22),
-                                        const SizedBox(width: 8),
-                                        const Text('등록', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                                      ],
-                                    ),
-                            ),
-                          ),
-                        ),
-                      ),
-                ),
-              ],
-            ),
+                  )
+                : null,
+            viewTicket: _myTickets?.viewTicket ?? 0,
+            registerTicket: _myTickets?.registerTicket ?? 0,
+            matchingTicket: _myTickets?.matchingTicket ?? 0,
+            profiles: displayProfiles.asMap().entries.map((e) {
+              final i = e.key;
+              final p = e.value;
+              final nickname = p['nickname']?.toString().trim();
+              final displayName = (nickname != null && nickname.isNotEmpty)
+                  ? nickname
+                  : (p['user'] as Map<String, dynamic>?)?['nickname']?.toString().trim() ?? '-';
+              final tag = (p['idealType'] ?? (p['user'] as Map<String, dynamic>?)?['idealType'])?.toString() ?? '-';
+              return MeetzyBoardProfileItem(
+                nickname: displayName.isEmpty ? '-' : displayName,
+                tag: tag,
+                avatarWidget: _buildBoardAvatar(context, p),
+                isNew: i < 6,
+              );
+            }).toList(),
+            onProfileTap: (index, _) => _openNoteSheet(context, index, displayProfiles, myUserId),
+            onRegister: _registerProfile,
+            onRefresh: () async {
+              await _fetchProfiles();
+              await _fetchMySummary();
+            },
+            onMatchingInboxTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const MailboxScreen()),
+              );
+            },
+            isLoading: _loading,
+            isRegistering: _isRegistering,
           ),
         );
       },
     );
   }
 
-  Future<void> _openNoteSheet(BuildContext context, int startIndex, String? myUserId) async {
+  Future<void> _openNoteSheet(BuildContext context, int startIndex, List<Map<String, dynamic>> displayProfiles, String? myUserId) async {
     if (_isOpeningSheet) return;
     _isOpeningSheet = true;
     if (mounted) setState(() {});
 
     try {
-      final others = myUserId != null
-          ? _profiles.where((p) => p['userId'] != myUserId).toList()
-          : List<Map<String, dynamic>>.from(_profiles);
-      final tappedProfile = startIndex < _profiles.length ? _profiles[startIndex] : null;
-      final startInOthers = tappedProfile != null ? others.indexWhere((p) => p['id'] == tappedProfile['id']) : 0;
-      final initialIndex = startInOthers >= 0 ? startInOthers : 0;
-      if (others.isEmpty) return;
+      final tappedProfile = startIndex < displayProfiles.length ? displayProfiles[startIndex] : null;
+      if (tappedProfile == null) return;
       // 열람권: 상세 보기 시 1장 소비
       final viewTicket = _myTickets?.viewTicket ?? 0;
       if (viewTicket <= 0) {
@@ -724,7 +535,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
         );
         return;
       }
-      final profileId = tappedProfile?['id']?.toString();
+      final profileId = tappedProfile['id']?.toString();
       if (profileId == null || profileId.isEmpty) return;
       try {
         await _repository.consumeViewTicket(profileId);
@@ -742,31 +553,21 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
         return;
       }
       if (!mounted) return;
-      final sheetContent = _BoardNoteSheetContent(
-        profiles: others,
-        startIndex: initialIndex,
-        buildAvatar: _buildBoardAvatar,
-        onTakeNote: _takeNote,
-        onPop: () {
-          _fetchProfiles();
-          _fetchMySummary();
-        },
-        myMatchingTicket: _myTickets?.matchingTicket ?? 0,
-        onRefreshTickets: _fetchMySummary,
-      );
-      // AppDesign ProfileDetailModal: 열기/닫기 rotateY 플립, scale, opacity, perspective 1000px, spring
+      final detailData = _profileMapToDetailData(tappedProfile);
+      final dark = Theme.of(context).brightness == Brightness.dark;
+      // last ProfileDetailModal: 열기/닫기 rotateY 플립, scale, opacity, perspective 1000px
       await showGeneralDialog<void>(
         context: context,
         barrierDismissible: true,
         barrierLabel: '닫기',
-        barrierColor: Colors.transparent,
-        transitionDuration: const Duration(milliseconds: 600),
+        barrierColor: Colors.black54,
+        transitionDuration: const Duration(milliseconds: 500),
         pageBuilder: (_, __, ___) => const SizedBox.shrink(),
         transitionBuilder: (ctx, animation, secondaryAnimation, child) {
           return AnimatedBuilder(
             animation: animation,
             builder: (context, _) {
-              final t = Curves.easeOutBack.transform(animation.value);
+              final t = Curves.easeOutCubic.transform(animation.value);
               final barrierOpacity = 0.6 * t;
               final opacity = t;
               final scale = 0.5 + 0.5 * t;
@@ -777,11 +578,11 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                 children: [
                   GestureDetector(
                     onTap: () => Navigator.of(ctx).pop(),
-                    child: Container(color: Colors.black.withOpacity(barrierOpacity)),
+                    child: Container(color: Colors.black.withValues(alpha: barrierOpacity)),
                   ),
                   Center(
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 390),
+                      constraints: const BoxConstraints(maxWidth: 390, maxHeight: 700),
                       child: Transform(
                         alignment: Alignment.center,
                         transform: Matrix4.identity()
@@ -792,7 +593,34 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                           alignment: Alignment.center,
                           child: Opacity(
                             opacity: opacity.clamp(0.0, 1.0),
-                            child: sheetContent,
+                            child: Material(
+                              type: MaterialType.transparency,
+                              child: MeetzyProfileDetailModal(
+                                profile: detailData,
+                                darkMode: dark,
+                                avatarWidget: _buildBoardAvatar(ctx, tappedProfile),
+                                onClose: () => Navigator.of(ctx).pop(),
+                                onMatch: () async {
+                                  final ok = await _takeNote(profileId);
+                                  if (!ctx.mounted) return;
+                                  if (ok) {
+                                    await showDialog<void>(
+                                      context: ctx,
+                                      barrierDismissible: false,
+                                      barrierColor: Colors.black54,
+                                      builder: (dialogCtx) => _MatchCelebrationOverlay(
+                                        profile: tappedProfile,
+                                        buildAvatar: _buildBoardAvatar,
+                                      ),
+                                    );
+                                    if (!ctx.mounted) return;
+                                    Navigator.of(ctx).pop();
+                                    _fetchProfiles();
+                                    _fetchMySummary();
+                                  }
+                                },
+                            ),
+                            ),
                           ),
                         ),
                       ),
@@ -804,6 +632,8 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
           );
         },
       );
+      _fetchProfiles();
+      _fetchMySummary();
     } finally {
       if (mounted) setState(() => _isOpeningSheet = false);
     }
