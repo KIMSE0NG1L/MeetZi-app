@@ -195,7 +195,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
         width: double.infinity,
         height: double.infinity,
         decoration: BoxDecoration(
-          gradient: dark ? null : NearoTheme.designScreenBgGradientLight,
+          gradient: dark ? null : ThemeController.getScreenBgGradient(),
           color: dark ? NearoTheme.designScreenBgDark : null,
         ),
         child: _isLoading

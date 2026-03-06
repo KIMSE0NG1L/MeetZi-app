@@ -11,6 +11,7 @@ import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
+import 'package:nearo_app/core/theme/university_theme.dart';
 import 'package:nearo_app/shared/utils/photo_url.dart';
 import 'package:nearo_app/presentation/pages/meetzy_board_page.dart';
 import 'package:nearo_app/presentation/widgets/meetzy_profile_detail_modal.dart';
@@ -135,7 +136,7 @@ Future<void> showBoardNoteSheet(
   VoidCallback? onPop,
   int myMatchingTicket = 0,
   Future<void> Function()? onRefreshTickets,
-  Future<bool> Function(String profileId)? onTakeNote,
+  Future<bool> Function(String profileId, Map<String, dynamic> profile)? onTakeNote,
   /// true면 넘기기/가져가기 버튼 숨김 (채팅방에서 프로필 보기용)
   bool hideActionButtons = false,
 }) async {
@@ -143,7 +144,7 @@ Future<void> showBoardNoteSheet(
     profiles: profiles,
     startIndex: startIndex,
     buildAvatar: buildAvatar,
-    onTakeNote: onTakeNote ?? (_) async => false,
+    onTakeNote: onTakeNote ?? (_, __) async => false,
     onPop: onPop ?? () {},
     myMatchingTicket: myMatchingTicket,
     onRefreshTickets: onRefreshTickets,
@@ -601,7 +602,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                                 avatarWidget: _buildBoardAvatar(ctx, tappedProfile),
                                 onClose: () => Navigator.of(ctx).pop(),
                                 onMatch: () async {
-                                  final ok = await _takeNote(profileId);
+                                  final ok = await _takeNote(profileId, tappedProfile);
                                   if (!ctx.mounted) return;
                                   if (ok) {
                                     await showDialog<void>(
@@ -639,7 +640,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     }
   }
 
-  Future<bool> _takeNote(String profileId) async {
+  Future<bool> _takeNote(String profileId, Map<String, dynamic> profile) async {
     final matchingTicket = _myTickets?.matchingTicket ?? 0;
     if (matchingTicket <= 0) {
       if (!mounted) return false;
@@ -648,9 +649,11 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       );
       return false;
     }
-    final message = await showDialog<String?>(
+    final message = await showModalBottomSheet<String?>(
       context: context,
-      builder: (ctx) => _TakeNoteMessageDialog(),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _TakeNoteMessageSheet(profile: profile),
     );
     if (!mounted) return false;
     if (message == null) return false; // 취소 시 요청 안 보냄
@@ -671,17 +674,23 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   }
 }
 
-/// 가져가기 요청 시 상대에게 보낼 멘트 입력 다이얼로그. 5자 이상. 확인 시 입력 텍스트 반환, 취소 시 null.
-class _TakeNoteMessageDialog extends StatefulWidget {
+/// ad ProfileDetailModal "첫 인사를 전해보세요" 메시지 입력 시트: 하단 시트, 그라데이션 헤더, 프로필 미리보기, 5자 이상/200자, 전송 버튼.
+class _TakeNoteMessageSheet extends StatefulWidget {
+  const _TakeNoteMessageSheet({required this.profile});
+
+  final Map<String, dynamic> profile;
+
   @override
-  State<_TakeNoteMessageDialog> createState() => _TakeNoteMessageDialogState();
+  State<_TakeNoteMessageSheet> createState() => _TakeNoteMessageSheetState();
 }
 
-class _TakeNoteMessageDialogState extends State<_TakeNoteMessageDialog> {
+class _TakeNoteMessageSheetState extends State<_TakeNoteMessageSheet> {
   final _controller = TextEditingController();
   final _focus = FocusNode();
+  static const int _minLength = 5;
+  static const int _maxLength = 200;
 
-  bool get _isValid => _controller.text.trim().length >= 5;
+  bool get _isValid => _controller.text.trim().length >= _minLength;
 
   @override
   void dispose() {
@@ -690,43 +699,338 @@ class _TakeNoteMessageDialogState extends State<_TakeNoteMessageDialog> {
     super.dispose();
   }
 
+  static String _str(dynamic v) => v?.toString().trim() ?? '';
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return AlertDialog(
-      title: const Text('가져가기 멘트'),
-      content: SingleChildScrollView(
-        child: TextField(
-          controller: _controller,
-          focusNode: _focus,
-          autofocus: true,
-          maxLines: 3,
-          decoration: InputDecoration(
-            hintText: '상대에게 보낼 말 (5자 이상)',
-            border: const OutlineInputBorder(),
-            helperText: _controller.text.trim().isNotEmpty && !_isValid
-                ? '5자 이상 입력해 주세요'
-                : '5자 이상 입력해 주세요',
-            helperStyle: TextStyle(
-              color: _controller.text.trim().isNotEmpty && !_isValid ? theme.colorScheme.error : theme.colorScheme.onSurfaceVariant,
-            ),
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final nickname = _str(widget.profile['nickname']);
+    final school = _str(widget.profile['affiliationText']) != ''
+        ? _str(widget.profile['affiliationText'])
+        : _str(widget.profile['school']);
+    final major = _str(widget.profile['department']) != ''
+        ? _str(widget.profile['department'])
+        : _str(widget.profile['major']);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: dark ? const Color(0xFF1F2937) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 20,
+            offset: const Offset(0, -4),
           ),
-          onChanged: (_) => setState(() {}),
-          onSubmitted: (_) {
-            if (_isValid) Navigator.of(context).pop(_controller.text.trim());
-          },
+        ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header (ad: gradient, "첫 인사를 전해보세요", X, subtitle)
+              Container(
+              padding: const EdgeInsets.fromLTRB(24, 20, 16, 16),
+              decoration: const BoxDecoration(
+                gradient: UniversityTheme.designPinkGradient,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        '첫 인사를 전해보세요',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop<String?>(null),
+                        icon: const Icon(LucideIcons.x, color: Colors.white, size: 24),
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.white.withValues(alpha: 0.2),
+                          shape: const CircleBorder(),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${nickname.isNotEmpty ? nickname : '상대'}님에게 보낼 메시지를 작성해주세요',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Content
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Profile preview (ad: avatar + nickname + school · major)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: dark ? Colors.white.withValues(alpha: 0.06) : Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        _buildProfileAvatar(context, widget.profile, 48),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                nickname.isNotEmpty ? nickname : '프로필',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: dark ? Colors.white : const Color(0xFF111827),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                [school, major].where((s) => s.isNotEmpty).join(' · '),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Message input (ad: textarea, placeholder, max 200, count)
+                  Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      TextField(
+                        controller: _controller,
+                        focusNode: _focus,
+                        autofocus: true,
+                        maxLines: 4,
+                        maxLength: _maxLength,
+                        decoration: InputDecoration(
+                          counterText: '',
+                          hintText: '안녕하세요! 프로필을 보고 관심이 생겨 메시지 남겨요 😊',
+                          hintStyle: TextStyle(
+                            color: dark ? Colors.grey.shade500 : Colors.grey.shade400,
+                          ),
+                          filled: true,
+                          fillColor: dark ? const Color(0xFF374151) : Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: dark ? const Color(0xFF4B5563) : const Color(0xFFE5E7EB),
+                              width: 2,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: dark ? const Color(0xFF4B5563) : const Color(0xFFE5E7EB),
+                              width: 2,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFEC4899),
+                              width: 2,
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+                        ),
+                        style: TextStyle(
+                          color: dark ? Colors.white : const Color(0xFF111827),
+                          fontSize: 16,
+                        ),
+                        onChanged: (_) => setState(() {}),
+                      ),
+                      Positioned(
+                        right: 12,
+                        bottom: 8,
+                        child: Text(
+                          '${_controller.text.length}/$_maxLength',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: _isValid
+                                ? (dark ? const Color(0xFF34D399) : const Color(0xFF059669))
+                                : (dark ? Colors.grey.shade500 : Colors.grey.shade400),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Warning/Success box (ad)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _isValid
+                          ? (dark ? const Color(0xFF064E3B).withValues(alpha: 0.3) : const Color(0xFFD1FAE5))
+                          : (dark ? const Color(0xFF78350F).withValues(alpha: 0.3) : const Color(0xFFFEF3C7)),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _isValid
+                            ? (dark ? const Color(0xFF047857) : const Color(0xFFA7F3D0))
+                            : (dark ? const Color(0xFFB45309) : const Color(0xFFFDE68A)),
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          _isValid ? LucideIcons.heart : LucideIcons.circleAlert,
+                          size: 20,
+                          color: _isValid
+                              ? (dark ? const Color(0xFF34D399) : const Color(0xFF059669))
+                              : (dark ? const Color(0xFFFBBF24) : const Color(0xFFD97706)),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _isValid
+                                ? '좋아요! 이제 전송할 수 있어요 💕'
+                                : '최소 $_minLength자 이상 입력해주세요 (현재 ${_controller.text.length}자)',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: _isValid
+                                  ? (dark ? const Color(0xFF6EE7B7) : const Color(0xFF047857))
+                                  : (dark ? const Color(0xFFFCD34D) : const Color(0xFFB45309)),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Send button (ad: "메시지 보내고 카드 가져가기")
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _isValid
+                          ? () => Navigator.of(context).pop<String?>(_controller.text.trim())
+                          : null,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
+                          gradient: _isValid
+                              ? UniversityTheme.designPinkGradient
+                              : null,
+                          color: _isValid ? null : (dark ? const Color(0xFF374151) : Colors.grey.shade200),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: _isValid
+                              ? [
+                                  BoxShadow(
+                                    color: const Color(0xFFEC4899).withValues(alpha: 0.35),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              LucideIcons.send,
+                              size: 20,
+                              color: _isValid ? Colors.white : (dark ? Colors.grey.shade500 : Colors.grey.shade400),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _isValid ? '메시지 보내고 카드 가져가기' : '메시지를 입력해주세요',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: _isValid ? Colors.white : (dark ? Colors.grey.shade500 : Colors.grey.shade400),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop<String?>(null),
-          child: const Text('취소'),
+    ),
+    );
+  }
+
+  Widget _buildProfileAvatar(BuildContext context, Map<String, dynamic> profile, double size) {
+    final displayType = profile['boardDisplayType']?.toString() ?? profile['user']?['boardDisplayType']?.toString() ?? 'avatar';
+    final photos = profile['photos'];
+    String? photoUrl;
+    if (displayType == 'photo' && photos is List && photos.isNotEmpty && photos[0] is Map) {
+      final storageKey = (photos[0] as Map)['storageKey']?.toString();
+      if (storageKey != null && storageKey.isNotEmpty) {
+        photoUrl = photoUrlFromStorageKey(storageKey);
+      }
+    }
+    String? seed = profile['avatarSeed']?.toString() ?? (profile['user'] as Map?)?['avatarSeed']?.toString();
+    if (seed != null && seed.isNotEmpty) {
+      final opts = profile['avatarOptions'] as Map<String, String>? ?? (profile['user'] as Map?)?['avatarOptions'] as Map<String, String>?;
+      final options = opts != null && opts.isNotEmpty ? opts : null;
+      return SizedBox(
+        width: size,
+        height: size,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(size / 2),
+          child: (photoUrl != null && photoUrl.isNotEmpty)
+              ? Image.network(photoUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _avatarPlaceholder(size))
+              : SvgPicture.network(
+                  diceBearAvatarUrl(seed, options: options),
+                  fit: BoxFit.cover,
+                  placeholderBuilder: (context) => _avatarPlaceholder(size),
+                ),
         ),
-        FilledButton(
-          onPressed: _isValid ? () => Navigator.of(context).pop(_controller.text.trim()) : null,
-          child: const Text('보내기'),
-        ),
-      ],
+      );
+    }
+    return SizedBox(
+      width: size,
+      height: size,
+      child: _avatarPlaceholder(size),
+    );
+  }
+
+  Widget _avatarPlaceholder(double size) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: dark ? Colors.grey.shade700 : Colors.grey.shade200,
+        shape: BoxShape.circle,
+      ),
+      child: Icon(LucideIcons.user, size: size * 0.5, color: Colors.grey),
     );
   }
 }
@@ -878,7 +1182,7 @@ class _BoardNoteSheetContent extends StatefulWidget {
   final List<Map<String, dynamic>> profiles;
   final int startIndex;
   final Widget Function(BuildContext context, Map<String, dynamic> profile) buildAvatar;
-  final Future<bool> Function(String profileId) onTakeNote;
+  final Future<bool> Function(String profileId, Map<String, dynamic> profile) onTakeNote;
   final VoidCallback onPop;
   final int myMatchingTicket;
   final Future<void> Function()? onRefreshTickets;
@@ -929,7 +1233,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
 
     setState(() => _taking = true);
     try {
-      final sent = await widget.onTakeNote(_profile['id'] as String);
+      final sent = await widget.onTakeNote(_profile['id'] as String, _profile);
       if (widget.onRefreshTickets != null) await widget.onRefreshTickets!();
       if (!mounted) return;
       setState(() => _taking = false);

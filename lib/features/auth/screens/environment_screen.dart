@@ -266,23 +266,27 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
       );
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: dark ? const Color(0xFF111827) : null,
-        gradient: dark ? null : const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFFFF1F2),
-            Color(0xFFFDF2F8),
-            Color(0xFFFFE4E6),
-          ],
+    return Scaffold(
+      backgroundColor: dark ? const Color(0xFF111827) : null,
+      body: Container(
+        decoration: BoxDecoration(
+          color: dark ? const Color(0xFF111827) : null,
+          gradient: dark
+              ? null
+              : const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFFFFF1F2),
+                    Color(0xFFFDF2F8),
+                    Color(0xFFFFE4E6),
+                  ],
+                ),
         ),
-      ),
-      child: Column(
-        children: [
-          // Header (last: gradient, 뒤로 / 학생 인증 / 3-step progress)
-          Container(
+        child: Column(
+          children: [
+            // Header (last: gradient, 뒤로 / 학생 인증 / 3-step progress)
+            Container(
             padding: EdgeInsets.only(
               left: 20,
               right: 20,
@@ -742,7 +746,8 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
               ),
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }

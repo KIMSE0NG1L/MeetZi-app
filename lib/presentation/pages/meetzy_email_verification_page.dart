@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/core/theme/university_theme.dart';
+import 'package:nearo_app/features/auth/data/environment_repository.dart';
 
 /// last EmailVerification 1:1 — gradient header, 3-step progress, 학생 메일 입력/전송, 인증번호 입력, 인증 완료 버튼.
 class MeetzyEmailVerificationPage extends StatefulWidget {
@@ -22,33 +23,115 @@ class MeetzyEmailVerificationPage extends StatefulWidget {
 class _MeetzyEmailVerificationPageState extends State<MeetzyEmailVerificationPage> {
   final _emailController = TextEditingController();
   final _codeController = TextEditingController();
+  final _envRepository = EnvironmentRepository();
   bool _isCodeSent = false;
   bool _isSending = false;
   bool _isVerifying = false;
   int _timer = 0;
   String _error = '';
   String _success = '';
+  bool _didLoadDomain = false;
+  String? _emailDomain;
+  String? _environmentId;
+  String? _environmentName;
 
-  static bool _isValidEmail(String email) {
-    return email.endsWith('@sju.ac.kr') || email.endsWith('@sejong.ac.kr');
+  /// 라우트 인자(선택한 학교명)로 DB에서 도메인 로드
+  Future<void> _loadEmailDomain() async {
+    if (_didLoadDomain) return;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    final selectedName = args is String ? args.toString().trim() : null;
+    try {
+      final list = await _envRepository.getEnvironments();
+      if (!mounted) return;
+      final universities = list
+          .where((e) => e is Map && e['type']?.toString() == 'university')
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+      Map<String, dynamic>? matched;
+      if (selectedName != null && selectedName.isNotEmpty) {
+        try {
+          matched = universities.firstWhere(
+            (e) => e['name']?.toString().trim() == selectedName,
+          );
+        } catch (_) {
+          matched = null;
+        }
+      }
+      matched ??= universities.isNotEmpty ? universities.first : null;
+      if (mounted && matched != null) {
+        setState(() {
+          _emailDomain = matched!['emailDomain']?.toString().trim();
+          _environmentId = matched['id']?.toString();
+          _environmentName = matched['name']?.toString();
+          _didLoadDomain = true;
+        });
+      } else if (mounted) {
+        setState(() => _didLoadDomain = true);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _didLoadDomain = true);
+    }
   }
+
+  String get _fullEmail {
+    final local = _emailController.text.trim();
+    if (_emailDomain == null || _emailDomain!.isEmpty) return local;
+    return local.isEmpty ? '' : '$local@$_emailDomain';
+  }
+
+  bool get _isValidEmail {
+    final full = _fullEmail;
+    if (full.isEmpty) return false;
+    if (_emailDomain != null && _emailDomain!.isNotEmpty) {
+      return full.endsWith('@$_emailDomain');
+    }
+    return full.endsWith('@sju.ac.kr') || full.endsWith('@sejong.ac.kr');
+  }
+
+  /// 전송 버튼 활성화: 도메인 로드됨 + 아이디 입력됨 + 전송 중 아님
+  bool get _canTapSend =>
+      !_isSending &&
+      _emailController.text.trim().isNotEmpty &&
+      _emailDomain != null &&
+      _emailDomain!.isNotEmpty;
 
   void _sendCode() async {
     setState(() {
       _error = '';
       _success = '';
     });
-    final email = _emailController.text.trim();
-    if (email.isEmpty) {
-      setState(() => _error = '학생 메일을 입력해주세요');
+    final local = _emailController.text.trim();
+    if (local.isEmpty) {
+      setState(() => _error = '학생 메일 아이디를 입력해주세요');
       return;
     }
-    if (!_isValidEmail(email)) {
-      setState(() => _error = '세종대학교 메일 주소를 입력해주세요\n(@sju.ac.kr 또는 @sejong.ac.kr)');
+    if (_emailDomain == null || _emailDomain!.isEmpty) {
+      setState(() => _error = '도메인 정보를 불러오는 중이에요. 잠시 후 다시 시도해주세요.');
       return;
     }
+    if (!_isValidEmail) {
+      setState(() => _error = '$_environmentName 학생 메일 주소를 입력해주세요\n(@$_emailDomain)');
+      return;
+    }
+    final fullEmail = _fullEmail;
     setState(() => _isSending = true);
-    await Future.delayed(const Duration(milliseconds: 1500));
+    try {
+      if (_environmentId != null && _environmentId!.isNotEmpty) {
+        await _envRepository.requestEmailVerification(
+          environmentId: _environmentId!,
+          email: fullEmail,
+        );
+      } else {
+        await Future.delayed(const Duration(milliseconds: 1500));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isSending = false;
+        _error = e.toString().replaceFirst('Exception: ', '');
+      });
+      return;
+    }
     if (!mounted) return;
     setState(() {
       _isSending = false;
@@ -95,7 +178,23 @@ class _MeetzyEmailVerificationPageState extends State<MeetzyEmailVerificationPag
       return;
     }
     setState(() => _isVerifying = true);
-    await Future.delayed(const Duration(milliseconds: 1500));
+    try {
+      if (_environmentId != null && _environmentId!.isNotEmpty) {
+        await _envRepository.confirmEmailVerification(
+          environmentId: _environmentId!,
+          code: code,
+        );
+      } else {
+        await Future.delayed(const Duration(milliseconds: 1500));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isVerifying = false;
+        _error = e.toString().replaceFirst('Exception: ', '');
+      });
+      return;
+    }
     if (!mounted) return;
     setState(() {
       _isVerifying = false;
@@ -113,18 +212,26 @@ class _MeetzyEmailVerificationPageState extends State<MeetzyEmailVerificationPag
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _loadEmailDomain();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final dark = widget.darkMode;
     final gradient = UniversityTheme.designPinkGradient;
     final bgGradient = dark ? null : UniversityTheme.screenBgGradient;
     final surface = dark ? const Color(0xFF111827) : null;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: surface,
-        gradient: bgGradient,
-      ),
-      child: Column(
+    return Scaffold(
+      backgroundColor: surface,
+      body: Container(
+        decoration: BoxDecoration(
+          color: surface,
+          gradient: bgGradient,
+        ),
+        child: Column(
         children: [
           // Header (last: gradient px-5 pt-14 pb-6)
           Container(
@@ -164,14 +271,14 @@ class _MeetzyEmailVerificationPageState extends State<MeetzyEmailVerificationPag
                   ],
                 ),
                 const SizedBox(height: 24),
-                // Progress: 프로필 — 메일 인증 — 완료
+                // Progress: 메일 인증 → 프로필 → 완료 (ad 순서)
                 Row(
                   children: [
-                    _progressStep(icon: LucideIcons.check, label: '프로필', active: false),
-                    Expanded(child: Container(height: 2, color: Colors.white.withValues(alpha: 0.3))),
                     _progressStep(icon: LucideIcons.mail, label: '메일 인증', active: true),
                     Expanded(child: Container(height: 2, color: Colors.white.withValues(alpha: 0.3))),
-                    _progressStep(icon: null, label: '완료', active: false, text: '3'),
+                    _progressStep(icon: null, label: '프로필', active: false, text: '2'),
+                    Expanded(child: Container(height: 2, color: Colors.white.withValues(alpha: 0.3))),
+                    _progressStep(icon: LucideIcons.check, label: '완료', active: false),
                   ],
                 ),
               ],
@@ -193,7 +300,9 @@ class _MeetzyEmailVerificationPageState extends State<MeetzyEmailVerificationPag
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '세종대학교 학생 메일로 인증해주세요',
+                    _environmentName != null
+                        ? '$_environmentName 학생 메일로 인증해주세요'
+                        : '학생 메일로 인증해주세요',
                     style: TextStyle(
                       fontSize: 14,
                       color: dark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
@@ -209,35 +318,99 @@ class _MeetzyEmailVerificationPageState extends State<MeetzyEmailVerificationPag
                     ),
                   ),
                   const SizedBox(height: 8),
-                  TextField(
-                    controller: _emailController,
-                    readOnly: _isCodeSent,
-                    decoration: InputDecoration(
-                      hintText: 'example@sju.ac.kr',
-                      filled: true,
-                      fillColor: dark ? const Color(0xFF1F2937) : Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: dark ? const Color(0xFF374151) : const Color(0xFFE5E7EB), width: 2),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: dark ? const Color(0xFF1F2937) : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: dark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
+                        width: 2,
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                      suffixIcon: _isCodeSent
-                          ? null
-                          : TextButton(
-                              onPressed: _isSending || _emailController.text.isEmpty ? null : _sendCode,
-                              child: _isSending
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
-                                    )
-                                  : const Text('전송'),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _emailController,
+                            readOnly: _isCodeSent,
+                            decoration: InputDecoration(
+                              hintText: _emailDomain != null ? '아이디' : '로딩 중...',
+                              filled: true,
+                              fillColor: Colors.transparent,
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                             ),
+                            style: TextStyle(
+                              color: dark ? Colors.white : const Color(0xFF111827),
+                              fontSize: 16,
+                            ),
+                            onChanged: (_) => setState(() {}),
+                          ),
+                        ),
+                        Container(
+                          width: 1,
+                          height: 24,
+                          color: dark ? const Color(0xFF4B5563) : const Color(0xFFE5E7EB),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text(
+                            _emailDomain != null ? '@$_emailDomain' : '@',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: dark ? Colors.grey.shade400 : const Color(0xFF6B7280),
+                            ),
+                          ),
+                        ),
+                        if (!_isCodeSent)
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: _canTapSend ? _sendCode : null,
+                              borderRadius: const BorderRadius.only(
+                                topRight: Radius.circular(14),
+                                bottomRight: Radius.circular(14),
+                              ),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                decoration: BoxDecoration(
+                                  color: !_canTapSend
+                                      ? (dark ? Colors.grey.shade700 : Colors.grey.shade300)
+                                      : null,
+                                  gradient: _canTapSend
+                                      ? const LinearGradient(
+                                          colors: [Color(0xFFFDA4AF), Color(0xFFF9A8D4), Color(0xFFFB7185)],
+                                        )
+                                      : null,
+                                  borderRadius: const BorderRadius.only(
+                                    topRight: Radius.circular(14),
+                                    bottomRight: Radius.circular(14),
+                                  ),
+                                ),
+                                child: _isSending
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                      )
+                                    : const Text('전송', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                              ),
+                            ),
+                          )
+                        else
+                          const SizedBox(width: 8),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '@sju.ac.kr 또는 @sejong.ac.kr 메일을 입력하세요',
+                    _emailDomain != null
+                        ? '@$_emailDomain 메일 아이디만 입력하세요'
+                        : '선택한 학교의 메일 도메인을 불러오는 중이에요',
                     style: TextStyle(fontSize: 12, color: dark ? const Color(0xFF6B7280) : const Color(0xFF6B7280)),
                   ),
                   if (_isCodeSent) ...[
@@ -371,7 +544,9 @@ class _MeetzyEmailVerificationPageState extends State<MeetzyEmailVerificationPag
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                '• 세종대학교 학생 메일만 인증 가능합니다\n• 인증번호는 3분간 유효합니다\n• 메일이 오지 않으면 스팸함을 확인해주세요\n• 재전송은 여러 번 가능합니다',
+                                _environmentName != null
+                                    ? '• $_environmentName 학생 메일만 인증 가능합니다\n• 인증번호는 3분간 유효합니다\n• 메일이 오지 않으면 스팸함을 확인해주세요\n• 재전송은 여러 번 가능합니다'
+                                    : '• 학생 메일만 인증 가능합니다\n• 인증번호는 3분간 유효합니다\n• 메일이 오지 않으면 스팸함을 확인해주세요\n• 재전송은 여러 번 가능합니다',
                                 style: TextStyle(fontSize: 12, color: dark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280), height: 1.5),
                               ),
                             ],
@@ -384,13 +559,9 @@ class _MeetzyEmailVerificationPageState extends State<MeetzyEmailVerificationPag
               ),
             ),
           ),
-          // Bottom button (last: px-6 py-5 border-t)
-          Container(
+          // Bottom button: 배경 없이 버튼만 (하얀 박스 제거)
+          Padding(
             padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-            decoration: BoxDecoration(
-              color: dark ? const Color(0xFF1F2937).withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.8),
-              border: Border(top: BorderSide(color: dark ? const Color(0xFF374151) : const Color(0xFFE5E7EB))),
-            ),
             child: SafeArea(
               top: false,
               child: FilledButton(
@@ -408,6 +579,7 @@ class _MeetzyEmailVerificationPageState extends State<MeetzyEmailVerificationPag
                       : (dark ? const Color(0xFF6B7280) : const Color(0xFF9CA3AF)),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  side: BorderSide.none,
                 ),
                 child: _isVerifying
                     ? const Row(
@@ -428,6 +600,7 @@ class _MeetzyEmailVerificationPageState extends State<MeetzyEmailVerificationPag
           ),
         ],
       ),
+    ),
     );
   }
 

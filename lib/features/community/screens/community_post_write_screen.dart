@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/community/data/community_repository.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
+import 'package:nearo_app/shared/theme/theme_controller.dart';
 
 class CommunityPostWriteScreen extends StatefulWidget {
   final String environmentId;
@@ -128,16 +129,14 @@ class _CommunityPostWriteScreenState extends State<CommunityPostWriteScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: NearoTheme.designPinkGradientBar,
-          ),
+          decoration: BoxDecoration(gradient: ThemeController.getHeaderGradient()),
         ),
       ),
       body: Container(
         width: double.infinity,
         height: double.infinity,
         decoration: BoxDecoration(
-          gradient: dark ? null : NearoTheme.designScreenBgGradientLight,
+          gradient: dark ? null : ThemeController.getScreenBgGradient(),
           color: dark ? NearoTheme.designScreenBgDark : null,
         ),
         child: Column(

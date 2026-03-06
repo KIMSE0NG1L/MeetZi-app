@@ -5,6 +5,7 @@ import 'package:nearo_app/features/auth/data/environment_repository.dart';
 import 'package:nearo_app/features/auth/data/environment_status_repository.dart';
 import 'package:nearo_app/features/community/screens/community_screen.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
+import 'package:nearo_app/shared/theme/theme_controller.dart';
 
 /// AppDesign RankingScreen: 보라 테마, 트로피 섹션, 카드형 랭킹 리스트
 class UniversityRankingScreen extends StatefulWidget {
@@ -111,7 +112,7 @@ class _UniversityRankingScreenState extends State<UniversityRankingScreen> with 
       decoration: BoxDecoration(
         gradient: dark
             ? null
-            : NearoTheme.designScreenBgGradientLight,
+            : ThemeController.getScreenBgGradient(),
         color: dark ? NearoTheme.designScreenBgDark : null,
       ),
       child: _loading

@@ -279,7 +279,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
     final dark = Theme.of(context).brightness == Brightness.dark;
     const inactiveColor = Color(0xFF9CA3AF); // gray-400 (last)
     // last: active tab = bg-gradient-to-br themeColors.gradient (from-rose-300 via-pink-300 to-rose-400), text white
-    final activeGradient = NearoTheme.designPinkGradient;
+    final activeGradient = ThemeController.getActiveAccentGradient();
     final labels = ['대학교 랭킹', '메시지함', '게시판', '프로필', '상점'];
     final icons = [
       LucideIcons.trophy,

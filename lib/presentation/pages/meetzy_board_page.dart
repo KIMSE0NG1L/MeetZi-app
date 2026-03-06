@@ -4,6 +4,7 @@ import 'package:nearo_app/core/theme/meetzy_design_tokens.dart';
 import 'package:nearo_app/core/theme/university_theme.dart';
 import 'package:nearo_app/core/theme/app_text_styles.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
+import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/presentation/widgets/meetzy_profile_card.dart';
 import 'package:nearo_app/presentation/widgets/meetzy_stats_bar.dart';
 import 'package:nearo_app/presentation/widgets/meetzy_primary_button.dart';
@@ -45,7 +46,7 @@ class MeetzyBoardContent extends StatelessWidget {
     final theme = Theme.of(context);
     final primary = theme.colorScheme.primary;
     final isDark = theme.brightness == Brightness.dark;
-    final bgGradient = isDark ? null : UniversityTheme.screenBgGradient;
+    final bgGradient = isDark ? null : ThemeController.getScreenBgGradient();
     final surface = isDark ? const Color(0xFF111827) : UniversityTheme.surface;
 
     Widget body = LayoutBuilder(
@@ -204,7 +205,7 @@ class MeetzyBoardPage extends StatelessWidget {
     final theme = Theme.of(context);
     final primary = theme.colorScheme.primary;
     final isDark = theme.brightness == Brightness.dark;
-    final bgGradient = isDark ? null : UniversityTheme.screenBgGradient;
+    final bgGradient = isDark ? null : ThemeController.getScreenBgGradient();
     final surface = isDark ? const Color(0xFF111827) : UniversityTheme.surface;
 
     return Container(
@@ -376,7 +377,7 @@ class MeetzyBoardPage extends StatelessWidget {
     final theme = Theme.of(context);
     // last: active = gradient + white text/icon, inactive = gray-400
     const inactiveColor = Color(0xFF9CA3AF);
-    final activeGradient = NearoTheme.designPinkGradient;
+    final activeGradient = ThemeController.getActiveAccentGradient();
 
     return Expanded(
       child: Material(

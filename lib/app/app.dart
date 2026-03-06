@@ -33,6 +33,8 @@ import 'package:nearo_app/features/matching_board/screens/take_note_request_resp
 import 'dart:async';
 import 'package:nearo_app/features/profile/screens/avatar_setup_screen.dart';
 import 'package:nearo_app/features/settings/screens/customer_support_screen.dart';
+import 'package:nearo_app/presentation/pages/meetzy_university_select_page.dart';
+import 'package:nearo_app/presentation/pages/meetzy_email_verification_page.dart';
 
 final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
 
@@ -68,39 +70,51 @@ class _NearoAppState extends State<NearoApp> {
     String? route;
     // 로그인 성공 딥링크 등 초기 링크 먼저 처리(토큰 저장) 후 토큰 기준으로 라우트 결정
     final initialLink = await _appLinks.getInitialLink();
+    final isLoginSuccessLink = initialLink != null &&
+        initialLink.scheme == 'nearo' &&
+        initialLink.host == 'login-success' &&
+        (initialLink.queryParameters['token'] ?? '').trim().isNotEmpty;
+
     if (initialLink != null) {
-      _handleLink(initialLink);
+      _handleLink(initialLink, isInitial: true);
     }
-    final token = await _tokenStorage.readAccessToken();
-    if (token == null || token.isEmpty) {
-      route = AppRoutes.onboarding;
+
+    if (isLoginSuccessLink) {
+      // 로그인 직후: 학교 선택 → 메일 인증 → 프로필 생성 순서로 진행
+      route = AppRoutes.universitySelect;
     } else {
-      try {
-        final profile = await _authRepository.getProfile();
-        final user = (profile['user'] as Map?) ?? profile;
-        final hasProfile = user['nickname'] != null;
-        final hasAffiliation =
-            (user['affiliationText'] as String?)?.trim().isNotEmpty ?? false;
-        if (!hasProfile || !hasAffiliation) {
-          route = AppRoutes.profileSetup;
-        } else {
-          try {
-            final status =
-                await _environmentStatusRepository.getMyEnvironmentStatus();
-            if (status == null || status['environmentId'] == null) {
-              route = AppRoutes.environment;
-            } else if (status['verified'] == true) {
-              route = AppRoutes.home;
-            } else {
+      final token = await _tokenStorage.readAccessToken();
+      if (token == null || token.isEmpty) {
+        route = AppRoutes.onboarding;
+      } else {
+        try {
+          final profile = await _authRepository.getProfile();
+          final user = (profile['user'] as Map?) ?? profile;
+          final hasProfile = user['nickname'] != null;
+          final hasAffiliation =
+              (user['affiliationText'] as String?)?.trim().isNotEmpty ?? false;
+          if (!hasProfile || !hasAffiliation) {
+            // 프로필 미완성: 옛날 프로필 등록 대신 학교 선택 → 메일 인증 → 프로필 생성 순서로
+            route = AppRoutes.universitySelect;
+          } else {
+            try {
+              final status =
+                  await _environmentStatusRepository.getMyEnvironmentStatus();
+              if (status == null || status['environmentId'] == null) {
+                route = AppRoutes.environment;
+              } else if (status['verified'] == true) {
+                route = AppRoutes.home;
+              } else {
+                route = AppRoutes.environment;
+              }
+            } catch (_) {
               route = AppRoutes.environment;
             }
-          } catch (_) {
-            route = AppRoutes.environment;
           }
+        } catch (_) {
+          await _tokenStorage.clear();
+          route = AppRoutes.onboarding;
         }
-      } catch (_) {
-        await _tokenStorage.clear();
-        route = AppRoutes.onboarding;
       }
     }
     // Design 스플래시: 최소 3.3초 표시 후 화면 전환
@@ -164,9 +178,9 @@ class _NearoAppState extends State<NearoApp> {
   Future<void> _initDeepLinks() async {
     final initialLink = await _appLinks.getInitialLink();
     if (initialLink != null) {
-      _handleLink(initialLink);
+      _handleLink(initialLink, isInitial: true);
     }
-    _linkSub = _appLinks.uriLinkStream.listen(_handleLink);
+    _linkSub = _appLinks.uriLinkStream.listen((uri) => _handleLink(uri));
   }
 
   Future<void> _restoreSession() async {
@@ -224,13 +238,21 @@ class _NearoAppState extends State<NearoApp> {
     }
   }
 
-  void _handleLink(Uri uri) {
+  void _handleLink(Uri uri, {bool isInitial = false}) {
     if (uri.scheme == 'nearo' && uri.host == 'login-success') {
       final token = uri.queryParameters['token'];
       if (token != null && token.isNotEmpty) {
         _tokenStorage.saveAccessToken(token);
       }
-      _restoreSession();
+      // 콜드 스타트가 아닐 때만(앱이 이미 떠 있는 상태에서 딥링크로 복귀) 학교 선택으로 이동
+      if (!isInitial) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _navigatorKey.currentState?.pushNamedAndRemoveUntil(
+            AppRoutes.universitySelect,
+            (route) => false,
+          );
+        });
+      }
     }
   }
 
@@ -273,6 +295,29 @@ class _NearoAppState extends State<NearoApp> {
                   navigatorKey: _navigatorKey,
                   initialRoute: _initialRoute,
                   builder: (context, child) => child ?? const SizedBox.shrink(),
+                  onGenerateRoute: (settings) {
+                    if (settings.name == AppRoutes.emailVerification) {
+                      final universityName = settings.arguments is String
+                          ? settings.arguments as String
+                          : (settings.arguments?.toString().trim().isNotEmpty == true
+                              ? settings.arguments.toString()
+                              : null);
+                      return MaterialPageRoute<void>(
+                        settings: RouteSettings(
+                          name: settings.name,
+                          arguments: universityName,
+                        ),
+                        builder: (ctx) => MeetzyEmailVerificationPage(
+                          onBack: () => Navigator.of(ctx).pushReplacementNamed(AppRoutes.universitySelect),
+                          onComplete: () => Navigator.of(ctx).pushReplacementNamed(
+                            AppRoutes.profileSetup,
+                            arguments: {'isInitialSetup': true},
+                          ),
+                        ),
+                      );
+                    }
+                    return null;
+                  },
                   routes: {
                     AppRoutes.onboarding: (context) => MeetzyOnboardingPage(
                       onComplete: () {
@@ -282,6 +327,10 @@ class _NearoAppState extends State<NearoApp> {
                       },
                     ),
                     AppRoutes.login: (_) => const LoginScreen(),
+                    AppRoutes.universitySelect: (ctx) => MeetzyUniversitySelectPage(
+                      onBack: () => Navigator.pushReplacementNamed(ctx, AppRoutes.login),
+                      onComplete: null,
+                    ),
                     AppRoutes.environment: (_) => const EnvironmentScreen(),
                     AppRoutes.matchingResult: (_) => const MatchingResultScreen(),
                     AppRoutes.matchingHome: (_) => const MatchingHomeScreen(),

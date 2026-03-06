@@ -5,6 +5,7 @@ import 'package:nearo_app/features/community/data/community_repository.dart';
 import 'package:nearo_app/features/community/screens/community_post_detail_screen.dart';
 import 'package:nearo_app/features/community/screens/community_post_write_screen.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
+import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/shared/utils/post_time_format.dart';
 
@@ -203,7 +204,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
         width: double.infinity,
         height: double.infinity,
         decoration: BoxDecoration(
-          gradient: dark ? null : NearoTheme.designScreenBgGradientLight,
+          gradient: dark ? null : ThemeController.getScreenBgGradient(),
           color: dark ? NearoTheme.designScreenBgDark : null,
         ),
         child: Column(
