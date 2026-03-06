@@ -78,6 +78,28 @@ class ThemeController {
     return gradientFromPrimaryDiagonal(seedColor.value);
   }
 
+  /// 화면 배경 그라데이션. pink 모드: rose-50 계열, school 모드: 교색 기반 밝은 톤.
+  static LinearGradient getScreenBgGradient() {
+    if (themeColorMode.value == _valuePink) return NearoTheme.designScreenBgGradientLight;
+    final c = seedColor.value;
+    return LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        Color.lerp(c, Colors.white, 0.92)!,
+        Color.lerp(c, Colors.white, 0.94)!,
+        Color.lerp(c, Colors.white, 0.88)!,
+      ],
+    );
+  }
+
+  /// 하단바/선택 상태 등에 쓰는 강한 포인트 그라데이션.
+  /// pink 모드: 디자인 핑크, school 모드: 교색 기반.
+  static LinearGradient getActiveAccentGradient() {
+    if (themeColorMode.value == _valuePink) return NearoTheme.designPinkGradient;
+    return gradientFromPrimaryDiagonal(seedColor.value);
+  }
+
   /// 위와 동일 3색, 방향만 topLeft → bottomRight (프로필 시트·모달 헤더용)
   static LinearGradient gradientFromPrimaryDiagonal(Color primary) {
     final lighter = Color.lerp(primary, Colors.white, 0.22)!;

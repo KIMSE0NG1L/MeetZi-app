@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/matching_board/data/matching_board_repository.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
+import 'package:nearo_app/shared/theme/theme_controller.dart';
 
 /// AppDesign ShopScreen: 보유 코인 박스 + 패키지 카드 (로즈/다크 스타일)
 class RatingsScreen extends StatefulWidget {
@@ -152,7 +153,7 @@ class _RatingsScreenState extends State<RatingsScreen> {
         width: double.infinity,
         height: double.infinity,
         decoration: BoxDecoration(
-          gradient: dark ? null : NearoTheme.designScreenBgGradientLight,
+          gradient: dark ? null : ThemeController.getScreenBgGradient(),
           color: dark ? NearoTheme.designScreenBgDark : null,
         ),
         child: Column(

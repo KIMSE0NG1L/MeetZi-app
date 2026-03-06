@@ -18,6 +18,8 @@ class AppRoutes {
   static const String authProfile = '/auth/profile';
   static const String users = '/users';
   static const String profileSetup = '/profile/setup';
+  static const String universitySelect = '/onboarding/university-select';
+  static const String emailVerification = '/onboarding/email-verification';
   static const String avatarSetup = '/profile/avatar-setup';
   static const String customerSupport = '/settings/customer-support';
 }

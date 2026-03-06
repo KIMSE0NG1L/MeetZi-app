@@ -89,7 +89,6 @@ flutter:
   assets:
     - assets/animations/
     - assets/images/
-    - assets/noise.png
     - assets/icon.png
 
   # Pretendard: assets/fonts/README.md 참고. 파일 추가 후 아래 주석 해제.

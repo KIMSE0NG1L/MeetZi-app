@@ -4,6 +4,7 @@ import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/shared/utils/photo_url.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
+import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -182,7 +183,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
         width: double.infinity,
         height: double.infinity,
         decoration: BoxDecoration(
-          gradient: dark ? null : NearoTheme.designScreenBgGradientLight,
+          gradient: dark ? null : ThemeController.getScreenBgGradient(),
           color: dark ? NearoTheme.designScreenBgDark : null,
         ),
         child: _loading

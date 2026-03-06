@@ -33,13 +33,13 @@ class _MeetzyCoachMarkState extends State<MeetzyCoachMark> {
   int _currentStep = 0;
 
   static const _steps = [
-    ('열람권', '다른 학생의 프로필을 볼 수 있는 티켓이에요! 마음에 드는 사람의 카드를 클릭해보세요.'),
-    ('등록권', '내 프로필을 게시판에 올려서 다른 사람들에게 보여줄 수 있어요!'),
-    ('매칭권', '마음에 드는 사람에게 메시지를 보낼 수 있는 특별한 기회예요!'),
-    ('알림', '새로운 매칭 요청이나 메시지 알림을 확인할 수 있어요.'),
-    ('설정', '다크모드, 컬러 테마 등 앱 설정을 변경할 수 있어요.'),
-    ('프로필 카드', '카드를 클릭하면 상세 프로필을 볼 수 있어요.'),
-    ('하단 네비게이션', '랭킹, 메시지, 게시판, 프로필, 상점을 자유롭게 이동할 수 있어요!'),
+    ('👀', '열람권', '다른 학생의 프로필을 볼 수 있는 티켓이에요! 마음에 드는 사람의 카드를 클릭해보세요.'),
+    ('📝', '등록권', '내 프로필을 게시판에 올려서 다른 사람들에게 보여줄 수 있어요!'),
+    ('💝', '매칭권', '마음에 드는 사람에게 메시지를 보낼 수 있는 특별한 기회예요!'),
+    ('🔔', '알림', '새로운 매칭 요청이나 메시지 알림을 확인할 수 있어요.'),
+    ('⚙️', '설정', '다크모드, 컬러 테마 등 앱 설정을 변경할 수 있어요.'),
+    ('🃏', '프로필 카드', '카드를 클릭하면 상세 프로필을 볼 수 있어요.'),
+    ('🧭', '하단 네비게이션', '랭킹, 메시지, 게시판, 프로필, 상점을 자유롭게 이동할 수 있어요!'),
   ];
 
   void _next() {
@@ -121,17 +121,32 @@ class _MeetzyCoachMarkState extends State<MeetzyCoachMark> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              step.$1,
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: dark ? Colors.white : const Color(0xFF111827),
-                              ),
+                            Row(
+                              children: [
+                                Text(
+                                  step.$1,
+                                  style: const TextStyle(
+                                    fontSize: 22,
+                                    height: 1,
+                                    fontFamilyFallback: ['Noto Color Emoji'],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    step.$2,
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: dark ? Colors.white : const Color(0xFF111827),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              step.$2,
+                              step.$3,
                               style: TextStyle(
                                 fontSize: 14,
                                 height: 1.4,

@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:nearo_app/app/app_routes.dart';
+import 'package:nearo_app/core/theme/university_theme.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/auth/data/environment_repository.dart';
 import 'package:nearo_app/features/photo/data/photo_repository.dart';
@@ -70,6 +71,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   String _result = '';
   bool _isEditing = false;
   bool _forceEdit = false;
+  bool _isInitialSetup = false;
   bool _didReadArgs = false;
   XFile? _selectedPhoto;
   List<dynamic> _photos = [];
@@ -84,6 +86,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     final args = ModalRoute.of(context)?.settings.arguments;
     if (args is bool) {
       _forceEdit = args;
+    } else if (args is Map) {
+      _isInitialSetup = args['isInitialSetup'] == true;
     }
     _didReadArgs = true;
     _loadProfileIfExists();
@@ -423,7 +427,12 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       _applyThemeForAffiliation();
       setState(() => _result = response.toString());
       if (!mounted) return;
-      if (_isEditing) {
+      if (_isInitialSetup) {
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          AppRoutes.home,
+          (route) => false,
+        );
+      } else if (_isEditing) {
         Navigator.of(context).pushNamedAndRemoveUntil(
           AppRoutes.home,
           (route) => false,
@@ -460,7 +469,104 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   }
 
   /// AppDesign ProfileEditScreen: 헤더 + 본문 (다크모드 시 배경/글자 테마 반영)
+  /// isInitialSetup이면 ad 스타일: gradient 헤더 + "프로필 생성" + 진행 단계(메일 인증 → 프로필 → 완료)
   Widget _buildAppDesignHeader(BuildContext context, Color surface, Color onSurface) {
+    if (_isInitialSetup) {
+      final topInset = MediaQuery.of(context).padding.top;
+      final pt = topInset > 0 ? topInset : 56.0;
+      return Container(
+        padding: EdgeInsets.only(left: 20, right: 20, top: pt, bottom: 24),
+        decoration: const BoxDecoration(
+          gradient: UniversityTheme.designPinkGradient,
+          boxShadow: [BoxShadow(color: Color(0x26000000), blurRadius: 4, offset: Offset(0, 2))],
+        ),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  onPressed: () => Navigator.of(context).pushReplacementNamed(AppRoutes.emailVerification),
+                  icon: const Icon(LucideIcons.arrowLeft, color: Colors.white, size: 24),
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.white.withValues(alpha: 0.1),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+                const Text(
+                  '프로필 생성',
+                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(width: 48),
+              ],
+            ),
+            const SizedBox(height: 24),
+            // 진행 단계: 메일 인증(완료) → 프로필(현재) → 완료 (ad: flex items-center justify-between)
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.3),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(LucideIcons.check, size: 20, color: Colors.white),
+                      ),
+                      const SizedBox(height: 8),
+                      Text('메일 인증', style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 12, fontWeight: FontWeight.w500)),
+                    ],
+                  ),
+                ),
+                Expanded(flex: 0, child: Container(height: 2, width: 24, color: Colors.white.withValues(alpha: 0.3))),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 8)],
+                        ),
+                        child: const Icon(LucideIcons.user, size: 20, color: Color(0xFFEC4899)),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text('프로필', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+                Expanded(flex: 0, child: Container(height: 2, width: 24, color: Colors.white.withValues(alpha: 0.3))),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.3),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(LucideIcons.check, size: 20, color: Colors.white.withValues(alpha: 0.6)),
+                      ),
+                      const SizedBox(height: 8),
+                      Text('완료', style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 12, fontWeight: FontWeight.w500)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
     final topInset = MediaQuery.of(context).padding.top;
     final pt = topInset > 0 ? topInset : 56.0;
     return Container(
@@ -489,6 +595,42 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     borderSide: BorderSide.none,
   );
 
+  /// ad ProfileEditScreen: rounded-2xl card with icon + title
+  Widget _adSectionCard({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required bool dark,
+    required Color cardBg,
+    required Color onSurface,
+    required Widget child,
+  }) {
+    final iconColor = dark ? const Color(0xFFF472B6) : const Color(0xFFEC4899);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: dark ? null : [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 20, color: iconColor),
+              const SizedBox(width: 8),
+              Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: onSurface)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          child,
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
@@ -500,146 +642,186 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     final labelStyle = TextStyle(fontSize: 14, color: onSurfaceVariant);
     final sectionLabelStyle = TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: onSurface);
 
+    final cardBg = _isInitialSetup
+        ? (dark ? Colors.white.withValues(alpha: 0.06) : Colors.white.withValues(alpha: 0.6))
+        : surface;
+    final screenBg = _isInitialSetup && !dark
+        ? null
+        : backgroundColor;
+    final screenGradient = _isInitialSetup && !dark
+        ? UniversityTheme.screenBgGradient
+        : null;
+
     return Scaffold(
-      backgroundColor: backgroundColor,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Material(
-            elevation: 1,
-            shadowColor: Colors.black.withOpacity(0.06),
-            color: surface,
-            child: _buildAppDesignHeader(context, surface, onSurface),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-              child: ListView(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  Text('아바타', style: sectionLabelStyle),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      SizedBox(
-                        width: 80,
-                        height: 80,
-                        child: _avatarSeed != null && _avatarSeed!.isNotEmpty
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(40),
-                                child: SvgPicture.network(
-                                  diceBearAvatarUrl(_avatarSeed!, options: _avatarOptions.isNotEmpty ? _avatarOptions : null),
-                                  fit: BoxFit.cover,
-                                  placeholderBuilder: (context) => const Center(child: CircularProgressIndicator()),
+      backgroundColor: screenBg,
+      body: Container(
+        decoration: BoxDecoration(
+          color: screenBg,
+          gradient: screenGradient,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (_isInitialSetup)
+              _buildAppDesignHeader(context, surface, onSurface)
+            else
+              Material(
+                elevation: 1,
+                shadowColor: Colors.black.withOpacity(0.06),
+                color: surface,
+                child: _buildAppDesignHeader(context, surface, onSurface),
+              ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                child: ListView(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    if (_isInitialSetup) ...[
+                      Text(
+                        '나를 소개해주세요 ✨',
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: onSurface),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '매력적인 프로필로 특별한 인연을 만나보세요',
+                        style: TextStyle(fontSize: 14, color: onSurfaceVariant),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                    _adSectionCard(
+                      context: context,
+                      icon: LucideIcons.camera,
+                      title: '프로필 이미지',
+                      dark: dark,
+                      cardBg: cardBg,
+                      onSurface: onSurface,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('아바타', style: TextStyle(fontSize: 12, color: onSurfaceVariant)),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              SizedBox(
+                                width: 80,
+                                height: 80,
+                                child: _avatarSeed != null && _avatarSeed!.isNotEmpty
+                                    ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(40),
+                                        child: SvgPicture.network(
+                                          diceBearAvatarUrl(_avatarSeed!, options: _avatarOptions.isNotEmpty ? _avatarOptions : null),
+                                          fit: BoxFit.cover,
+                                          placeholderBuilder: (context) => const Center(child: CircularProgressIndicator()),
+                                        ),
+                                      )
+                                    : Container(
+                                        width: 80,
+                                        height: 80,
+                                        decoration: BoxDecoration(
+                                          color: dark ? Colors.grey.shade700 : Colors.grey.shade200,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(LucideIcons.user, size: 40, color: onSurfaceVariant),
+                                      ),
+                              ),
+                              const SizedBox(width: 16),
+                              Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () async {
+                                    await Navigator.of(context).pushNamed(AppRoutes.avatarSetup);
+                                    if (!mounted) return;
+                                    _loadProfileIfExists();
+                                  },
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                    decoration: BoxDecoration(
+                                      border: Border.all(color: borderColor, width: 2),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text('아바타 편집', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: onSurface)),
+                                  ),
                                 ),
-                              )
-                            : Container(
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Text('프로필 사진', style: TextStyle(fontSize: 12, color: onSurfaceVariant)),
+                          const SizedBox(height: 8),
+                            Row(
+                            children: [
+                              Container(
                                 width: 80,
                                 height: 80,
                                 decoration: BoxDecoration(
                                   color: dark ? Colors.grey.shade700 : Colors.grey.shade200,
-                                  shape: BoxShape.circle,
+                                  borderRadius: BorderRadius.circular(16),
                                 ),
-                                child: Icon(LucideIcons.user, size: 40, color: onSurfaceVariant),
+                                clipBehavior: Clip.antiAlias,
+                                child: _selectedPhoto == null
+                                    ? Icon(LucideIcons.upload, size: 32, color: onSurfaceVariant)
+                                    : Image.file(
+                                        File(_selectedPhoto!.path),
+                                        fit: BoxFit.cover,
+                                      ),
                               ),
-                      ),
-                      const SizedBox(width: 16),
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () async {
-                            await Navigator.of(context).pushNamed(AppRoutes.avatarSetup);
-                            if (!mounted) return;
-                            _loadProfileIfExists();
-                          },
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: borderColor, width: 2),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text('아바타 편집', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: onSurface)),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        onTap: _pickPhoto,
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                          decoration: BoxDecoration(
+                                            border: Border.all(color: borderColor, width: 2),
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Text(_photos.isEmpty ? '사진 선택' : '다른 사진 선택', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: onSurface)),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        onTap: _isUploadingPhoto ? null : _uploadSelectedPhoto,
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                          decoration: BoxDecoration(
+                                            gradient: ThemeController.getHeaderGradient(),
+                                            borderRadius: BorderRadius.circular(12),
+                                            boxShadow: [BoxShadow(color: Theme.of(context).colorScheme.primary.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 2))],
+                                          ),
+                                          child: _isUploadingPhoto
+                                              ? const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)))
+                                              : Text(_photos.isEmpty ? '사진 업로드' : '사진 변경', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white)),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  Text('프로필 사진', style: sectionLabelStyle),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          color: dark ? Colors.grey.shade700 : Colors.grey.shade200,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        clipBehavior: Clip.antiAlias,
-                        child: _selectedPhoto == null
-                            ? Icon(LucideIcons.upload, size: 32, color: onSurfaceVariant)
-                            : Image.file(
-                                File(_selectedPhoto!.path),
-                                fit: BoxFit.cover,
-                              ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: _pickPhoto,
-                                borderRadius: BorderRadius.circular(12),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                  decoration: BoxDecoration(
-                                    border: Border.all(color: borderColor, width: 2),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(_photos.isEmpty ? '사진 선택' : '다른 사진 선택', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: onSurface)),
-                                ),
-                              ),
-                            ),
+                          if (_photoError != null) ...[
                             const SizedBox(height: 8),
-                            Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: _isUploadingPhoto ? null : _uploadSelectedPhoto,
-                                borderRadius: BorderRadius.circular(12),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                  decoration: BoxDecoration(
-                                    gradient: ThemeController.getHeaderGradient(),
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [BoxShadow(color: Theme.of(context).colorScheme.primary.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 2))],
-                                  ),
-                                  child: _isUploadingPhoto
-                                      ? const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)))
-                                      : Text(_photos.isEmpty ? '사진 업로드' : '사진 변경', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white)),
-                                ),
-                              ),
+                            Text(
+                              _photoError!,
+                              style: TextStyle(color: Theme.of(context).colorScheme.error),
                             ),
                           ],
-                        ),
-                      ),
-                    ],
-                  ),
-              if (_photoError != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  _photoError!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              ],
-              if (_photos.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                SizedBox(
+                          if (_photos.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            SizedBox(
                   height: 88,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
@@ -717,33 +899,45 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                     },
                   ),
                 ),
-              ],
-              const SizedBox(height: 16),
-              Text('프로필 방식', style: labelStyle),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: _boardDisplayChip(
-                      label: '아바타',
-                      value: 'avatar',
-                      icon: LucideIcons.smile,
+                          ],
+                          const SizedBox(height: 16),
+                          Text('프로필 방식', style: labelStyle),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _boardDisplayChip(
+                                  label: '아바타',
+                                  value: 'avatar',
+                                  icon: LucideIcons.smile,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _boardDisplayChip(
+                                  label: '내 사진',
+                                  value: 'photo',
+                                  icon: LucideIcons.image,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _boardDisplayChip(
-                      label: '내 사진',
-                      value: 'photo',
-                      icon: LucideIcons.image,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Text('닉네임 (2~8자, 한글/영문/숫자)', style: labelStyle),
-              const SizedBox(height: 8),
-              TextField(
+                    _adSectionCard(
+                      context: context,
+                      icon: LucideIcons.user,
+                      title: '기본 정보',
+                      dark: dark,
+                      cardBg: cardBg,
+                      onSurface: onSurface,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('닉네임 (2~8자, 한글/영문/숫자)', style: labelStyle),
+                          const SizedBox(height: 8),
+                          TextField(
                 controller: _nicknameController,
                 keyboardType: TextInputType.name,
                 textInputAction: TextInputAction.next,
@@ -908,42 +1102,66 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 items: _mbtiOptions.map((e) => DropdownMenuItem(value: e, child: Text(e, style: TextStyle(color: onSurface)))).toList(),
                 onChanged: (v) { if (v != null) setState(() => _mbtiController.text = v); },
               ),
-              const SizedBox(height: 16),
-              Text('나를 소개하는 태그', style: labelStyle),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _idealKeywordOptions.map((label) {
-                  final selected = _idealTypeKeywords.contains(label);
-                  final canSelect = selected || _idealTypeKeywords.length < 3;
-                  final primary = Theme.of(context).colorScheme.primary;
-                  return FilterChip(
-                    label: Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: selected ? Colors.white : onSurface)),
-                    selected: selected,
-                    selectedColor: primary,
-                    checkmarkColor: Colors.white,
-                    side: BorderSide(color: selected ? primary : borderColor),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-                    onSelected: canSelect
-                        ? (v) {
-                            setState(() {
-                              if (v == true) {
-                                if (_idealTypeKeywords.length < 3) _idealTypeKeywords.add(label);
-                              } else {
-                                _idealTypeKeywords.remove(label);
-                              }
-                            });
-                          }
-                        : null,
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 16),
-              Text('평소 패션 스타일', style: labelStyle),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                value: _fashionStyle,
+                        ],
+                      ),
+                    ),
+                    _adSectionCard(
+                      context: context,
+                      icon: LucideIcons.sparkles,
+                      title: '나를 소개하는 태그',
+                      dark: dark,
+                      cardBg: cardBg,
+                      onSurface: onSurface,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('나를 잘 표현하는 태그를 선택해보세요 (여러 개 선택 가능)', style: TextStyle(fontSize: 12, color: onSurfaceVariant)),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: _idealKeywordOptions.map((label) {
+                              final selected = _idealTypeKeywords.contains(label);
+                              final canSelect = selected || _idealTypeKeywords.length < 3;
+                              final primary = Theme.of(context).colorScheme.primary;
+                              return FilterChip(
+                                label: Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: selected ? Colors.white : onSurface)),
+                                selected: selected,
+                                selectedColor: primary,
+                                checkmarkColor: Colors.white,
+                                side: BorderSide(color: selected ? primary : borderColor),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+                                onSelected: canSelect
+                                    ? (v) {
+                                        setState(() {
+                                          if (v == true) {
+                                            if (_idealTypeKeywords.length < 3) _idealTypeKeywords.add(label);
+                                          } else {
+                                            _idealTypeKeywords.remove(label);
+                                          }
+                                        });
+                                      }
+                                    : null,
+                              );
+                            }).toList(),
+                          ),
+                        ],
+                      ),
+                    ),
+                    _adSectionCard(
+                      context: context,
+                      icon: LucideIcons.heart,
+                      title: '취향 & 라이프스타일',
+                      dark: dark,
+                      cardBg: cardBg,
+                      onSurface: onSurface,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('평소 패션 스타일', style: labelStyle),
+                          const SizedBox(height: 8),
+                          DropdownButtonFormField<String>(
+                            value: _fashionStyle,
                 dropdownColor: surface,
                 style: TextStyle(color: onSurface),
                 decoration: InputDecoration(
@@ -1077,39 +1295,47 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
               ),
-              const SizedBox(height: 24),
-              Material(
-                elevation: 4,
-                shadowColor: Colors.black.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(16),
-                child: InkWell(
-                  onTap: _isLoading ? null : _submit,
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    decoration: BoxDecoration(
-                      gradient: ThemeController.getHeaderGradient(),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [BoxShadow(color: Theme.of(context).colorScheme.primary.withOpacity(0.35), blurRadius: 12, offset: const Offset(0, 4))],
+                        ],
+                      ),
                     ),
-                    child: _isLoading
-                        ? const Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)))
-                        : Text(
-                            _isEditing ? '프로필 수정' : '프로필 저장',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                    const SizedBox(height: 24),
+                    Material(
+                      elevation: 4,
+                      shadowColor: Colors.black.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(16),
+                      child: InkWell(
+                        onTap: _isLoading ? null : _submit,
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          decoration: BoxDecoration(
+                            gradient: ThemeController.getHeaderGradient(),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [BoxShadow(color: Theme.of(context).colorScheme.primary.withOpacity(0.35), blurRadius: 12, offset: const Offset(0, 4))],
                           ),
-                  ),
+                          child: _isLoading
+                              ? const Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)))
+                              : Text(
+                                  _isInitialSetup
+                                      ? '완료하고 시작하기 🎉'
+                                      : _isEditing
+                                          ? '프로필 수정'
+                                          : '프로필 저장',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                                ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    if (_result.isNotEmpty) Text(_result, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                  ],
                 ),
               ),
-              const SizedBox(height: 24),
-              if (_result.isNotEmpty) Text(_result, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-            ],
-          ),
+            ),
+          ],
         ),
-      ),
-        ],
       ),
     );
   }

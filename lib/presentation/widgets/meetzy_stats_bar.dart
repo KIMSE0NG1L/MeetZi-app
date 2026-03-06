@@ -111,33 +111,18 @@ class _MatchingInboxChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final fg = isDark ? const Color(0xFFA78BFA) : const Color(0xFF7C3AED);
-    final bg = isDark ? const Color(0xFF4C1D95).withValues(alpha: 0.3) : const Color(0xFFEDE9FE);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final fg = isDark ? Colors.white : theme.colorScheme.primary;
 
     return Material(
-      color: bg,
-      borderRadius: BorderRadius.circular(MeetzyDesignTokens.ticketChipRadius),
+      type: MaterialType.transparency,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(MeetzyDesignTokens.ticketChipRadius),
+        borderRadius: BorderRadius.circular(10),
         child: Padding(
-          padding: MeetzyDesignTokens.ticketChipPadding,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(LucideIcons.messageCircle, size: 14, color: fg),
-              const SizedBox(width: 4),
-              Text(
-                '매칭대기함',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: fg,
-                ),
-              ),
-            ],
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Icon(LucideIcons.mail, size: 26, color: fg),
         ),
       ),
     );
