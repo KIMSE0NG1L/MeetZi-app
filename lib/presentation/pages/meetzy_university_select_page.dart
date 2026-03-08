@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:nearo_app/core/theme/university_theme.dart';
 import 'package:nearo_app/app/app_routes.dart';
+import 'package:nearo_app/core/theme/university_theme.dart';
+import 'package:nearo_app/features/auth/data/environment_repository.dart';
 import 'package:nearo_app/presentation/pages/meetzy_email_verification_page.dart';
 
-/// ad UniversitySelectScreen 100% — gradient header, 검색창, "학교를 선택해주세요 🎓", 인기/전체 대학교, 흰 카드·핑크 선택.
 class MeetzyUniversitySelectPage extends StatefulWidget {
   const MeetzyUniversitySelectPage({
     super.key,
@@ -22,72 +22,115 @@ class MeetzyUniversitySelectPage extends StatefulWidget {
 }
 
 class _MeetzyUniversitySelectPageState extends State<MeetzyUniversitySelectPage> {
+  final EnvironmentRepository _repository = EnvironmentRepository();
+
   String _searchQuery = '';
   String? _selectedUniversity;
+  bool _loading = true;
+  List<MeetzyUniversityItem> _popularUniversities = [];
+  List<MeetzyUniversityItem> _allUniversities = [];
 
-  static const _defaultUniversities = [
-    MeetzyUniversityItem(name: '세종대학교', location: '서울', popular: true),
-    MeetzyUniversityItem(name: '서울대학교', location: '서울', popular: true),
-    MeetzyUniversityItem(name: '연세대학교', location: '서울', popular: true),
-    MeetzyUniversityItem(name: '고려대학교', location: '서울', popular: true),
-    MeetzyUniversityItem(name: '성균관대학교', location: '서울', popular: true),
-    MeetzyUniversityItem(name: '한양대학교', location: '서울', popular: true),
-    MeetzyUniversityItem(name: '이화여자대학교', location: '서울', popular: true),
-    MeetzyUniversityItem(name: '중앙대학교', location: '서울', popular: false),
-    MeetzyUniversityItem(name: '경희대학교', location: '서울', popular: false),
-    MeetzyUniversityItem(name: '한국외국어대학교', location: '서울', popular: false),
-    MeetzyUniversityItem(name: '건국대학교', location: '서울', popular: false),
-    MeetzyUniversityItem(name: '동국대학교', location: '서울', popular: false),
-    MeetzyUniversityItem(name: '홍익대학교', location: '서울', popular: false),
-    MeetzyUniversityItem(name: '숙명여자대학교', location: '서울', popular: false),
-    MeetzyUniversityItem(name: '서울시립대학교', location: '서울', popular: false),
-    MeetzyUniversityItem(name: '부산대학교', location: '부산', popular: false),
-    MeetzyUniversityItem(name: '경북대학교', location: '대구', popular: false),
-    MeetzyUniversityItem(name: '전남대학교', location: '광주', popular: false),
-    MeetzyUniversityItem(name: '충남대학교', location: '대전', popular: false),
-  ];
-
-  List<MeetzyUniversityItem> get _filtered {
-    final list = widget.universities ?? _defaultUniversities;
-    if (_searchQuery.trim().isEmpty) return list;
-    final q = _searchQuery.trim().toLowerCase();
-    return list.where((u) => u.name.toLowerCase().contains(q)).toList();
+  @override
+  void initState() {
+    super.initState();
+    _loadUniversities();
   }
 
-  void _select(String name) {
-    setState(() => _selectedUniversity = name);
-    Future.delayed(const Duration(milliseconds: 300), () {
+  Future<void> _loadUniversities() async {
+    try {
+      final ranking = await _repository.getRanking();
+      final environments = await _repository.getEnvironments();
+
+      final universities = environments
+          .where((item) => item is Map && item['type']?.toString() == 'university')
+          .map((item) => Map<String, dynamic>.from(item as Map))
+          .toList();
+      final envByName = {
+        for (final item in universities)
+          (item['name']?.toString() ?? ''): item,
+      };
+
+      final popular = ranking
+          .where((item) => (item['name']?.toString().trim().isNotEmpty ?? false) && envByName.containsKey(item['name']?.toString()))
+          .take(10)
+          .map(
+            (item) => MeetzyUniversityItem(
+              id: envByName[item['name']?.toString()]?['id']?.toString(),
+              name: item['name']?.toString() ?? '-',
+              count: (item['count'] as num?)?.toInt() ?? (item['users'] as num?)?.toInt() ?? 0,
+              popular: true,
+            ),
+          )
+          .toList();
+
+      final all = universities
+          .map(
+            (item) => MeetzyUniversityItem(
+              id: item['id']?.toString(),
+              name: item['name']?.toString() ?? '-',
+              count: 0,
+            ),
+          )
+          .toList()
+        ..sort((a, b) => a.name.compareTo(b.name));
+
+      if (!mounted) return;
+      setState(() {
+        _popularUniversities = widget.universities ?? popular;
+        _allUniversities = widget.universities ?? all;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _popularUniversities = widget.universities ?? const [];
+        _allUniversities = widget.universities ?? const [];
+        _loading = false;
+      });
+    }
+  }
+
+  List<MeetzyUniversityItem> get _filteredResults {
+    final query = _searchQuery.trim().toLowerCase();
+    if (query.isEmpty) {
+      return _popularUniversities;
+    }
+    return _allUniversities.where((u) => u.name.toLowerCase().contains(query)).toList();
+  }
+
+  void _select(MeetzyUniversityItem item) {
+    setState(() => _selectedUniversity = item.name);
+    Future.delayed(const Duration(milliseconds: 250), () {
       if (!mounted) return;
       if (widget.onComplete != null) {
-        widget.onComplete!(name);
-      } else {
-        Navigator.of(context).pushReplacement<void, void>(
-          MaterialPageRoute(
-            settings: RouteSettings(
-              name: AppRoutes.emailVerification,
-              arguments: name,
-            ),
-            builder: (ctx) => MeetzyEmailVerificationPage(
-              onBack: () => Navigator.of(ctx).pushReplacementNamed(AppRoutes.universitySelect),
-              onComplete: () => Navigator.of(ctx).pushReplacementNamed(
-                AppRoutes.profileSetup,
-                arguments: {'isInitialSetup': true},
-              ),
+        widget.onComplete!(item.name);
+        return;
+      }
+      Navigator.of(context).pushReplacement<void, void>(
+        MaterialPageRoute(
+          settings: RouteSettings(
+            name: AppRoutes.emailVerification,
+            arguments: item.name,
+          ),
+          builder: (ctx) => MeetzyEmailVerificationPage(
+            onBack: () => Navigator.of(ctx).pushReplacementNamed(AppRoutes.universitySelect),
+            onComplete: () => Navigator.of(ctx).pushReplacementNamed(
+              AppRoutes.profileSetup,
+              arguments: {'isInitialSetup': true},
             ),
           ),
-        );
-      }
+        ),
+      );
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _filtered;
-    final popular = filtered.where((u) => u.popular).toList();
-    final other = filtered.where((u) => !u.popular).toList();
+    final results = _filteredResults;
+    final isSearching = _searchQuery.trim().isNotEmpty;
 
     return Scaffold(
-      body: Container(
+      body: DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -103,10 +146,9 @@ class _MeetzyUniversitySelectPageState extends State<MeetzyUniversitySelectPage>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Header (ad: bg-gradient-to-r themeColors.gradient)
               Container(
-                padding: const EdgeInsets.fromLTRB(20, 56, 20, 24),
-                decoration: BoxDecoration(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                decoration: const BoxDecoration(
                   gradient: UniversityTheme.designPinkGradient,
                   boxShadow: [
                     BoxShadow(
@@ -132,19 +174,14 @@ class _MeetzyUniversitySelectPageState extends State<MeetzyUniversitySelectPage>
                         ),
                         const Text(
                           '학교 선택',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(width: 48),
                       ],
                     ),
                     const SizedBox(height: 24),
-                    // 검색창 (ad: white/95 rounded-2xl)
                     TextField(
-                      onChanged: (v) => setState(() => _searchQuery = v),
+                      onChanged: (value) => setState(() => _searchQuery = value),
                       decoration: InputDecoration(
                         hintText: '학교명 검색',
                         hintStyle: const TextStyle(color: Color(0xFF9CA3AF)),
@@ -166,79 +203,54 @@ class _MeetzyUniversitySelectPageState extends State<MeetzyUniversitySelectPage>
                   ],
                 ),
               ),
-              // Content (ad: 학교를 선택해주세요 🎓, 같은 학교 친구들과 만나보세요)
               Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-                  children: [
-                    const SizedBox(height: 8),
-                    const Text(
-                      '학교를 선택해주세요 🎓',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF111827),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      '같은 학교 친구들과 만나보세요',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF6B7280),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    if (filtered.isEmpty)
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 48),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(LucideIcons.school, size: 64, color: Colors.grey.shade300),
-                              const SizedBox(height: 16),
-                              Text(
-                                '검색 결과가 없습니다',
-                                style: TextStyle(color: Colors.grey.shade500, fontSize: 16),
+                child: _loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : ListView(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                        children: [
+                          const Text(
+                            '학교를 선택해주세요',
+                            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF111827)),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            isSearching
+                                ? '검색 결과에서 학교를 선택하세요'
+                                : '인기 대학교는 실제 가입자 수 기준 상위 10개만 보여줘요',
+                            style: const TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
+                          ),
+                          const SizedBox(height: 24),
+                          if (!isSearching) ...[
+                            const Padding(
+                              padding: EdgeInsets.only(left: 4, bottom: 12),
+                              child: Text(
+                                '인기 대학교',
+                                style: TextStyle(color: Color(0xFF6B7280), fontSize: 14, fontWeight: FontWeight.w600),
                               ),
-                            ],
-                          ),
-                        ),
-                      )
-                    else ...[
-                      if (popular.isNotEmpty) ...[
-                        Padding(
-                          padding: const EdgeInsets.only(left: 4, bottom: 12),
-                          child: Text(
-                            '🔥 인기 대학교',
-                            style: TextStyle(
-                              color: Colors.grey.shade600,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
                             ),
-                          ),
-                        ),
-                        ...popular.map((u) => _uniTile(u)),
-                        const SizedBox(height: 24),
-                      ],
-                      if (other.isNotEmpty) ...[
-                        Padding(
-                          padding: const EdgeInsets.only(left: 4, bottom: 12),
-                          child: Text(
-                            '전체 대학교',
-                            style: TextStyle(
-                              color: Colors.grey.shade600,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        ...other.map((u) => _uniTile(u)),
-                      ],
-                    ],
-                  ],
-                ),
+                          ],
+                          if (results.isEmpty)
+                            Center(
+                              child: Padding(
+                                padding: const EdgeInsets.only(top: 48),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(LucideIcons.school, size: 64, color: Colors.grey.shade300),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      isSearching ? '검색 결과가 없어요' : '아직 표시할 인기 대학교가 없어요',
+                                      style: TextStyle(color: Colors.grey.shade500, fontSize: 16),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          else
+                            ...results.map(_universityTile),
+                        ],
+                      ),
               ),
             ],
           ),
@@ -247,8 +259,8 @@ class _MeetzyUniversitySelectPageState extends State<MeetzyUniversitySelectPage>
     );
   }
 
-  Widget _uniTile(MeetzyUniversityItem u) {
-    final selected = _selectedUniversity == u.name;
+  Widget _universityTile(MeetzyUniversityItem item) {
+    final selected = _selectedUniversity == item.name;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
@@ -257,7 +269,7 @@ class _MeetzyUniversitySelectPageState extends State<MeetzyUniversitySelectPage>
         shadowColor: selected ? const Color(0xFFEC4899).withValues(alpha: 0.3) : null,
         elevation: selected ? 4 : 0,
         child: InkWell(
-          onTap: () => _select(u.name),
+          onTap: () => _select(item),
           borderRadius: BorderRadius.circular(16),
           child: Container(
             padding: const EdgeInsets.all(16),
@@ -274,19 +286,11 @@ class _MeetzyUniversitySelectPageState extends State<MeetzyUniversitySelectPage>
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    gradient: selected
-                        ? const LinearGradient(
-                            colors: [Color(0xFFEC4899), Color(0xFF8B5CF6)],
-                          )
-                        : null,
+                    gradient: selected ? const LinearGradient(colors: [Color(0xFFEC4899), Color(0xFF8B5CF6)]) : null,
                     color: selected ? null : Colors.grey.shade100,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
-                    LucideIcons.school,
-                    size: 20,
-                    color: selected ? Colors.white : Colors.grey.shade600,
-                  ),
+                  child: Icon(LucideIcons.school, size: 20, color: selected ? Colors.white : Colors.grey.shade600),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -294,24 +298,16 @@ class _MeetzyUniversitySelectPageState extends State<MeetzyUniversitySelectPage>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        u.name,
-                        style: const TextStyle(
-                          color: Color(0xFF111827),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
+                        item.name,
+                        style: const TextStyle(color: Color(0xFF111827), fontWeight: FontWeight.w600, fontSize: 16),
+                      ),
+                      if (item.popular) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          '가입자 ${item.count}명',
+                          style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(LucideIcons.mapPin, size: 14, color: Colors.grey.shade500),
-                          const SizedBox(width: 4),
-                          Text(
-                            u.location,
-                            style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
-                          ),
-                        ],
-                      ),
+                      ],
                     ],
                   ),
                 ),
@@ -328,10 +324,13 @@ class _MeetzyUniversitySelectPageState extends State<MeetzyUniversitySelectPage>
 class MeetzyUniversityItem {
   const MeetzyUniversityItem({
     required this.name,
-    required this.location,
+    this.id,
+    this.count = 0,
     this.popular = false,
   });
+
+  final String? id;
   final String name;
-  final String location;
+  final int count;
   final bool popular;
 }
