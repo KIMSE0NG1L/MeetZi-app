@@ -10,28 +10,13 @@ import 'package:image_picker/image_picker.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/core/theme/university_theme.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
-import 'package:nearo_app/features/auth/data/environment_repository.dart';
+import 'package:nearo_app/features/auth/data/environment_status_repository.dart';
 import 'package:nearo_app/features/photo/data/photo_repository.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/app_config.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/shared/widgets/primary_button.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-
-/// 한글(가나다) 먼저, 영어/로마자 학교명은 맨 아래로 정렬
-void _sortSchoolListKoreanFirst(List<String> list) {
-  bool startsWithHangul(String s) {
-    if (s.isEmpty) return false;
-    final c = s.codeUnitAt(0);
-    return c >= 0xAC00 && c <= 0xD7A3; // 가-힣
-  }
-  list.sort((a, b) {
-    final aFirst = startsWithHangul(a) ? 0 : 1;
-    final bFirst = startsWithHangul(b) ? 0 : 1;
-    if (aFirst != bFirst) return aFirst - bFirst;
-    return a.compareTo(b);
-  });
-}
 
 class ProfileSetupScreen extends StatefulWidget {
   const ProfileSetupScreen({super.key});
@@ -43,13 +28,12 @@ class ProfileSetupScreen extends StatefulWidget {
 class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _repository = AuthRepository();
   final _photoRepository = PhotoRepository();
-  final _envRepository = EnvironmentRepository();
+  final _environmentStatusRepository = EnvironmentStatusRepository();
   final _nicknameController = TextEditingController();
   final _idealTypeController = TextEditingController();
   final _departmentController = TextEditingController();
-  String _affiliation = '세종대학교';
-  List<String> _schoolList = [];
-  bool _schoolListLoaded = false;
+  String _affiliation = '';
+  bool _affiliationLoaded = false;
   final _heightController = TextEditingController();
   final _mbtiController = TextEditingController();
   final _introOneLineController = TextEditingController();
@@ -91,31 +75,23 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     }
     _didReadArgs = true;
     _loadProfileIfExists();
-    _loadSchoolList();
+    _loadVerifiedAffiliation();
   }
 
-  Future<void> _loadSchoolList() async {
+  Future<void> _loadVerifiedAffiliation() async {
     try {
-      final list = await _envRepository.getEnvironments();
-      final names = list
-          .where((e) => e is Map && (e as Map)['type']?.toString() == 'university')
-          .map<String>((e) => (e as Map)['name']?.toString() ?? '')
-          .where((s) => s.isNotEmpty)
-          .toList();
-      _sortSchoolListKoreanFirst(names);
+      final status = await _environmentStatusRepository.getMyEnvironmentStatus();
+      final environment = status['environment'];
+      final name = environment is Map ? environment['name']?.toString() : null;
       if (!mounted) return;
       setState(() {
-        _schoolList = names;
-        _schoolListLoaded = true;
-        if (_schoolList.isNotEmpty && !_schoolList.contains(_affiliation)) {
-          _affiliation = _schoolList.first;
-        }
+        if (name != null && name.isNotEmpty) _affiliation = name;
+        _affiliationLoaded = true;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _schoolList = ['세종대학교', '건국대학교', '한양대학교'];
-        _schoolListLoaded = true;
+        _affiliationLoaded = true;
       });
     }
   }
@@ -396,6 +372,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     final heightCm = _heightCm ?? int.tryParse(_heightController.text.trim());
     if (heightCm != null && (heightCm < 120 || heightCm > 200)) {
       setState(() => _result = '키는 120~200cm 범위로 입력해 주세요.');
+      return;
+    }
+    if (_affiliation.trim().isEmpty) {
+      setState(() => _result = '인증된 대학교 정보를 확인한 뒤 다시 시도해 주세요.');
       return;
     }
 
@@ -976,46 +956,28 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               ),
               const SizedBox(height: 16),
               Text('소속 대학교', style: labelStyle),
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  '대학교 인증에서 선택한 학교로 자동 고정됩니다.',
+                  style: TextStyle(fontSize: 12, color: onSurfaceVariant),
+                ),
+              ),
               const SizedBox(height: 8),
-              _isEditing
-                  ? Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: surface,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: borderColor),
-                      ),
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        _schoolListLoaded ? _affiliation : '로딩 중...',
-                        style: TextStyle(color: _schoolListLoaded ? onSurface : onSurfaceVariant),
-                      ),
-                    )
-                  : InkWell(
-                onTap: () async {
-                        final chosen = await showModalBottomSheet<String>(
-                          context: context,
-                          isScrollControlled: true,
-                          builder: (ctx) => _SchoolPickerSheet(
-                            schoolList: _schoolList,
-                            current: _affiliation,
-                          ),
-                        );
-                        if (chosen != null && mounted) setState(() => _affiliation = chosen);
-                      },
-                child: InputDecorator(
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: surface,
-                    border: inputBorder,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  ),
-                  child: Text(
-                    _schoolListLoaded ? _affiliation : '로딩 중...',
-                    style: TextStyle(
-                      color: _schoolListLoaded ? onSurface : onSurfaceVariant,
-                    ),
+              InputDecorator(
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: surface,
+                  border: inputBorder,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  suffixIcon: Icon(LucideIcons.lock, size: 20, color: onSurfaceVariant),
+                ),
+                child: Text(
+                  _affiliationLoaded
+                      ? (_affiliation.isNotEmpty ? _affiliation : '인증된 학교 정보를 불러오지 못했습니다')
+                      : '로딩 중...',
+                  style: TextStyle(
+                    color: _affiliationLoaded && _affiliation.isNotEmpty ? onSurface : onSurfaceVariant,
                   ),
                 ),
               ),
@@ -1390,97 +1352,6 @@ class _HeightPickerState extends State<_HeightPicker> {
           ],
         ),
       ),
-    );
-  }
-}
-
-/// 학교 검색 + 가나다순 리스트 선택 시트
-class _SchoolPickerSheet extends StatefulWidget {
-  const _SchoolPickerSheet({
-    required this.schoolList,
-    required this.current,
-  });
-
-  final List<String> schoolList;
-  final String current;
-
-  @override
-  State<_SchoolPickerSheet> createState() => _SchoolPickerSheetState();
-}
-
-class _SchoolPickerSheetState extends State<_SchoolPickerSheet> {
-  final _searchController = TextEditingController();
-  String _query = '';
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  List<String> get _filtered {
-    if (_query.trim().isEmpty) return widget.schoolList;
-    final q = _query.trim().toLowerCase();
-    return widget.schoolList
-        .where((name) => name.toLowerCase().contains(q))
-        .toList();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final list = _filtered;
-    return DraggableScrollableSheet(
-      initialChildSize: 0.6,
-      minChildSize: 0.4,
-      maxChildSize: 0.9,
-      expand: false,
-      builder: (context, scrollController) {
-        return SafeArea(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: (v) => setState(() => _query = v),
-                  decoration: InputDecoration(
-                    hintText: '학교 검색',
-                    prefixIcon: const Icon(LucideIcons.search, size: 22),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  ),
-                  autofocus: true,
-                ),
-              ),
-              Expanded(
-                child: list.isEmpty
-                    ? Center(
-                        child: Text(
-                          _query.trim().isEmpty ? '학교 목록이 없어요' : '검색 결과가 없어요',
-                          style: TextStyle(color: Colors.grey.shade600),
-                        ),
-                      )
-                    : ListView.builder(
-                        controller: scrollController,
-                        itemCount: list.length,
-                        itemBuilder: (context, i) {
-                          final name = list[i];
-                          final selected = name == widget.current;
-                          return ListTile(
-                            title: Text(name),
-                            trailing: selected ? Icon(LucideIcons.check, size: 20, color: Theme.of(context).colorScheme.primary) : null,
-                            onTap: () => Navigator.of(context).pop(name),
-                          );
-                        },
-                      ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }
