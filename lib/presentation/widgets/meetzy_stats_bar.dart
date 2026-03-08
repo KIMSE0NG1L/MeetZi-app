@@ -5,14 +5,12 @@ import 'package:nearo_app/core/theme/meetzy_design_tokens.dart';
 import 'package:nearo_app/core/theme/university_theme.dart';
 import 'package:nearo_app/presentation/widgets/meetzy_ticket_chip.dart';
 
-/// last MeetZyBoard Stats Bar: rounded-2xl p-4, avatar 48px, gap-3, 열람권/등록권/매칭권 칩.
+/// last MeetZyBoard Stats Bar: avatar, nickname, 매칭대기함 + 매칭권만 표시.
 class MeetzyStatsBar extends StatelessWidget {
   const MeetzyStatsBar({
     super.key,
     required this.nickname,
     required this.avatarWidget,
-    required this.viewTicket,
-    required this.registerTicket,
     required this.matchingTicket,
     this.onMatchingTap,
     this.onMatchingInboxTap,
@@ -20,12 +18,10 @@ class MeetzyStatsBar extends StatelessWidget {
 
   final String nickname;
   final Widget avatarWidget;
-  final int viewTicket;
-  final int registerTicket;
   final int matchingTicket;
-  /// 매칭권 칩 탭 시 호출 (매칭대기함으로 이동 등)
+  /// 매칭권 칩 탭 시 호출
   final VoidCallback? onMatchingTap;
-  /// 매칭대기함 열기 (열람권 왼쪽에 표시)
+  /// 매칭대기함 열기
   final VoidCallback? onMatchingInboxTap;
 
   @override
@@ -71,21 +67,7 @@ class MeetzyStatsBar extends StatelessWidget {
             _MatchingInboxChip(onTap: onMatchingInboxTap!),
             const SizedBox(width: MeetzyDesignTokens.space2),
           ],
-          Flexible(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  MeetzyReadingTicketChip(count: viewTicket),
-                  const SizedBox(width: MeetzyDesignTokens.space2),
-                  MeetzyRegisterTicketChip(count: registerTicket),
-                  const SizedBox(width: MeetzyDesignTokens.space2),
-                  _wrapMatchingChip(context),
-                ],
-              ),
-            ),
-          ),
+          _wrapMatchingChip(context),
         ],
       ),
     );
@@ -103,7 +85,7 @@ class MeetzyStatsBar extends StatelessWidget {
   }
 }
 
-/// 매칭대기함 진입 칩 (열람권 왼쪽에 표시)
+/// 매칭대기함 진입 칩
 class _MatchingInboxChip extends StatelessWidget {
   const _MatchingInboxChip({required this.onTap});
 

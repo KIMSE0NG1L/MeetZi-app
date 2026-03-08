@@ -7,44 +7,33 @@ import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/presentation/widgets/meetzy_profile_card.dart';
 import 'package:nearo_app/presentation/widgets/meetzy_stats_bar.dart';
-import 'package:nearo_app/presentation/widgets/meetzy_primary_button.dart';
 
-/// Shell 상단바/하단 네비가 따로 있을 때 사용. 스탯 바 + 그리드 + FAB만 표시.
+/// Shell 상단바/하단 네비가 따로 있을 때 사용. 스탯 바 + 그리드만 표시 (등록 버튼 없음).
 class MeetzyBoardContent extends StatelessWidget {
   const MeetzyBoardContent({
     super.key,
     this.myNickname,
     this.myAvatarWidget,
-    this.viewTicket = 0,
-    this.registerTicket = 0,
     this.matchingTicket = 0,
     this.profiles = const [],
     this.onProfileTap,
-    this.onRegister,
     this.onRefresh,
     this.onMatchingInboxTap,
     this.isLoading = false,
-    this.isRegistering = false,
   });
 
   final String? myNickname;
   final Widget? myAvatarWidget;
-  final int viewTicket;
-  final int registerTicket;
   final int matchingTicket;
   final List<MeetzyBoardProfileItem> profiles;
   final void Function(int index, MeetzyBoardProfileItem item)? onProfileTap;
-  final VoidCallback? onRegister;
   final Future<void> Function()? onRefresh;
-  /// 매칭대기함 열기 (열람권 왼쪽 칩)
   final VoidCallback? onMatchingInboxTap;
   final bool isLoading;
-  final bool isRegistering;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final primary = theme.colorScheme.primary;
     final isDark = theme.brightness == Brightness.dark;
     final bgGradient = isDark ? null : ThemeController.getScreenBgGradient();
     final surface = isDark ? const Color(0xFF111827) : UniversityTheme.surface;
@@ -62,8 +51,6 @@ class MeetzyBoardContent extends StatelessWidget {
                 MeetzyStatsBar(
                   nickname: myNickname ?? '닉네임',
                   avatarWidget: myAvatarWidget ?? _defaultAvatar(),
-                  viewTicket: viewTicket,
-                  registerTicket: registerTicket,
                   matchingTicket: matchingTicket,
                   onMatchingInboxTap: onMatchingInboxTap,
                 ),
@@ -131,27 +118,10 @@ class MeetzyBoardContent extends StatelessWidget {
         color: isDark ? surface : null,
         gradient: bgGradient,
       ),
-      child: Stack(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(child: isLoading ? const Center(child: CircularProgressIndicator()) : body),
-            ],
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: MeetzyDesignTokens.bottomFab,
-            child: Center(
-              child: MeetzyPrimaryButton(
-                label: '등록',
-                onTap: onRegister,
-                backgroundColor: primary,
-                isLoading: isRegistering,
-              ),
-            ),
-          ),
+          Expanded(child: isLoading ? const Center(child: CircularProgressIndicator()) : body),
         ],
       ),
     );
@@ -165,7 +135,7 @@ class MeetzyBoardContent extends StatelessWidget {
   }
 }
 
-/// last MeetZyBoard 1:1 레이아웃: Header(px-5 pt-14 pb-5), Content(px-5 py-6), Grid gap-4, FAB bottom-24, Bottom nav.
+/// last MeetZyBoard 1:1 레이아웃: Header, Content, Bottom nav (등록 버튼 없음).
 class MeetzyBoardPage extends StatelessWidget {
   const MeetzyBoardPage({
     super.key,
@@ -174,11 +144,8 @@ class MeetzyBoardPage extends StatelessWidget {
     this.onTabChange,
     this.onSettings,
     this.onNotification,
-    this.onRegister,
     this.myNickname,
     this.myAvatarWidget,
-    this.viewTicket = 0,
-    this.registerTicket = 0,
     this.matchingTicket = 0,
     this.profiles = const [],
     this.onProfileTap,
@@ -190,11 +157,8 @@ class MeetzyBoardPage extends StatelessWidget {
   final ValueChanged<String>? onTabChange;
   final VoidCallback? onSettings;
   final VoidCallback? onNotification;
-  final VoidCallback? onRegister;
   final String? myNickname;
   final Widget? myAvatarWidget;
-  final int viewTicket;
-  final int registerTicket;
   final int matchingTicket;
   final List<MeetzyBoardProfileItem> profiles;
   final void Function(int index, MeetzyBoardProfileItem item)? onProfileTap;
@@ -213,11 +177,9 @@ class MeetzyBoardPage extends StatelessWidget {
         color: isDark ? surface : null,
         gradient: bgGradient,
       ),
-      child: Stack(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
               // Header (last: px-5 pt-14 pb-5, gradient)
               Container(
                 padding: MeetzyDesignTokens.headerPadding,
@@ -276,8 +238,6 @@ class MeetzyBoardPage extends StatelessWidget {
                             MeetzyStatsBar(
                               nickname: myNickname ?? '닉네임',
                               avatarWidget: myAvatarWidget ?? _defaultAvatar(),
-                              viewTicket: viewTicket,
-                              registerTicket: registerTicket,
                               matchingTicket: matchingTicket,
                             ),
                             const SizedBox(height: MeetzyDesignTokens.space6),
@@ -354,21 +314,6 @@ class MeetzyBoardPage extends StatelessWidget {
               ),
             ],
           ),
-          // FAB (last: absolute bottom-24 center)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: MeetzyDesignTokens.bottomFab,
-            child: Center(
-              child: MeetzyPrimaryButton(
-                label: '등록',
-                onTap: onRegister,
-                backgroundColor: primary,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 

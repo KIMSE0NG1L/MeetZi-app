@@ -194,7 +194,7 @@ class _TakeNoteRequestResponseScreenState extends State<TakeNoteRequestResponseS
                               const SizedBox(height: 16),
                               _infoRow('학과', _str(_profile!['department'] ?? (_profile!['user'] as Map?)?['department']), onSurfaceVariant, onSurface),
                               _infoRow('성별', _str(_profile!['gender'] ?? (_profile!['user'] as Map?)?['gender']), onSurfaceVariant, onSurface),
-                              _infoRow('한 줄 소개', _str((_profile!['user'] as Map?)?['introOneLine']), onSurfaceVariant, onSurface),
+                              _infoRow('자기 소개', _str((_profile!['user'] as Map?)?['introOneLine']), onSurfaceVariant, onSurface),
                             ],
                           ),
                         ),

@@ -56,7 +56,7 @@ class _RatingsScreenState extends State<RatingsScreen> {
     }
   }
 
-  /// 코인으로 열람권/등록권 구매 (1코인=1열람권, 5코인=1등록권)
+  /// 코인으로 매칭권 구매
   Future<void> _buyTicket(String product, int cost, String label, {int quantity = 1}) async {
     if ((_myCredit ?? 0) < cost) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('코인이 부족해요.')));
@@ -212,16 +212,14 @@ class _RatingsScreenState extends State<RatingsScreen> {
                     child: ListView(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       children: [
-                        // 코인으로 구매: 1코인=열람권 1장, 5코인=등록권 1장
-                        Text('코인으로 구매', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: onSurfaceVariant)),
+                        // 코인으로 매칭권 구매
+                        Text('코인으로 매칭권 구매', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: onSurfaceVariant)),
                         const SizedBox(height: 8),
-                        _ticketCard(dark, surface, onSurface, onSurfaceVariant, primary, 1, '열람권 1장', '1', LucideIcons.eye, () => _buyTicket('view_ticket', 1, '열람권 1장')),
+                        _ticketCard(dark, surface, onSurface, onSurfaceVariant, primary, 5, '매칭권 1장', '5', LucideIcons.heart, () => _buyTicket('matching_ticket', 5, '매칭권 1장')),
                         const SizedBox(height: 8),
-                        _ticketCard(dark, surface, onSurface, onSurfaceVariant, primary, 100, '열람권 100장', '100', LucideIcons.eye, () => _buyTicket('view_ticket', 100, '열람권 100장', quantity: 100)),
+                        _ticketCard(dark, surface, onSurface, onSurfaceVariant, primary, 50, '매칭권 10장', '50', LucideIcons.heart, () => _buyTicket('matching_ticket', 50, '매칭권 10장', quantity: 10)),
                         const SizedBox(height: 8),
-                        _ticketCard(dark, surface, onSurface, onSurfaceVariant, primary, 5, '등록권 1장', '5', LucideIcons.clipboardList, () => _buyTicket('register_ticket', 5, '등록권 1장')),
-                        const SizedBox(height: 8),
-                        _ticketCard(dark, surface, onSurface, onSurfaceVariant, primary, 500, '등록권 100장', '500', LucideIcons.clipboardList, () => _buyTicket('register_ticket', 500, '등록권 100장', quantity: 100)),
+                        _ticketCard(dark, surface, onSurface, onSurfaceVariant, primary, 500, '매칭권 100장', '500', LucideIcons.heart, () => _buyTicket('matching_ticket', 500, '매칭권 100장', quantity: 100)),
                         const SizedBox(height: 24),
                         ...List.generate(_packages.length, (index) {
                           final pkg = _packages[index];
