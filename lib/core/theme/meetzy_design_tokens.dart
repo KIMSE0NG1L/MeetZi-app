@@ -69,11 +69,13 @@ class MeetzyDesignTokens {
   static const double cardAvatarRingWidth = 3;
   static const double cardAvatarRingOffset = 0; // 링과 아바타 원 딱 맞게 (간격 없음)
   static const double cardAvatarMarginBottom = 12; // mb-3
-  static const double cardNicknameFontSize = 14;  // text-sm
+  static const double cardNicknameFontSize = 16;  // text-base (예전 사이즈)
   static const double cardNicknameMarginBottom = 6; // mb-1.5
   static const EdgeInsets cardTagPadding = EdgeInsets.symmetric(horizontal: 12, vertical: 6); // px-3 py-1.5
   static const double cardTagFontSize = 12;   // text-xs
-  static const double cardTagMaxWidth = 60;   // max-w-[60px]
+  static const double cardTagMaxWidth = 60;   // max-w-[60px] (1줄일 때)
+  /// 이상형 등 태그 2줄 허용 시 최대 너비 (카드 여백 활용)
+  static const double cardTagMaxWidthTwoLines = 88;
   static const double cardTagGap = 6;        // gap-1.5
   // NEW badge
   static const double badgeTop = 4;   // top-1

@@ -789,10 +789,22 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                                   mainAxisAlignment: message.isMine ? MainAxisAlignment.end : MainAxisAlignment.start,
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
-                                    if (message.isMine && message.readAt == null)
+                                    if (message.isMine)
                                       Padding(
-                                        padding: const EdgeInsets.only(right: 6),
-                                        child: Text('1', style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
+                                        padding: const EdgeInsets.only(right: 6, bottom: 2),
+                                        child: message.readAt == null
+                                            ? Text(
+                                                '안읽음',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: dark ? Colors.grey.shade500 : Colors.grey.shade600,
+                                                ),
+                                              )
+                                            : Icon(
+                                                LucideIcons.check,
+                                                size: 14,
+                                                color: Theme.of(context).colorScheme.primary,
+                                              ),
                                       ),
                                     if (!message.isMine) ...[
                                       _buildPartnerAvatar(context),
