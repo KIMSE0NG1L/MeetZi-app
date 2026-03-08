@@ -559,42 +559,73 @@ class _MeetzyEmailVerificationPageState extends State<MeetzyEmailVerificationPag
               ),
             ),
           ),
-          // Bottom button: 배경 없이 버튼만 (하얀 박스 제거)
+          // Bottom button: 전체 너비, 캡슐형 둥근 모서리, 비활성 시 연한 회색 + 은은한 그림자
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
             child: SafeArea(
               top: false,
-              child: FilledButton(
-                onPressed: (_isCodeSent &&
-                            _codeController.text.length == 6 &&
-                            !_isVerifying)
-                    ? _verify
-                    : null,
-                style: FilledButton.styleFrom(
-                  backgroundColor: _isCodeSent && _codeController.text.length == 6 && !_isVerifying
-                      ? Theme.of(context).colorScheme.primary
-                      : (dark ? const Color(0xFF374151) : const Color(0xFFE5E7EB)),
-                  foregroundColor: _isCodeSent && _codeController.text.length == 6 && !_isVerifying
-                      ? Colors.white
-                      : (dark ? const Color(0xFF6B7280) : const Color(0xFF9CA3AF)),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  side: BorderSide.none,
-                ),
-                child: _isVerifying
-                    ? const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: (_isCodeSent &&
+                              _codeController.text.length == 6 &&
+                              !_isVerifying)
+                      ? _verify
+                      : null,
+                  borderRadius: BorderRadius.circular(999),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    decoration: BoxDecoration(
+                      color: _isCodeSent && _codeController.text.length == 6 && !_isVerifying
+                          ? null
+                          : (dark ? const Color(0xFF374151) : const Color(0xFFE5E7EB)),
+                      gradient: _isCodeSent && _codeController.text.length == 6 && !_isVerifying
+                          ? const LinearGradient(
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                              colors: [
+                                Color(0xFFFDA4AF),
+                                Color(0xFFF9A8D4),
+                                Color(0xFFFB7185),
+                              ],
+                            )
+                          : null,
+                      borderRadius: BorderRadius.circular(999),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.06),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: _isVerifying
+                        ? const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              ),
+                              SizedBox(width: 8),
+                              Text('인증 중...', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            ],
+                          )
+                        : Text(
+                            '인증 완료',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: _isCodeSent && _codeController.text.length == 6 && !_isVerifying
+                                  ? Colors.white
+                                  : (dark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280)),
+                            ),
                           ),
-                          SizedBox(width: 8),
-                          Text('인증 중...'),
-                        ],
-                      )
-                    : const Text('인증 완료'),
+                  ),
+                ),
               ),
             ),
           ),

@@ -12,6 +12,7 @@ import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/core/theme/university_theme.dart';
+import 'package:nearo_app/core/theme/meetzy_design_tokens.dart';
 import 'package:nearo_app/shared/utils/photo_url.dart';
 import 'package:nearo_app/presentation/pages/meetzy_board_page.dart';
 import 'package:nearo_app/presentation/widgets/meetzy_profile_detail_modal.dart';
@@ -401,43 +402,39 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     }
     final photoUrl = primaryPhotoKey != null ? photoUrlFromStorageKey(primaryPhotoKey) : null;
     if (displayType == 'photo' && photoUrl != null && photoUrl.isNotEmpty) {
-      return CircleAvatar(
-        radius: 40,
-        backgroundColor: Colors.white,
-        child: ClipOval(
-          child: Image.network(
-            photoUrl,
-            width: 80,
-            height: 80,
-            fit: BoxFit.contain,
-            loadingBuilder: (_, child, progress) =>
-                progress == null ? child : Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, value: progress.expectedTotalBytes != null ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes! : null))),
-            errorBuilder: (_, __, ___) => Icon(LucideIcons.user, size: 40, color: Theme.of(context).colorScheme.primary),
-          ),
+      return ClipOval(
+        child: Image.network(
+          photoUrl,
+          width: MeetzyDesignTokens.cardAvatarSize,
+          height: MeetzyDesignTokens.cardAvatarSize,
+          fit: BoxFit.cover,
+          loadingBuilder: (_, child, progress) =>
+              progress == null ? child : Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, value: progress.expectedTotalBytes != null ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes! : null))),
+          errorBuilder: (_, __, ___) => Icon(LucideIcons.user, size: 40, color: Theme.of(context).colorScheme.primary),
         ),
       );
     }
     final seed = user?['avatarSeed']?.toString() ?? profile['userId']?.toString();
     final options = _parseAvatarOptions(user?['avatarOptions']);
     if (seed != null && seed.isNotEmpty) {
-      return CircleAvatar(
-        radius: 40,
-        backgroundColor: Colors.white,
-        child: ClipOval(
-          child: SvgPicture.network(
-            diceBearAvatarUrl(seed, options: options.isNotEmpty ? options : null),
-            fit: BoxFit.contain,
-            width: 80,
-            height: 80,
-            placeholderBuilder: (context) => Icon(LucideIcons.user, size: 40, color: Theme.of(context).colorScheme.primary),
-          ),
+      return ClipOval(
+        child: SvgPicture.network(
+          diceBearAvatarUrl(seed, options: options.isNotEmpty ? options : null),
+          fit: BoxFit.cover,
+          width: MeetzyDesignTokens.cardAvatarSize,
+          height: MeetzyDesignTokens.cardAvatarSize,
+          placeholderBuilder: (context) => Icon(LucideIcons.user, size: 40, color: Theme.of(context).colorScheme.primary),
         ),
       );
     }
-    return CircleAvatar(
-      radius: 40,
-      backgroundColor: Colors.white,
-      child: Icon(LucideIcons.user, size: 40, color: Theme.of(context).colorScheme.primary),
+    return ClipOval(
+      child: Container(
+        width: MeetzyDesignTokens.cardAvatarSize,
+        height: MeetzyDesignTokens.cardAvatarSize,
+        color: Colors.white,
+        alignment: Alignment.center,
+        child: Icon(LucideIcons.user, size: 40, color: Theme.of(context).colorScheme.primary),
+      ),
     );
   }
 
@@ -561,75 +558,68 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       if (!mounted) return;
       final detailData = _profileMapToDetailData(tappedProfile);
       final dark = Theme.of(context).brightness == Brightness.dark;
-      // last ProfileDetailModal: 열기/닫기 rotateY 플립, scale, opacity, perspective 1000px
+      // ad ProfileDetailModal: 열기 = 아래에서 슬라이드 업 + 배경 페이드, 닫기 = 아래로 슬라이드 다운 + 배경 페이드
       await showGeneralDialog<void>(
         context: context,
         barrierDismissible: true,
         barrierLabel: '닫기',
-        barrierColor: Colors.black54,
-        transitionDuration: const Duration(milliseconds: 500),
+        barrierColor: Colors.transparent,
+        transitionDuration: const Duration(milliseconds: 350),
         pageBuilder: (_, __, ___) => const SizedBox.shrink(),
         transitionBuilder: (ctx, animation, secondaryAnimation, child) {
+          final curve = Curves.easeOutCubic;
+          final t = curve.transform(animation.value);
+          final barrierOpacity = 0.6 * t;
+          final slideY = 700.0 * (1.0 - t); // 열기: 700→0, 닫기: 0→700
           return AnimatedBuilder(
             animation: animation,
             builder: (context, _) {
-              final t = Curves.easeOutCubic.transform(animation.value);
-              final barrierOpacity = 0.6 * t;
-              final opacity = t;
-              final scale = 0.5 + 0.5 * t;
-              final isReverse = animation.status == AnimationStatus.reverse;
-              final rotateYDeg = isReverse ? 180.0 - 180.0 * t : -180.0 + 180.0 * t;
-              final rotateYRad = rotateYDeg * (3.14159265359 / 180.0);
               return Stack(
                 children: [
                   GestureDetector(
                     onTap: () => Navigator.of(ctx).pop(),
-                    child: Container(color: Colors.black.withValues(alpha: barrierOpacity)),
+                    child: Container(
+                      color: Colors.black.withValues(alpha: barrierOpacity),
+                    ),
                   ),
-                  Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 390, maxHeight: 700),
-                      child: Transform(
-                        alignment: Alignment.center,
-                        transform: Matrix4.identity()
-                          ..setEntry(3, 2, 0.001)
-                          ..rotateY(rotateYRad),
-                        child: Transform.scale(
-                          scale: scale,
-                          alignment: Alignment.center,
-                          child: Opacity(
-                            opacity: opacity.clamp(0.0, 1.0),
-                            child: Material(
-                              type: MaterialType.transparency,
-                              child: MeetzyProfileDetailModal(
-                                profile: detailData,
-                                darkMode: dark,
-                                avatarWidget: _buildBoardAvatar(ctx, tappedProfile),
-                                onClose: () => Navigator.of(ctx).pop(),
-                                onMatch: () async {
-                                  final ok = await _takeNote(profileId, tappedProfile);
-                                  if (!ctx.mounted) return;
-                                  if (ok) {
-                                    await showDialog<void>(
-                                      context: ctx,
-                                      barrierDismissible: false,
-                                      barrierColor: Colors.black54,
-                                      builder: (dialogCtx) => _MatchCelebrationOverlay(
-                                        profile: tappedProfile,
-                                        buildAvatar: _buildBoardAvatar,
-                                      ),
-                                    );
-                                    if (!ctx.mounted) return;
-                                    Navigator.of(ctx).pop();
-                                    _fetchProfiles();
-                                    _fetchMySummary();
-                                  }
-                                },
-                            ),
-                            ),
-                          ),
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Transform.translate(
+                      offset: Offset(0, slideY),
+                      child: Center(
+                        child: SizedBox(
+                          width: 390,
+                          height: 700,
+                          child: Material(
+                            type: MaterialType.transparency,
+                            child: MeetzyProfileDetailModal(
+                          profile: detailData,
+                          darkMode: dark,
+                          avatarWidget: _buildBoardAvatar(ctx, tappedProfile),
+                          onClose: () => Navigator.of(ctx).pop(),
+                          onMatch: () async {
+                            final ok = await _takeNote(profileId, tappedProfile);
+                            if (!ctx.mounted) return;
+                            if (ok) {
+                              await showDialog<void>(
+                                context: ctx,
+                                barrierDismissible: false,
+                                barrierColor: Colors.black54,
+                                builder: (dialogCtx) => _MatchCelebrationOverlay(
+                                  profile: tappedProfile,
+                                  buildAvatar: _buildBoardAvatar,
+                                ),
+                              );
+                              if (!ctx.mounted) return;
+                              Navigator.of(ctx).pop();
+                              _fetchProfiles();
+                              _fetchMySummary();
+                            }
+                          },
                         ),
                       ),
+                    ),
+                  ),
                     ),
                   ),
                 ],
@@ -1385,52 +1375,61 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
               child: Stack(
                 children: [
                   Center(
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 28),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 4,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.3),
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          Container(
-                            width: 96,
-                            height: 96,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 4),
-                              boxShadow: [
-                                BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 2)),
-                              ],
-                            ),
-                            child: ClipOval(
-                              child: widget.buildAvatar(context, profile),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          ConstrainedBox(
-                            constraints: BoxConstraints(maxWidth: 280),
-                            child: Text(
-                              _str(profile['nickname']),
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                decoration: TextDecoration.none,
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final content = Padding(
+                          padding: const EdgeInsets.only(top: 28),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 4,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.3),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
                               ),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                              textAlign: TextAlign.center,
-                            ),
+                              const SizedBox(height: 20),
+                              Container(
+                                width: 96,
+                                height: 96,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white, width: 4),
+                                  boxShadow: [
+                                    BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 2)),
+                                  ],
+                                ),
+                                child: ClipOval(
+                                  child: widget.buildAvatar(context, profile),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              ConstrainedBox(
+                                constraints: BoxConstraints(maxWidth: 280),
+                                child: Text(
+                                  _str(profile['nickname']),
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    decoration: TextDecoration.none,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        );
+                        return FittedBox(
+                          alignment: Alignment.topCenter,
+                          fit: BoxFit.scaleDown,
+                          child: content,
+                        );
+                      },
                     ),
                   ),
                   Positioned(
@@ -1600,7 +1599,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                                     child: _taking
                                         ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                                         : const Text(
-                                            '가져가기',
+                                            '매칭하기',
                                             style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                                           ),
                                   ),
