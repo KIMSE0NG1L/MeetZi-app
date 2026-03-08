@@ -51,7 +51,8 @@ class MeetzyDesignTokens {
   static const double gridGap = 16; // gap-4
   static const double gridBottomSpace = 96; // h-24
   /// 카드 높이/너비 비율. 작을수록 카드가 높아짐 (오버플로우 방지).
-  static const double gridChildAspectRatio = 0.56;
+  /// 0.50 이하로 두어 96px 폭에서도 셀 높이 ≥192px 되도록 함.
+  static const double gridChildAspectRatio = 0.50;
 
   // ─── Profile card (last MeetZyBoard card) ───
   static const double cardOuterRadius = 24;   // rounded-3xl
@@ -64,9 +65,9 @@ class MeetzyDesignTokens {
   static const List<BoxShadow> cardInnerShadow = [
     BoxShadow(color: Color(0x80FFFFFF), blurRadius: 2, offset: Offset(0, 1), spreadRadius: 0),
   ];
-  static const double cardAvatarSize = 80;   // w-20 h-20
+  static const double cardAvatarSize = 90;   // 아바타 원 (바깥 링과 맞춤)
   static const double cardAvatarRingWidth = 3;
-  static const double cardAvatarRingOffset = 8; // ring-offset-2 = 8px
+  static const double cardAvatarRingOffset = 0; // 링과 아바타 원 딱 맞게 (간격 없음)
   static const double cardAvatarMarginBottom = 12; // mb-3
   static const double cardNicknameFontSize = 14;  // text-sm
   static const double cardNicknameMarginBottom = 6; // mb-1.5

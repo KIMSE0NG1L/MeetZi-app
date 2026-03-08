@@ -940,15 +940,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               Text('성별', style: labelStyle),
               const SizedBox(height: 8),
               _isEditing
-                  ? Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: surface,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: borderColor),
+                  ? InputDecorator(
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: surface,
+                        border: inputBorder,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        suffixIcon: Icon(LucideIcons.lock, size: 20, color: onSurfaceVariant),
                       ),
-                      alignment: Alignment.centerLeft,
                       child: Text(
                         _gender == 'male' ? '남성' : '여성',
                         style: TextStyle(color: onSurface),
