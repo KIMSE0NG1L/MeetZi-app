@@ -29,6 +29,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _repository = AuthRepository();
   final _photoRepository = PhotoRepository();
   final _environmentStatusRepository = EnvironmentStatusRepository();
+  static const int _introMinLength = 20;
+  static const int _introMaxLength = 100;
+  static const int _textMinLength = 10;
+  static const int _textMaxLength = 100;
+  static const int _maxTagCount = 10;
   final _nicknameController = TextEditingController();
   final _idealTypeController = TextEditingController();
   final _departmentController = TextEditingController();
@@ -360,6 +365,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
   Future<void> _submit() async {
     final nickname = _nicknameController.text.trim();
+    final intro = _introOneLineController.text.trim();
+    final hobby = _intoLatelyController.text.trim();
+    final idealType = _idealTypeController.text.trim();
     if (nickname.isEmpty) {
       setState(() => _result = '닉네임을 입력해 주세요.');
       return;
@@ -375,7 +383,27 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       return;
     }
     if (_affiliation.trim().isEmpty) {
-      setState(() => _result = '인증된 대학교 정보를 확인한 뒤 다시 시도해 주세요.');
+      setState(() => _result = '인증된 학교 정보를 확인한 뒤 다시 시도해 주세요.');
+      return;
+    }
+    if (intro.length < _introMinLength || intro.length > _introMaxLength) {
+      setState(() => _result = '자기 소개는 20자 이상 100자 이하로 입력해 주세요.');
+      return;
+    }
+    if (hobby.length < _textMinLength || hobby.length > _textMaxLength) {
+      setState(() => _result = '취미는 10자 이상 100자 이하로 입력해 주세요.');
+      return;
+    }
+    if (idealType.length < _textMinLength || idealType.length > _textMaxLength) {
+      setState(() => _result = '이상형은 10자 이상 100자 이하로 입력해 주세요.');
+      return;
+    }
+    if (_fashionStyle == null || _preferredDateType == null || _activityTime == null || _smoking == null || _drinking == null) {
+      setState(() => _result = '취향과 라이프스타일 항목을 모두 선택해 주세요.');
+      return;
+    }
+    if (_idealTypeKeywords.length > _maxTagCount) {
+      setState(() => _result = '나를 소개하는 태그는 최대 10개까지 선택할 수 있어요.');
       return;
     }
 
@@ -395,24 +423,16 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         if (heightCm != null) 'heightCm': heightCm,
         if (_smoking != null) 'smoking': _smoking,
         if (_drinking != null) 'drinking': _drinking,
-        if (_mbtiController.text.trim().isNotEmpty)
-          'mbti': _mbtiController.text.trim(),
-        if (_idealTypeController.text.trim().isNotEmpty)
-          'idealType': _idealTypeController.text.trim(),
+        if (_mbtiController.text.trim().isNotEmpty) 'mbti': _mbtiController.text.trim(),
+        'idealType': idealType,
         'preferredGenders': preferredGenders,
         if (_gradeYear != null) 'gradeYear': _gradeYear,
-        if (_introOneLineController.text.trim().isNotEmpty)
-          'introOneLine': _introOneLineController.text.trim().length > 40
-              ? _introOneLineController.text.trim().substring(0, 40)
-              : _introOneLineController.text.trim(),
+        'introOneLine': intro,
         if (_idealTypeKeywords.isNotEmpty) 'idealTypeKeywords': _idealTypeKeywords,
         if (_fashionStyle != null) 'fashionStyle': _fashionStyle,
         if (_preferredDateType != null) 'preferredDateType': _preferredDateType,
         if (_activityTime != null) 'activityTime': _activityTime,
-        if (_intoLatelyController.text.trim().isNotEmpty)
-          'intoLately': _intoLatelyController.text.trim().length > 20
-              ? _intoLatelyController.text.trim().substring(0, 20)
-              : _intoLatelyController.text.trim(),
+        'intoLately': hobby,
       });
       _applyThemeForAffiliation();
       setState(() => _result = response.toString());
@@ -684,7 +704,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                                         child: Icon(LucideIcons.user, size: 40, color: onSurfaceVariant),
                                       ),
                               ),
-                              const SizedBox(width: 16),
+                              const SizedBox(width: 12),
                               Material(
                                 color: Colors.transparent,
                                 child: InkWell(
@@ -695,9 +715,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                                   },
                                   borderRadius: BorderRadius.circular(12),
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                     decoration: BoxDecoration(
-                                      border: Border.all(color: borderColor, width: 2),
+                                      border: Border.all(color: borderColor, width: 1),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text('아바타 편집', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: onSurface)),
@@ -706,7 +726,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 12),
                           Text('프로필 사진', style: TextStyle(fontSize: 12, color: onSurfaceVariant)),
                           const SizedBox(height: 8),
                             Row(
@@ -726,7 +746,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                                         fit: BoxFit.cover,
                                       ),
                               ),
-                              const SizedBox(width: 16),
+                              const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -737,9 +757,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                                         onTap: _pickPhoto,
                                         borderRadius: BorderRadius.circular(12),
                                         child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                           decoration: BoxDecoration(
-                                            border: Border.all(color: borderColor, width: 2),
+                                            border: Border.all(color: borderColor, width: 1),
                                             borderRadius: BorderRadius.circular(12),
                                           ),
                                           child: Text(_photos.isEmpty ? '사진 선택' : '다른 사진 선택', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: onSurface)),
@@ -1044,15 +1064,15 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               ),
               if (!_isEditing) ...[
               const SizedBox(height: 16),
-              Text('자기 소개 (최대 40자)', style: labelStyle),
+              Text('자기 소개 (20~100자)', style: labelStyle),
               const SizedBox(height: 8),
               TextField(
                 controller: _introOneLineController,
-                maxLength: 40,
-                maxLines: 1,
+                maxLength: 100,
+                maxLines: 3,
                 style: TextStyle(color: onSurface),
                 decoration: InputDecoration(
-                  hintText: '자신을 소개해주세요',
+                  hintText: '나를 소개하는 글을 20자 이상 작성해 주세요',
                   hintStyle: TextStyle(color: onSurfaceVariant),
                   filled: true,
                   fillColor: surface,
@@ -1075,11 +1095,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('나를 잘 표현하는 태그를 선택해보세요 (여러 개 선택 가능)', style: TextStyle(fontSize: 12, color: onSurfaceVariant)),
-                          const SizedBox(height: 12),
+                          Text('나를 잘 표현하는 태그를 선택해보세요 (최대 10개)', style: TextStyle(fontSize: 12, color: onSurfaceVariant)),
+                          const SizedBox(height: 8),
                           Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
+                            spacing: 6,
+                            runSpacing: 6,
                             children: _idealKeywordOptions.map((label) {
                               final selected = _idealTypeKeywords.contains(label);
                               final primary = Theme.of(context).colorScheme.primary;
@@ -1093,7 +1113,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                                 onSelected: (v) {
                                   setState(() {
                                     if (v == true) {
-                                      _idealTypeKeywords.add(label);
+                                      if (_idealTypeKeywords.length < _maxTagCount) {
+                                        _idealTypeKeywords.add(label);
+                                      }
                                     } else {
                                       _idealTypeKeywords.remove(label);
                                     }
@@ -1203,15 +1225,15 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 onChanged: (value) => setState(() => _drinking = value),
               ),
               const SizedBox(height: 16),
-              Text('취미', style: labelStyle),
+              Text('취미 (10~100자)', style: labelStyle),
               const SizedBox(height: 8),
               TextField(
                 controller: _intoLatelyController,
-                maxLength: 20,
-                maxLines: 1,
+                maxLength: 100,
+                maxLines: 3,
                 style: TextStyle(color: onSurface),
                 decoration: InputDecoration(
-                  hintText: '취미를 알려주세요',
+                  hintText: '취미를 10자 이상 적어 주세요',
                   hintStyle: TextStyle(color: onSurfaceVariant),
                   filled: true,
                   fillColor: surface,
@@ -1221,19 +1243,22 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              Text('이상형', style: labelStyle),
+              Text('이상형 (10~100자)', style: labelStyle),
               const SizedBox(height: 8),
               TextField(
                 controller: _idealTypeController,
                 textInputAction: TextInputAction.next,
+                maxLength: 100,
+                maxLines: 3,
                 style: TextStyle(color: onSurface),
                 decoration: InputDecoration(
-                  hintText: '이상형을 입력하세요',
+                  hintText: '이상형을 10자 이상 적어 주세요',
                   hintStyle: TextStyle(color: onSurfaceVariant),
                   filled: true,
                   fillColor: surface,
                   border: inputBorder,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  counterText: '',
                 ),
               ),
                         ],
