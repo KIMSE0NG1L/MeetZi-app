@@ -149,7 +149,7 @@ class NearoTheme {
         ),
       );
     }
-  static Color primary = const Color(0xFF6C5CE7);
+  static Color primary = const Color(0xFFEC4899);
   static const Color secondary = Color(0xFF00B894);
   static const Color background = Color(0xFFF7F7FB);
   static const Color textPrimary = Color(0xFF1B1B1F);

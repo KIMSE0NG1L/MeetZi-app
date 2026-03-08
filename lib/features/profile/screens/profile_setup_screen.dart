@@ -225,8 +225,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       final boardDisplay = user['boardDisplayType']?.toString();
       if (boardDisplay == 'photo' || boardDisplay == 'avatar') _boardDisplayType = boardDisplay!;
 
+      final hasExistingProfile = nickname != null && nickname.isNotEmpty;
+
       setState(() {
-        _isEditing = _forceEdit || (affiliation != null && affiliation.isNotEmpty);
+        _isEditing = _forceEdit || (!_isInitialSetup && hasExistingProfile);
       });
       await _loadPhotos();
     } catch (_) {
@@ -1097,8 +1099,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                           Text('나를 잘 표현하는 태그를 선택해보세요 (최대 10개)', style: TextStyle(fontSize: 12, color: onSurfaceVariant)),
                           const SizedBox(height: 8),
                           Wrap(
-                            spacing: 6,
-                            runSpacing: 6,
+                            spacing: 4,
+                            runSpacing: 2,
                             children: _idealKeywordOptions.map((label) {
                               final selected = _idealTypeKeywords.contains(label);
                               final primary = Theme.of(context).colorScheme.primary;
@@ -1107,6 +1109,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                                 selected: selected,
                                 selectedColor: primary,
                                 checkmarkColor: Colors.white,
+                                visualDensity: const VisualDensity(horizontal: -2, vertical: -3),
+                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
+                                labelPadding: const EdgeInsets.symmetric(horizontal: 2),
                                 side: BorderSide(color: selected ? primary : borderColor),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
                                 onSelected: (v) {
