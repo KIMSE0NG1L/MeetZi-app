@@ -402,14 +402,14 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     final photoUrl = primaryPhotoKey != null ? photoUrlFromStorageKey(primaryPhotoKey) : null;
     if (displayType == 'photo' && photoUrl != null && photoUrl.isNotEmpty) {
       return CircleAvatar(
-        radius: 32,
+        radius: 40,
         backgroundColor: Colors.white,
         child: ClipOval(
           child: Image.network(
             photoUrl,
-            width: 64,
-            height: 64,
-            fit: BoxFit.cover,
+            width: 80,
+            height: 80,
+            fit: BoxFit.contain,
             loadingBuilder: (_, child, progress) =>
                 progress == null ? child : Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, value: progress.expectedTotalBytes != null ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes! : null))),
             errorBuilder: (_, __, ___) => Icon(LucideIcons.user, size: 40, color: Theme.of(context).colorScheme.primary),
@@ -421,21 +421,21 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     final options = _parseAvatarOptions(user?['avatarOptions']);
     if (seed != null && seed.isNotEmpty) {
       return CircleAvatar(
-        radius: 32,
+        radius: 40,
         backgroundColor: Colors.white,
         child: ClipOval(
           child: SvgPicture.network(
             diceBearAvatarUrl(seed, options: options.isNotEmpty ? options : null),
-            fit: BoxFit.cover,
-            width: 64,
-            height: 64,
+            fit: BoxFit.contain,
+            width: 80,
+            height: 80,
             placeholderBuilder: (context) => Icon(LucideIcons.user, size: 40, color: Theme.of(context).colorScheme.primary),
           ),
         ),
       );
     }
     return CircleAvatar(
-      radius: 32,
+      radius: 40,
       backgroundColor: Colors.white,
       child: Icon(LucideIcons.user, size: 40, color: Theme.of(context).colorScheme.primary),
     );
@@ -482,8 +482,6 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                     ),
                   )
                 : null,
-            viewTicket: _myTickets?.viewTicket ?? 0,
-            registerTicket: _myTickets?.registerTicket ?? 0,
             matchingTicket: _myTickets?.matchingTicket ?? 0,
             profiles: displayProfiles.asMap().entries.map((e) {
               final i = e.key;
@@ -501,18 +499,49 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
               );
             }).toList(),
             onProfileTap: (index, _) => _openNoteSheet(context, index, displayProfiles, myUserId),
-            onRegister: _registerProfile,
             onRefresh: () async {
               await _fetchProfiles();
               await _fetchMySummary();
             },
             onMatchingInboxTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const MailboxScreen()),
+              final size = MediaQuery.of(context).size;
+              final padding = EdgeInsets.symmetric(
+                horizontal: size.width > 400 ? 24 : 16,
+                vertical: 48,
+              );
+              showGeneralDialog<void>(
+                context: context,
+                barrierDismissible: true,
+                barrierColor: Colors.black54,
+                barrierLabel: '닫기',
+                pageBuilder: (_, __, ___) => Padding(
+                  padding: padding,
+                  child: Center(
+                    child: Material(
+                      color: Colors.transparent,
+                      child: Container(
+                        constraints: BoxConstraints(
+                          maxWidth: 420,
+                          maxHeight: size.height * 0.75,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFF1F2937)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(32),
+                          boxShadow: const [
+                            BoxShadow(color: Color(0x40000000), blurRadius: 24, offset: Offset(0, 8)),
+                          ],
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: const MailboxScreen(isModal: true),
+                      ),
+                    ),
+                  ),
+                ),
               );
             },
             isLoading: _loading,
-            isRegistering: _isRegistering,
           ),
         );
       },
@@ -527,32 +556,8 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     try {
       final tappedProfile = startIndex < displayProfiles.length ? displayProfiles[startIndex] : null;
       if (tappedProfile == null) return;
-      // 열람권: 상세 보기 시 1장 소비
-      final viewTicket = _myTickets?.viewTicket ?? 0;
-      if (viewTicket <= 0) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('열람권이 부족해요. 열람권을 구매한 뒤 프로필을 확인해 주세요.')),
-        );
-        return;
-      }
       final profileId = tappedProfile['id']?.toString();
       if (profileId == null || profileId.isEmpty) return;
-      try {
-        await _repository.consumeViewTicket(profileId);
-        await _fetchMySummary();
-      } catch (e) {
-        if (!mounted) return;
-        final msg = e.toString().replaceFirst('Exception: ', '');
-        final isTaken = msg.contains('열람할 수 없') || msg.contains('400');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(isTaken ? '이미 다른 사람이 가져간 프로필이에요.' : msg),
-          ),
-        );
-        if (isTaken) _fetchProfiles();
-        return;
-      }
       if (!mounted) return;
       final detailData = _profileMapToDetailData(tappedProfile);
       final dark = Theme.of(context).brightness == Brightness.dark;
@@ -1478,7 +1483,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                       _rowAppDesign(theme, dark, 'MBTI', _str(pluck(['mbti', 'mbtiType']))),
                       _rowAppDesign(theme, dark, '흡연', _toLabel('smoking', pluck(['smoking', 'smoke'])?.toString())),
                       _rowAppDesign(theme, dark, '음주', _toLabel('drinking', pluck(['drinking', 'alcohol'])?.toString())),
-                      _rowAppDesign(theme, dark, '한 줄 소개', _str(pluck(['oneLineIntroduce', 'introOneLine', 'bio', 'introduction']))),
+                      _rowAppDesign(theme, dark, '자기 소개', _str(pluck(['oneLineIntroduce', 'introOneLine', 'bio', 'introduction']))),
                       _rowAppDesign(theme, dark, '요즘 빠진 것', _str(pluck(['intoLately', 'hobby', 'recentInterest']))),
                       _rowAppDesign(theme, dark, '이상형', _str(pluck(['idealType', 'ideal']))),
                       _rowAppDesign(theme, dark, '패션 스타일', _toLabel('fashionStyle', pluck(['fashionStyle', 'style']))),

@@ -441,7 +441,7 @@ class _MeetzyEmailVerificationPageState extends State<MeetzyEmailVerificationPag
                       textAlign: TextAlign.center,
                       style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 8),
                       decoration: InputDecoration(
-                        hintText: '6자리 인증번호',
+                        hintText: '',
                         counterText: '',
                         filled: true,
                         fillColor: dark ? const Color(0xFF1F2937) : Colors.white,

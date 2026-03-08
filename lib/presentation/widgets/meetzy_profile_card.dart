@@ -109,7 +109,7 @@ class MeetzyProfileCard extends StatelessWidget {
                               ),
                               clipBehavior: Clip.antiAlias,
                               child: FittedBox(
-                                fit: BoxFit.cover,
+                                fit: BoxFit.contain,
                                 child: SizedBox(
                                   width: MeetzyDesignTokens.cardAvatarSize,
                                   height: MeetzyDesignTokens.cardAvatarSize,

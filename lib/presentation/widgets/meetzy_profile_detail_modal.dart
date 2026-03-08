@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/core/theme/university_theme.dart';
+import 'package:nearo_app/shared/theme/theme_controller.dart';
 
 /// last ProfileDetailModal 1:1 — gradient header, avatar, info rows, 닫기/가져가기.
 class MeetzyProfileDetailModal extends StatelessWidget {
@@ -35,31 +36,15 @@ class MeetzyProfileDetailModal extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Container(
-            margin: const EdgeInsets.only(top: 12),
-            width: 48,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
           Stack(
             clipBehavior: Clip.none,
             children: [
               Container(
                 height: 168,
                 width: double.infinity,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFFFB7185),
-                      Color(0xFFF472B6),
-                      Color(0xFFF43F5E),
-                    ],
-                  ),
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                  gradient: ThemeController.getSheetGradient(),
                 ),
                 child: Center(
                   child: Padding(
@@ -98,6 +83,21 @@ class MeetzyProfileDetailModal extends StatelessWidget {
                 ),
               ),
               Positioned(
+                top: 12,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    width: 48,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
                 top: 16,
                 right: 16,
                 child: Material(
@@ -127,8 +127,8 @@ class MeetzyProfileDetailModal extends StatelessWidget {
                 _InfoRow(label: 'MBTI', value: profile.mbti, darkMode: darkMode),
                 _InfoRow(label: '흡연', value: profile.smoking, darkMode: darkMode),
                 _InfoRow(label: '음주', value: profile.drinking, darkMode: darkMode),
-                _InfoRow(label: '한 줄 소개', value: profile.intro, darkMode: darkMode),
-                _InfoRow(label: '요즘 빠진 것', value: profile.interest, darkMode: darkMode),
+                _InfoRow(label: '자기 소개', value: profile.intro, darkMode: darkMode),
+                _InfoRow(label: '취미', value: profile.interest, darkMode: darkMode),
                 _InfoRow(label: '이상형', value: profile.idealType, darkMode: darkMode),
                 _InfoRow(label: '패션 스타일', value: profile.fashionStyle, darkMode: darkMode),
                 _InfoRow(label: '선호 데이트', value: profile.datePreference, darkMode: darkMode),

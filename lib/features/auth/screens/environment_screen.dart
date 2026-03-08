@@ -501,7 +501,7 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
                         letterSpacing: 8,
                       ),
                       decoration: InputDecoration(
-                        hintText: '6자리 인증번호',
+                        hintText: '',
                         counterText: '',
                         filled: true,
                         fillColor: dark
