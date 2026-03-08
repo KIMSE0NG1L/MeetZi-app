@@ -11,13 +11,13 @@ class ThemeController {
   static const _valueSchool = 'school';
 
   /// 'pink' = 핑크색, 'school' = DB 교색(primaryColor)
-  static final ValueNotifier<String> themeColorMode = ValueNotifier<String>(_valueSchool);
+  static final ValueNotifier<String> themeColorMode = ValueNotifier<String>(_valuePink);
 
   /// 저장된 테마 색상 모드 로드. 앱/홈 진입 시 한 번 호출.
   static Future<void> loadThemeColorMode() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final mode = prefs.getString(_keyThemeColorMode) ?? _valueSchool;
+      final mode = prefs.getString(_keyThemeColorMode) ?? _valuePink;
       themeColorMode.value = mode;
       if (mode == _valuePink) {
         setSeedColor(designPink);
@@ -123,7 +123,7 @@ class ThemeController {
       secretMode.value = enabled;
     }
   static final ValueNotifier<Color> seedColor =
-      ValueNotifier<Color>(NearoTheme.primary);
+      ValueNotifier<Color>(designPink);
 
   static void setSeedColor(Color color) {
     if (seedColor.value == color) return;
