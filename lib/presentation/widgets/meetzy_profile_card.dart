@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/core/theme/app_text_styles.dart';
 import 'package:nearo_app/core/theme/meetzy_design_tokens.dart';
 import 'package:nearo_app/core/theme/university_theme.dart';
@@ -56,71 +55,109 @@ class MeetzyProfileCard extends StatelessWidget {
               children: [
                 LayoutBuilder(
                   builder: (context, constraints) {
-                    final content = Column(
+                    const double avatarHeight = 96 + 12; // avatar + marginBottom
+                    const double nicknameHeight = 24;   // 16px 폰트 + 여유
+                    const double tagGapHeight = 6;
+                    const double tagHeightEstimate = 90; // 4줄 12px + line height
+                    const double safetyMargin = 12;      // 오버플로우 방지
+                    final maxH = constraints.maxHeight.isFinite ? constraints.maxHeight : 200.0;
+                    final fixedPart = nicknameHeight + tagGapHeight;
+                    final scalablePart = avatarHeight + tagHeightEstimate;
+                    final scale = maxH > fixedPart + scalablePart + safetyMargin
+                        ? 1.0
+                        : ((maxH - fixedPart - safetyMargin) / scalablePart).clamp(0.4, 1.0);
+
+                    final avatarSection = Container(
+                      margin: const EdgeInsets.only(bottom: MeetzyDesignTokens.cardAvatarMarginBottom),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Container(
+                            width: MeetzyDesignTokens.cardAvatarSize + MeetzyDesignTokens.cardAvatarRingOffset * 2 + MeetzyDesignTokens.cardAvatarRingWidth * 2,
+                            height: MeetzyDesignTokens.cardAvatarSize + MeetzyDesignTokens.cardAvatarRingOffset * 2 + MeetzyDesignTokens.cardAvatarRingWidth * 2,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: primary.withValues(alpha: 0.3),
+                                  blurRadius: 12,
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            width: MeetzyDesignTokens.cardAvatarSize + MeetzyDesignTokens.cardAvatarRingWidth * 2 + MeetzyDesignTokens.cardAvatarRingOffset * 2,
+                            height: MeetzyDesignTokens.cardAvatarSize + MeetzyDesignTokens.cardAvatarRingWidth * 2 + MeetzyDesignTokens.cardAvatarRingOffset * 2,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isDark ? Colors.white24 : Colors.white70,
+                                width: MeetzyDesignTokens.cardAvatarRingWidth,
+                              ),
+                              boxShadow: [
+                                if (avatarBgColor != null)
+                                  BoxShadow(
+                                    color: (avatarBgColor!).withValues(alpha: 0.25),
+                                    blurRadius: 20,
+                                  ),
+                                const BoxShadow(
+                                  color: Color(0x26000000),
+                                  blurRadius: 16,
+                                  offset: Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            padding: const EdgeInsets.all(MeetzyDesignTokens.cardAvatarRingOffset),
+                            child: Container(
+                              width: MeetzyDesignTokens.cardAvatarSize,
+                              height: MeetzyDesignTokens.cardAvatarSize,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: avatarBgColor ?? UniversityTheme.bgGradientStart,
+                              ),
+                              clipBehavior: Clip.antiAlias,
+                              child: FittedBox(
+                                fit: BoxFit.cover,
+                                child: SizedBox(
+                                  width: MeetzyDesignTokens.cardAvatarSize,
+                                  height: MeetzyDesignTokens.cardAvatarSize,
+                                  child: avatarWidget,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    final maxTagWidth = (constraints.maxWidth - 16).clamp(60.0, 200.0);
+                    final tagSection = Row(
                       mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Avatar with ring
-                        Container(
-                          margin: const EdgeInsets.only(bottom: MeetzyDesignTokens.cardAvatarMarginBottom),
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Container(
-                                width: MeetzyDesignTokens.cardAvatarSize + MeetzyDesignTokens.cardAvatarRingOffset * 2 + MeetzyDesignTokens.cardAvatarRingWidth * 2,
-                                height: MeetzyDesignTokens.cardAvatarSize + MeetzyDesignTokens.cardAvatarRingOffset * 2 + MeetzyDesignTokens.cardAvatarRingWidth * 2,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: primary.withValues(alpha: 0.3),
-                                      blurRadius: 12,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                width: MeetzyDesignTokens.cardAvatarSize + MeetzyDesignTokens.cardAvatarRingWidth * 2 + MeetzyDesignTokens.cardAvatarRingOffset * 2,
-                                height: MeetzyDesignTokens.cardAvatarSize + MeetzyDesignTokens.cardAvatarRingWidth * 2 + MeetzyDesignTokens.cardAvatarRingOffset * 2,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: isDark ? Colors.white24 : Colors.white70,
-                                    width: MeetzyDesignTokens.cardAvatarRingWidth,
-                                  ),
-                                  boxShadow: [
-                                    if (avatarBgColor != null)
-                                      BoxShadow(
-                                        color: (avatarBgColor!).withValues(alpha: 0.25),
-                                        blurRadius: 20,
-                                      ),
-                                    const BoxShadow(
-                                      color: Color(0x26000000),
-                                      blurRadius: 16,
-                                      offset: Offset(0, 8),
-                                    ),
-                                  ],
-                                ),
-                                padding: const EdgeInsets.all(MeetzyDesignTokens.cardAvatarRingOffset),
-                                child: Container(
-                                  width: MeetzyDesignTokens.cardAvatarSize,
-                                  height: MeetzyDesignTokens.cardAvatarSize,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: avatarBgColor ?? UniversityTheme.bgGradientStart,
-                                  ),
-                                  clipBehavior: Clip.antiAlias,
-                                  child: FittedBox(
-                                    fit: BoxFit.cover,
-                                    child: SizedBox(
-                                      width: MeetzyDesignTokens.cardAvatarSize,
-                                      height: MeetzyDesignTokens.cardAvatarSize,
-                                      child: avatarWidget,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
+                        ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: maxTagWidth),
+                          child: Text(
+                            tag,
+                            style: AppTextStyles.cardTag(onVariant),
+                            maxLines: 4,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
+                    );
+
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          height: avatarHeight * scale,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.topCenter,
+                            child: avatarSection,
                           ),
                         ),
                         Text(
@@ -131,29 +168,15 @@ class MeetzyProfileCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: MeetzyDesignTokens.cardNicknameMarginBottom),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(LucideIcons.sparkles, size: 14, color: onVariant),
-                            const SizedBox(width: MeetzyDesignTokens.cardTagGap),
-                            ConstrainedBox(
-                              constraints: BoxConstraints(maxWidth: MeetzyDesignTokens.cardTagMaxWidth),
-                              child: Text(
-                                tag,
-                                style: AppTextStyles.cardTag(onVariant),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
+                        SizedBox(
+                          height: tagHeightEstimate * scale,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.topCenter,
+                            child: tagSection,
+                          ),
                         ),
                       ],
-                    );
-                    return FittedBox(
-                      alignment: Alignment.topCenter,
-                      fit: BoxFit.scaleDown,
-                      child: content,
                     );
                   },
                 ),

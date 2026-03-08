@@ -64,6 +64,47 @@ class _TakeNoteRequestResponseScreenState extends State<TakeNoteRequestResponseS
 
   Future<void> _accept() async {
     if (_actionLoading) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+        final dark = theme.brightness == Brightness.dark;
+        return AlertDialog(
+          title: const Text('수락할까요?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '수락하면 매칭이 성사돼요.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: dark ? Colors.grey.shade300 : Colors.grey.shade700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '매칭권 1개가 사용됩니다.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('취소'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('수락'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !mounted) return;
     setState(() => _actionLoading = true);
     try {
       await _repository.acceptTakeNoteRequest(widget.requestId);
