@@ -3,7 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/core/theme/university_theme.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 
-/// last ProfileDetailModal 1:1 — gradient header, avatar, info rows, 닫기/가져가기.
+/// ad ProfileDetailModal 디자인 — 그라데이션 헤더, 기본정보 태그 팔, 한줄소개/취미/이상형 박스, #키워드 태그, 닫기/매칭하기.
 class MeetzyProfileDetailModal extends StatelessWidget {
   const MeetzyProfileDetailModal({
     super.key,
@@ -20,10 +20,34 @@ class MeetzyProfileDetailModal extends StatelessWidget {
   final bool darkMode;
   final Widget? avatarWidget;
 
+  /// ad InfoTag: gradient pill, white text
+  Widget _infoTag(String value, BuildContext context) {
+    if (value.isEmpty || value == '-') return const SizedBox.shrink();
+    final gradient = ThemeController.getSheetGradient();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        gradient: darkMode ? null : gradient,
+        color: darkMode ? const Color(0xFF374151) : null,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        value,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: darkMode ? const Color(0xFFE5E7EB) : Colors.white,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final surface = darkMode ? const Color(0xFF1F2937) : Colors.white;
-    final borderColor = darkMode ? const Color(0xFF374151) : const Color(0xFFF3F4F6);
+    final borderColor = darkMode ? const Color(0xFF374151) : const Color(0xFFE5E7EB);
+    final contentBg = darkMode ? const Color(0xFF374151).withValues(alpha: 0.5) : const Color(0xFFF9FAFB);
+    final onContent = darkMode ? const Color(0xFFD1D5DB) : const Color(0xFF374151);
 
     return Container(
       height: 700,
@@ -36,49 +60,59 @@ class MeetzyProfileDetailModal extends StatelessWidget {
       ),
       child: Column(
         children: [
+          // ad: Header with gradient, h-40, drag handle, X, avatar 96, nickname
           Stack(
             clipBehavior: Clip.none,
             children: [
               Container(
-                height: 168,
+                height: 160,
                 width: double.infinity,
                 decoration: BoxDecoration(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
                   gradient: ThemeController.getSheetGradient(),
                 ),
                 child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 28),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 96,
-                          height: 96,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: profile.avatarBgColor ?? UniversityTheme.bgGradientStart,
-                            border: Border.all(color: Colors.white, width: 4),
-                            boxShadow: const [
-                              BoxShadow(color: Color(0x40000000), blurRadius: 16, offset: Offset(0, 4)),
-                            ],
-                          ),
-                          child: ClipOval(
-                            child: avatarWidget ??
-                                Icon(LucideIcons.user, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                          ),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final content = Padding(
+                        padding: const EdgeInsets.only(top: 28),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 96,
+                              height: 96,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: profile.avatarBgColor ?? UniversityTheme.bgGradientStart,
+                                border: Border.all(color: Colors.white, width: 4),
+                                boxShadow: const [
+                                  BoxShadow(color: Color(0x40000000), blurRadius: 16, offset: Offset(0, 4)),
+                                ],
+                              ),
+                              child: ClipOval(
+                                child: avatarWidget ??
+                                    Icon(LucideIcons.user, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              profile.nickname,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          profile.nickname,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
+                      );
+                      return FittedBox(
+                        alignment: Alignment.topCenter,
+                        fit: BoxFit.scaleDown,
+                        child: content,
+                      );
+                    },
                   ),
                 ),
               ),
@@ -115,64 +149,124 @@ class MeetzyProfileDetailModal extends StatelessWidget {
               ),
             ],
           ),
+          // ad: Scrollable content — Basic Info Tags, intro/interest/idealType boxes, 추가 Tags, # 키워드
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
               children: [
-                _InfoRow(label: '학과', value: profile.major, darkMode: darkMode),
-                _InfoRow(label: '성별', value: profile.gender, darkMode: darkMode),
-                _InfoRow(label: '소속', value: profile.school, darkMode: darkMode),
-                _InfoRow(label: '키', value: profile.height, darkMode: darkMode),
-                _InfoRow(label: '학년', value: profile.grade, darkMode: darkMode),
-                _InfoRow(label: 'MBTI', value: profile.mbti, darkMode: darkMode),
-                _InfoRow(label: '흡연', value: profile.smoking, darkMode: darkMode),
-                _InfoRow(label: '음주', value: profile.drinking, darkMode: darkMode),
-                _InfoRow(label: '자기 소개', value: profile.intro, darkMode: darkMode),
-                _InfoRow(label: '취미', value: profile.interest, darkMode: darkMode),
-                _InfoRow(label: '이상형', value: profile.idealType, darkMode: darkMode),
-                _InfoRow(label: '패션 스타일', value: profile.fashionStyle, darkMode: darkMode),
-                _InfoRow(label: '선호 데이트', value: profile.datePreference, darkMode: darkMode),
-                _InfoRow(label: '활동 시간대', value: profile.activeTime, darkMode: darkMode),
-                if (profile.tags.isNotEmpty) ...[
+                // Basic Info Tags (ad flex-wrap gap-2)
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (profile.major.isNotEmpty && profile.major != '-') _infoTag(profile.major, context),
+                    if (profile.gender.isNotEmpty && profile.gender != '-') _infoTag(profile.gender, context),
+                    if (profile.school.isNotEmpty && profile.school != '-') _infoTag(profile.school, context),
+                    if (profile.height.isNotEmpty && profile.height != '-') _infoTag(profile.height, context),
+                    if (profile.grade.isNotEmpty && profile.grade != '-') _infoTag(profile.grade, context),
+                    if (profile.mbti.isNotEmpty && profile.mbti != '-') _infoTag(profile.mbti, context),
+                    if (profile.smoking.isNotEmpty && profile.smoking != '-') _infoTag(profile.smoking, context),
+                    if (profile.drinking.isNotEmpty && profile.drinking != '-') _infoTag(profile.drinking, context),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // 한 줄 소개 (ad rounded-2xl bg-gray-50)
+                if (profile.intro.isNotEmpty && profile.intro != '-') ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: contentBg,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      '💬 ${profile.intro}',
+                      style: TextStyle(fontSize: 14, height: 1.5, color: onContent),
+                    ),
+                  ),
                   const SizedBox(height: 12),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                ],
+                // 취미 / 요즘 빠진 것
+                if (profile.interest.isNotEmpty && profile.interest != '-') ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: contentBg,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      '✨ 요즘 빠진 것: ${profile.interest}',
+                      style: TextStyle(fontSize: 14, height: 1.5, color: onContent),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                // 이상형
+                if (profile.idealType.isNotEmpty && profile.idealType != '-') ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: contentBg,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      '💕 이상형: ${profile.idealType}',
+                      style: TextStyle(fontSize: 14, height: 1.5, color: onContent),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                // 추가 정보 Tags (ad 👔 ☕ 🕐)
+                if (profile.fashionStyle.isNotEmpty || profile.datePreference.isNotEmpty || profile.activeTime.isNotEmpty) ...[
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
-                      SizedBox(
-                        width: 112,
-                        child: Text(
-                          '나를 소개하는...',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: darkMode ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: profile.tags
-                              .map((t) => Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: darkMode ? const Color(0xFF374151) : const Color(0xFFF3F4F6),
-                                      borderRadius: BorderRadius.circular(999),
-                                    ),
-                                    child: Text(
-                                      t,
-                                      style: TextStyle(fontSize: 14, color: darkMode ? const Color(0xFFD1D5DB) : const Color(0xFF374151)),
-                                    ),
-                                  ))
-                              .toList(),
-                        ),
-                      ),
+                      if (profile.fashionStyle.isNotEmpty && profile.fashionStyle != '-')
+                        _infoTag('👔 ${profile.fashionStyle}', context),
+                      if (profile.datePreference.isNotEmpty && profile.datePreference != '-')
+                        _infoTag('☕ ${profile.datePreference}', context),
+                      if (profile.activeTime.isNotEmpty && profile.activeTime != '-')
+                        _infoTag('🕐 ${profile.activeTime}', context),
                     ],
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                // # 나를 소개하는 키워드 (ad)
+                if (profile.tags.isNotEmpty) ...[
+                  Text(
+                    '# 나를 소개하는 키워드',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: darkMode ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: profile.tags
+                        .map((t) => Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                gradient: ThemeController.getSheetGradient(),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '#$t',
+                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white),
+                              ),
+                            ))
+                        .toList(),
                   ),
                 ],
               ],
             ),
           ),
+          // ad: bottom border-t p-4 gap-3, 닫기 border-2 rounded-xl, 매칭하기 gradient rounded-xl
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -186,7 +280,7 @@ class MeetzyProfileDetailModal extends StatelessWidget {
                     onPressed: onClose,
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: BorderSide(color: darkMode ? const Color(0xFF4B5563) : const Color(0xFFE5E7EB)),
+                      side: BorderSide(color: darkMode ? const Color(0xFF4B5563) : const Color(0xFFE5E7EB), width: 2),
                       foregroundColor: darkMode ? const Color(0xFFE5E7EB) : const Color(0xFF374151),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
@@ -195,50 +289,41 @@ class MeetzyProfileDetailModal extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: FilledButton(
-                    onPressed: onMatch,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      elevation: 8,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: ThemeController.getSheetGradient(),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.35),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    child: const Text('가져가기'),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: onMatch,
+                        borderRadius: BorderRadius.circular(12),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Center(
+                            child: Text(
+                              '매칭하기',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.label, required this.value, required this.darkMode});
-
-  final String label;
-  final String value;
-  final bool darkMode;
-
-  @override
-  Widget build(BuildContext context) {
-    final onVariant = darkMode ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
-    final onSurface = darkMode ? Colors.white : const Color(0xFF111827);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 112,
-            child: Text(label, style: TextStyle(fontSize: 14, color: onVariant)),
-          ),
-          Expanded(
-            child: Text(
-              value.isEmpty ? '-' : value,
-              style: TextStyle(fontSize: 14, color: onSurface),
             ),
           ),
         ],

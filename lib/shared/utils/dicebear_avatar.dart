@@ -10,6 +10,7 @@ String diceBearAvatarUrl(
   String seed, {
   String style = 'notionists',
   Map<String, String>? options,
+  int scalePercent = 100,
 }) {
   final params = <String, String>{'seed': seed};
   if (options != null && options.isNotEmpty) {
@@ -26,6 +27,9 @@ String diceBearAvatarUrl(
     if (params.containsKey('gesture') && params['gesture']!.isNotEmpty) {
       params['gestureProbability'] = '100';
     }
+  }
+  if (scalePercent != 100) {
+    params['scale'] = scalePercent.clamp(0, 200).toString();
   }
   final query = params.entries
       .map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
