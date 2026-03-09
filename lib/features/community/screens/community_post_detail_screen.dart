@@ -282,6 +282,7 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
     final isPostAuthorMe = _myUserIdResolved != null && authorId != null && authorId == _myUserIdResolved;
     final content = post['content']?.toString() ?? '';
     final likeCount = (post['likeCount'] is int) ? post['likeCount'] as int : 0;
+    final viewCount = (post['viewCount'] is int) ? post['viewCount'] as int : 0;
     final liked = post['liked'] == true;
     final isDailyBest = post['isDailyBest'] == true;
     final comments = (post['comments'] as List<dynamic>?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? [];
@@ -447,6 +448,10 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
                       Icon(LucideIcons.messageCircle, size: 22, color: Colors.grey.shade600),
                       const SizedBox(width: 6),
                       Text('${comments.length}', style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
+                      const SizedBox(width: 8),
+                      Icon(LucideIcons.eye, size: 22, color: Colors.grey.shade600),
+                      const SizedBox(width: 6),
+                      Text('$viewCount', style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
                     ],
                   ),
                   const Divider(height: 32),
