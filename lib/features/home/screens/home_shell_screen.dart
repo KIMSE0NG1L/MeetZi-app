@@ -32,13 +32,14 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
   Map<String, dynamic>? _profile;
   bool _profileLoading = true;
   final ValueNotifier<int> _boardRefreshTrigger = ValueNotifier<int>(0);
+  final ValueNotifier<int> _messagesRefreshTrigger = ValueNotifier<int>(0);
   bool _routeObserverSubscribed = false;
   bool _takeNoteDialogShown = false;
   bool _showCoachMark = false;
 
   List<Widget> get _pages => [
     const UniversityRankingScreen(),
-    const MessagesScreen(),
+    MessagesScreen(refreshTrigger: _messagesRefreshTrigger),
     MatchingBoardScreen(refreshTrigger: _boardRefreshTrigger),
     const MyProfileScreen(),
     RatingsScreen(),
@@ -128,6 +129,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
     PendingTakeNoteStore.instance.pending.removeListener(_onPendingTakeNote);
     routeObserver.unsubscribe(this);
     _boardRefreshTrigger.dispose();
+    _messagesRefreshTrigger.dispose();
     _pageController.dispose();
     super.dispose();
   }
@@ -312,6 +314,9 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
                     onTap: () {
                       if (i == _currentIndex) return;
                       setState(() => _currentIndex = i);
+                      if (i == 1) {
+                        _messagesRefreshTrigger.value++;
+                      }
                       _pageController.animateToPage(
                         i,
                         duration: const Duration(milliseconds: 300),
@@ -376,7 +381,12 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
                 child: PageView.builder(
                   controller: _pageController,
                   itemCount: _pages.length,
-                  onPageChanged: (index) => setState(() => _currentIndex = index),
+                  onPageChanged: (index) {
+                    setState(() => _currentIndex = index);
+                    if (index == 1) {
+                      _messagesRefreshTrigger.value++;
+                    }
+                  },
                   itemBuilder: (_, index) => _pages[index],
                 ),
               ),
