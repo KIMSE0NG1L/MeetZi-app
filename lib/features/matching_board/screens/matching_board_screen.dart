@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -15,10 +15,120 @@ import 'package:nearo_app/core/theme/university_theme.dart';
 import 'package:nearo_app/core/theme/meetzy_design_tokens.dart';
 import 'package:nearo_app/shared/utils/photo_url.dart';
 import 'package:nearo_app/presentation/pages/meetzy_board_page.dart';
-import 'package:nearo_app/features/matching_board/profile_detail_sheet.dart';
 import 'package:nearo_app/presentation/widgets/meetzy_profile_detail_modal.dart';
 
-/// 채팅 등 외부에서 프로필 시트만 볼 때 사용 (hideActionButtons: true → 넘기기/가져가기 비표시)
+/// ?꾨줈??留???MeetzyProfileDetailData (last ?곸꽭 紐⑤떖??
+MeetzyProfileDetailData _profileMapToDetailData(Map<String, dynamic> profile) {
+  final user = profile['user'] as Map<String, dynamic>?;
+  dynamic pluck(List<String> keys) {
+    for (final k in keys) {
+      final v1 = profile[k];
+      if (v1 != null && v1.toString().trim().isNotEmpty) return v1;
+      final v2 = user?[k];
+      if (v2 != null && v2.toString().trim().isNotEmpty) return v2;
+    }
+    return null;
+  }
+  String str(dynamic v) => v?.toString().trim() ?? '';
+  String toLabel(String? field, dynamic v) {
+    final s = v?.toString().trim();
+    if (s == null || s.isEmpty) return '';
+    switch (field) {
+      case 'gender':
+        switch (s.toLowerCase()) {
+          case 'male': return '남성';
+          case 'female': return '여성';
+          default: return s;
+        }
+      case 'gradeYear':
+        switch (s.toLowerCase()) {
+          case 'one': return '1';
+          case 'two': return '2';
+          case 'three': return '3';
+          case 'four': return '4';
+          case 'five': return '5';
+          case 'graduation_deferred': return '졸업유예';
+          default: return s;
+        }
+      case 'smoking':
+        switch (s.toLowerCase()) {
+          case 'none': return '비흡연';
+          case 'sometimes': return '가끔';
+          case 'often': return '자주';
+          default: return s;
+        }
+      case 'drinking':
+        switch (s.toLowerCase()) {
+          case 'none': return '비음주';
+          case 'sometimes': return '가끔';
+          case 'often': return '자주';
+          default: return s;
+        }
+      case 'fashionStyle':
+        switch (s.toLowerCase()) {
+          case 'hood_casual': return '후드/캐주얼';
+          case 'shirt_neat': return '셔츠/단정';
+          case 'street': return '스트릿';
+          case 'knit': return '니트/감성';
+          case 'sporty': return '스포티';
+          case 'minimal': return '미니멀';
+          case 'hip': return '힙한';
+          default: return s;
+        }
+      case 'preferredDateType':
+        switch (s.toLowerCase()) {
+          case 'cafe': return '카페';
+          case 'walk': return '산책';
+          case 'movie': return '영화';
+          case 'drink': return '술자리';
+          case 'exercise': return '운동';
+          case 'food_tour': return '맛집 탐방';
+          case 'drive': return '드라이브';
+          default: return s;
+        }
+      case 'activityTime':
+        switch (s.toLowerCase()) {
+          case 'morning': return '아침형';
+          case 'daytime': return '주간형';
+          case 'evening': return '저녁형';
+          case 'night_owl': return '야행성';
+          default: return s;
+        }
+      default:
+        return s;
+    }
+  }
+  final heightVal = pluck(['heightCm', 'height']);
+  final heightStr = heightVal != null ? '${heightVal} cm' : '';
+  final listTags = <String>[];
+  final kw = pluck(['idealTypeKeywords']) ?? user?['idealTypeKeywords'];
+  if (kw is List) {
+    for (final e in kw) {
+      final s = e?.toString().trim();
+      if (s != null && s.isNotEmpty) listTags.add(s);
+    }
+  }
+  return MeetzyProfileDetailData(
+    nickname: str(pluck(['nickname']) ?? user?['nickname']).isEmpty ? '-' : str(pluck(['nickname']) ?? user?['nickname']),
+    major: str(pluck(['department', 'major', 'departmentName'])),
+    gender: toLabel('gender', pluck(['gender', 'sex'])),
+    school: str(pluck(['affiliation', 'school', 'affiliationText', 'organization'])),
+    height: heightStr,
+    grade: toLabel('gradeYear', pluck(['grade', 'year', 'schoolYear', 'class'])),
+    mbti: str(pluck(['mbti', 'mbtiType'])),
+    smoking: toLabel('smoking', pluck(['smoking', 'smoke'])),
+    drinking: toLabel('drinking', pluck(['drinking', 'alcohol'])),
+    intro: str(pluck(['oneLineIntroduce', 'introOneLine', 'bio', 'introduction'])),
+    interest: str(pluck(['intoLately', 'hobby', 'recentInterest'])),
+    idealType: str(pluck(['idealType', 'ideal'])),
+    fashionStyle: toLabel('fashionStyle', pluck(['fashionStyle', 'style'])),
+    datePreference: toLabel('preferredDateType', pluck(['preferredDateType', 'preferredDate'])),
+    activeTime: toLabel('activityTime', pluck(['activityTime', 'activeTime'])),
+    tags: listTags,
+  );
+}
+
+/// 梨꾪똿 ???몃??먯꽌 ?꾨줈???쒗듃留?蹂????ъ슜 (hideActionButtons: true ???섍린湲?媛?멸?湲?鍮꾪몴??
 Future<void> showBoardNoteSheet(
   BuildContext context, {
   required List<Map<String, dynamic>> profiles,
@@ -28,7 +138,7 @@ Future<void> showBoardNoteSheet(
   int myMatchingTicket = 0,
   Future<void> Function()? onRefreshTickets,
   Future<bool> Function(String profileId, Map<String, dynamic> profile)? onTakeNote,
-  /// true면 넘기기/가져가기 버튼 숨김 (채팅방에서 프로필 보기용)
+  /// true硫??섍린湲?媛?멸?湲?踰꾪듉 ?④? (梨꾪똿諛⑹뿉???꾨줈??蹂닿린??
   bool hideActionButtons = false,
 }) async {
   final sheetContent = _BoardNoteSheetContent(
@@ -45,7 +155,7 @@ Future<void> showBoardNoteSheet(
   showGeneralDialog<void>(
     context: context,
     barrierDismissible: true,
-    barrierLabel: '닫기',
+    barrierLabel: '?リ린',
     barrierColor: Colors.transparent,
     transitionDuration: const Duration(milliseconds: 600),
     pageBuilder: (_, __, ___) => const SizedBox.shrink(),
@@ -119,7 +229,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   List<Map<String, dynamic>> _profiles = [];
   bool _loading = false;
   bool _isRegistering = false;
-  bool _isOpeningSheet = false; // 카드 연타 방지: 시트 열리는 동안 추가 탭 무시
+  bool _isOpeningSheet = false; // 移대뱶 ?고? 諛⑹?: ?쒗듃 ?대━???숈븞 異붽? ??臾댁떆
   int? _myCredit;
   MyTickets? _myTickets;
   late Future<Map<String, dynamic>> _myProfileFuture;
@@ -148,8 +258,8 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
 
   String? _normalizePreferredGender(dynamic rawGender) {
     final g = rawGender?.toString().trim().toLowerCase();
-    if (g == 'male' || g == '남성') return 'female';
-    if (g == 'female' || g == '여성') return 'male';
+    if (g == 'male' || g == '?⑥꽦') return 'female';
+    if (g == 'female' || g == '?ъ꽦') return 'male';
     return null;
   }
 
@@ -188,7 +298,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     }
   }
 
-  /// 내 성별의 반대만 게시판에 노출 (남자 계정 → 여자만, 여자 계정 → 남자만)
+  /// ???깅퀎??諛섎?留?寃뚯떆?먯뿉 ?몄텧 (?⑥옄 怨꾩젙 ???ъ옄留? ?ъ옄 怨꾩젙 ???⑥옄留?
   Future<void> _fetchProfiles() async {
     setState(() => _loading = true);
     try {
@@ -197,9 +307,9 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
         final profile = await _myProfileFuture;
         final raw = profile['user'] is Map ? profile['user'] as Map : profile;
         final g = raw['gender']?.toString().trim().toLowerCase();
-        if (g == 'male' || g == '남성') {
+        if (g == 'male' || g == '?⑥꽦') {
           preferredGender = 'female';
-        } else if (g == 'female' || g == '여성') {
+        } else if (g == 'female' || g == '?ъ꽦') {
           preferredGender = 'male';
         }
       } catch (_) {}
@@ -218,7 +328,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     if (registerTicket <= 0) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('등록권이 부족해요. 등록권으로 게시판에 등록하면 매칭권 1장이 지급돼요.')),
+        const SnackBar(content: Text('?깅줉沅뚯씠 遺議깊빐?? ?깅줉沅뚯쑝濡?寃뚯떆?먯뿉 ?깅줉?섎㈃ 留ㅼ묶沅?1?μ씠 吏湲됰뤌??')),
       );
       return;
     }
@@ -229,7 +339,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       final user = profile['user'] is Map ? profile['user'] as Map<String, dynamic> : profile;
       final nickname = user['nickname']?.toString();
       final gender = user['gender']?.toString();
-      String school = user['school']?.toString() ?? user['affiliationText']?.toString() ?? profile['affiliationText']?.toString() ?? '세종대';
+      String school = user['school']?.toString() ?? user['affiliationText']?.toString() ?? profile['affiliationText']?.toString() ?? '?몄쥌?';
       final department = user['department']?.toString();
       final userEnvs = profile['userEnvironments'] ?? user['userEnvironments'];
       if ((school.isEmpty || school == 'null') && userEnvs != null && userEnvs is List && userEnvs.isNotEmpty) {
@@ -239,10 +349,10 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
           if (name != null && name.isNotEmpty) school = name;
         }
       }
-      if (school.isEmpty || school == 'null') school = '세종대';
+      if (school.isEmpty || school == 'null') school = '?몄쥌?';
       if (nickname == null || nickname.isEmpty || gender == null || gender.isEmpty) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('프로필 정보가 없습니다.')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('?꾨줈???뺣낫媛 ?놁뒿?덈떎.')));
         return;
       }
       final payload = <String, dynamic>{
@@ -257,7 +367,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       _myProfileFuture = _authRepository.getProfile(forceRefresh: true);
       await _primePreferredGender();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('프로필 등록 완료! 매칭권 1장이 지급됐어요.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('?꾨줈???깅줉 ?꾨즺! 留ㅼ묶沅?1?μ씠 吏湲됰릱?댁슂.')));
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -284,8 +394,8 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
 
   Widget _buildBoardAvatar(BuildContext context, Map<String, dynamic> profile) {
     final user = profile['user'] as Map<String, dynamic>?;
-    final displayType = user?['boardDisplayType']?.toString() ?? profile['boardDisplayType']?.toString();
-    dynamic photos = user?['photos'] ?? profile['photos'];
+    final displayType = user?['boardDisplayType']?.toString();
+    final photos = user?['photos'];
     String? primaryPhotoKey;
     if (photos is List && photos.isNotEmpty && photos[0] is Map) {
       primaryPhotoKey = (photos[0] as Map<String, dynamic>)['storageKey']?.toString();
@@ -347,7 +457,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
         final meProfile = profileData != null
             ? {'user': profileData, 'userId': myUserId, 'nickname': myNickname}
             : null;
-        // 내가 등록한 카드는 게시판에 보이지 않도록 제외
+        // ?닿? ?깅줉??移대뱶??寃뚯떆?먯뿉 蹂댁씠吏 ?딅룄濡??쒖쇅
         final displayProfiles = myUserId != null
             ? _profiles.where((p) {
                 final uid = p['userId']?.toString() ?? (p['user'] as Map<String, dynamic>?)?['id']?.toString();
@@ -446,26 +556,13 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       final profileId = tappedProfile['id']?.toString();
       if (profileId == null || profileId.isEmpty) return;
       if (!mounted) return;
-      final detailData = profileMapToDetailData(tappedProfile);
+      final detailData = _profileMapToDetailData(tappedProfile);
       final dark = Theme.of(context).brightness == Brightness.dark;
-      final user = tappedProfile['user'] as Map<String, dynamic>?;
-      final displayType = user?['boardDisplayType']?.toString() ?? tappedProfile['boardDisplayType']?.toString();
-      dynamic photos = user?['photos'] ?? tappedProfile['photos'];
-      String? photoUrlForEnlarge;
-      if (displayType == 'photo' && photos is List && photos.isNotEmpty && photos[0] is Map) {
-        final key = (photos[0] as Map<String, dynamic>)['storageKey']?.toString();
-        if (key != null) photoUrlForEnlarge = photoUrlFromStorageKey(key);
-      }
-      final seed = user?['avatarSeed']?.toString() ?? tappedProfile['userId']?.toString();
-      final options = _parseAvatarOptions(user?['avatarOptions']);
-      final avatarUrlForEnlarge = seed != null && seed.isNotEmpty
-          ? diceBearAvatarUrl(seed, options: options.isNotEmpty ? options : null)
-          : null;
-      // ad ProfileDetailModal: 열기 = 아래에서 슬라이드 업 + 배경 페이드, 닫기 = 아래로 슬라이드 다운 + 배경 페이드
+      // ad ProfileDetailModal: ?닿린 = ?꾨옒?먯꽌 ?щ씪?대뱶 ??+ 諛곌꼍 ?섏씠?? ?リ린 = ?꾨옒濡??щ씪?대뱶 ?ㅼ슫 + 諛곌꼍 ?섏씠??
       await showGeneralDialog<void>(
         context: context,
         barrierDismissible: true,
-        barrierLabel: '닫기',
+        barrierLabel: '?リ린',
         barrierColor: Colors.transparent,
         transitionDuration: const Duration(milliseconds: 350),
         pageBuilder: (_, __, ___) => const SizedBox.shrink(),
@@ -473,7 +570,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
           final curve = Curves.easeOutCubic;
           final t = curve.transform(animation.value);
           final barrierOpacity = 0.6 * t;
-          final slideY = 700.0 * (1.0 - t); // 열기: 700→0, 닫기: 0→700
+          final slideY = 700.0 * (1.0 - t); // ?닿린: 700??, ?リ린: 0??00
           return AnimatedBuilder(
             animation: animation,
             builder: (context, _) {
@@ -500,8 +597,6 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                           darkMode: dark,
                           avatarWidget: _buildBoardAvatar(ctx, tappedProfile),
                           onClose: () => Navigator.of(ctx).pop(),
-                          photoUrlForEnlarge: photoUrlForEnlarge,
-                          avatarUrlForEnlarge: avatarUrlForEnlarge,
                           onMatch: () async {
                             final ok = await _takeNote(profileId, tappedProfile);
                             if (!ctx.mounted) return;
@@ -545,26 +640,23 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     if (matchingTicket <= 0) {
       if (!mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('매칭권이 부족해요. 매칭권을 구매한 뒤 가져가기를 시도해 주세요.')),
+        const SnackBar(content: Text('留ㅼ묶沅뚯씠 遺議깊빐?? 留ㅼ묶沅뚯쓣 援щℓ????媛?멸?湲곕? ?쒕룄??二쇱꽭??')),
       );
       return false;
     }
-    final message = await showModalBottomSheet<String?>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => _TakeNoteMessageSheet(profile: profile),
-    );
-    if (!mounted) return false;
-    if (message == null) return false; // 취소 시 요청 안 보냄
-    final trimmed = message.trim();
-    if (trimmed.length < 5) return false;
+    // Avoid nested modal(bottom sheet over profile dialog) which can appear as a gray overlay
+    // and block the action flow on some devices. Send request immediately with a default message.
+    final nickname = (profile['nickname']?.toString().trim().isNotEmpty ?? false)
+        ? profile['nickname'].toString().trim()
+        : ((profile['user'] as Map<String, dynamic>?)?['nickname']?.toString().trim() ?? '상대');
+    final trimmed = '$nickname 님, 반가워요!';
     try {
       await _repository.takeNote(profileId, message: trimmed);
-      await _fetchProfiles();
-      await _fetchMySummary();
       if (!mounted) return false;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('요청을 보냈어요. 상대가 수락하면 매칭돼요.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('?붿껌??蹂대깉?댁슂. ?곷?媛 ?섎씫?섎㈃ 留ㅼ묶?쇱슂.')));
+      // Avoid keeping the match action blocked while refresh APIs are in flight.
+      _fetchProfiles();
+      _fetchMySummary();
       return true;
     } catch (e) {
       if (!mounted) return false;
@@ -574,7 +666,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   }
 }
 
-/// ad ProfileDetailModal "첫 인사를 전해보세요" 메시지 입력 시트: 하단 시트, 그라데이션 헤더, 프로필 미리보기, 5자 이상/200자, 전송 버튼.
+/// ad ProfileDetailModal "泥??몄궗瑜??꾪빐蹂댁꽭?? 硫붿떆吏 ?낅젰 ?쒗듃: ?섎떒 ?쒗듃, 洹몃씪?곗씠???ㅻ뜑, ?꾨줈??誘몃━蹂닿린, 5???댁긽/200?? ?꾩넚 踰꾪듉.
 class _TakeNoteMessageSheet extends StatefulWidget {
   const _TakeNoteMessageSheet({required this.profile});
 
@@ -633,7 +725,7 @@ class _TakeNoteMessageSheetState extends State<_TakeNoteMessageSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Header (ad: gradient, "첫 인사를 전해보세요", X, subtitle)
+              // Header (ad: gradient, "泥??몄궗瑜??꾪빐蹂댁꽭??, X, subtitle)
               Container(
               padding: const EdgeInsets.fromLTRB(24, 20, 16, 16),
               decoration: const BoxDecoration(
@@ -647,7 +739,7 @@ class _TakeNoteMessageSheetState extends State<_TakeNoteMessageSheet> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        '첫 인사를 전해보세요',
+                        '첫 인사를 해보세요',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 18,
@@ -681,7 +773,7 @@ class _TakeNoteMessageSheetState extends State<_TakeNoteMessageSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Profile preview (ad: avatar + nickname + school · major)
+                  // Profile preview (ad: avatar + nickname + school 쨌 major)
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -706,7 +798,7 @@ class _TakeNoteMessageSheetState extends State<_TakeNoteMessageSheet> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                [school, major].where((s) => s.isNotEmpty).join(' · '),
+                                [school, major].where((s) => s.isNotEmpty).join(' 쨌 '),
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
@@ -731,7 +823,7 @@ class _TakeNoteMessageSheetState extends State<_TakeNoteMessageSheet> {
                         maxLength: _maxLength,
                         decoration: InputDecoration(
                           counterText: '',
-                          hintText: '안녕하세요! 프로필을 보고 관심이 생겨 메시지 남겨요 😊',
+                          hintText: '안녕하세요! 프로필을 보고 관심이 생겨 메시지 보냅니다 :)',
                           hintStyle: TextStyle(
                             color: dark ? Colors.grey.shade500 : Colors.grey.shade400,
                           ),
@@ -810,8 +902,8 @@ class _TakeNoteMessageSheetState extends State<_TakeNoteMessageSheet> {
                         Expanded(
                           child: Text(
                             _isValid
-                                ? '좋아요! 이제 전송할 수 있어요 💕'
-                                : '최소 $_minLength자 이상 입력해주세요 (현재 ${_controller.text.length}자)',
+                                ? '醫뗭븘?? ?댁젣 ?꾩넚?????덉뼱???뮆'
+                                : '理쒖냼 $_minLength???댁긽 ?낅젰?댁＜?몄슂 (?꾩옱 ${_controller.text.length}??',
                             style: TextStyle(
                               fontSize: 14,
                               color: _isValid
@@ -825,7 +917,7 @@ class _TakeNoteMessageSheetState extends State<_TakeNoteMessageSheet> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  // Send button (ad: "메시지 보내고 카드 가져가기")
+                  // Send button (ad: "硫붿떆吏 蹂대궡怨?移대뱶 媛?멸?湲?)
                   Material(
                     color: Colors.transparent,
                     child: InkWell(
@@ -886,8 +978,8 @@ class _TakeNoteMessageSheetState extends State<_TakeNoteMessageSheet> {
   }
 
   Widget _buildProfileAvatar(BuildContext context, Map<String, dynamic> profile, double size) {
-    final displayType = profile['boardDisplayType']?.toString() ?? (profile['user'] as Map?)?['boardDisplayType']?.toString() ?? 'avatar';
-    final photos = (profile['user'] as Map?)?['photos'] ?? profile['photos'];
+    final displayType = profile['boardDisplayType']?.toString() ?? profile['user']?['boardDisplayType']?.toString() ?? 'avatar';
+    final photos = profile['photos'];
     String? photoUrl;
     if (displayType == 'photo' && photos is List && photos.isNotEmpty && photos[0] is Map) {
       final storageKey = (photos[0] as Map)['storageKey']?.toString();
@@ -935,7 +1027,7 @@ class _TakeNoteMessageSheetState extends State<_TakeNoteMessageSheet> {
   }
 }
 
-/// Design MeetZyBoard 스타일: 열람권/등록권/매칭권 (라벨 + 이모지 + 개수)
+/// Design MeetZyBoard ?ㅽ??? ?대엺沅??깅줉沅?留ㅼ묶沅?(?쇰꺼 + ?대え吏 + 媛쒖닔)
 class _DesignTicketChip extends StatelessWidget {
   const _DesignTicketChip({
     required this.label,
@@ -1005,7 +1097,7 @@ class _DesignTicketChip extends StatelessWidget {
   }
 }
 
-/// 등록/열람/매칭권 뱃지 (아이콘 + 개수만)
+/// ?깅줉/?대엺/留ㅼ묶沅?諭껋? (?꾩씠肄?+ 媛쒖닔留?
 class _TicketChip extends StatelessWidget {
   const _TicketChip({
     required this.icon,
@@ -1121,7 +1213,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('매칭권이 부족해요. 매칭권을 구매한 뒤 가져가기를 시도해 주세요.'),
+          content: const Text('留ㅼ묶沅뚯씠 遺議깊빐?? 留ㅼ묶沅뚯쓣 援щℓ????媛?멸?湲곕? ?쒕룄??二쇱꽭??'),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.all(16),
@@ -1133,12 +1225,16 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
 
     setState(() => _taking = true);
     try {
-      final sent = await widget.onTakeNote(_profile['id'] as String, _profile);
+      final profileId = _profile['id']?.toString();
+      if (profileId == null || profileId.isEmpty) {
+        throw Exception('프로필 ID를 찾을 수 없습니다.');
+      }
+      final sent = await widget.onTakeNote(profileId, _profile);
       if (widget.onRefreshTickets != null) await widget.onRefreshTickets!();
       if (!mounted) return;
       setState(() => _taking = false);
-      if (!sent) return; // 취소했거나 실패 시 축하 안 함
-      // AppDesign ProfileDetailModal: 카드 비행 1.5초 + 스파클 12 → 성공 문구 2초
+      if (!sent) return; // 痍⑥냼?덇굅???ㅽ뙣 ??異뺥븯 ????
+      // AppDesign ProfileDetailModal: 移대뱶 鍮꾪뻾 1.5珥?+ ?ㅽ뙆??12 ???깃났 臾멸뎄 2珥?
       await showDialog<void>(
         context: context,
         barrierDismissible: false,
@@ -1162,7 +1258,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
 
   static String _str(dynamic v) => v?.toString() ?? '-';
 
-  /// 프로필 수정 입력란과 동일한 한국어 라벨로 표시
+  /// ?꾨줈???섏젙 ?낅젰?怨??숈씪???쒓뎅???쇰꺼濡??쒖떆
   static String _toLabel(String? field, dynamic v) {
     final s = v?.toString().trim();
     if (s == null || s.isEmpty) return '-';
@@ -1192,7 +1288,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
         }
       case 'drinking':
         switch (s.toLowerCase()) {
-          case 'none': return '안 함';
+          case 'none': return '비음주';
           case 'sometimes': return '가끔';
           case 'often': return '자주';
           default: return s;
@@ -1203,26 +1299,26 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
           case 'shirt_neat': return '셔츠/단정';
           case 'street': return '스트릿';
           case 'knit': return '니트/감성';
-          case 'sporty': return '체육복/스포티';
+          case 'sporty': return '스포티';
           case 'minimal': return '미니멀';
           case 'hip': return '힙한';
           default: return s;
         }
       case 'preferredDateType':
         switch (s.toLowerCase()) {
-          case 'cafe': return '카페 탐방';
+          case 'cafe': return '카페';
           case 'walk': return '산책';
           case 'movie': return '영화';
-          case 'drink': return '술 한잔';
+          case 'drink': return '술자리';
           case 'exercise': return '운동';
-          case 'food_tour': return '맛집 투어';
+          case 'food_tour': return '맛집 탐방';
           case 'drive': return '드라이브';
           default: return s;
         }
       case 'activityTime':
         switch (s.toLowerCase()) {
           case 'morning': return '아침형';
-          case 'daytime': return '낮 활동형';
+          case 'daytime': return '주간형';
           case 'evening': return '저녁형';
           case 'night_owl': return '야행성';
           default: return s;
@@ -1248,7 +1344,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
       return null;
     }
 
-    // AppDesign ProfileDetailModal: 테마 primary 그라데이션 헤더, 아바타+닉네임, 스크롤 정보+태그, 하단 닫기/가져가기
+    // AppDesign ProfileDetailModal: ?뚮쭏 primary 洹몃씪?곗씠???ㅻ뜑, ?꾨컮?+?됰꽕?? ?ㅽ겕濡??뺣낫+?쒓렇, ?섎떒 ?リ린/媛?멸?湲?
     final primaryGradient = ThemeController.getSheetGradient();
     final dark = theme.brightness == Brightness.dark;
     final listTags = <String>[];
@@ -1273,7 +1369,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
         borderRadius: BorderRadius.circular(32),
         child: Column(
           children: [
-            // 헤더: 그라데이션 + 드래그 핸들 + X + 아바타 + 닉네임 (높이 200으로 오버플로우 방지)
+            // ?ㅻ뜑: 洹몃씪?곗씠??+ ?쒕옒洹??몃뱾 + X + ?꾨컮? + ?됰꽕??(?믪씠 200?쇰줈 ?ㅻ쾭?뚮줈??諛⑹?)
             Container(
               height: 200,
               decoration: BoxDecoration(gradient: primaryGradient),
@@ -1359,7 +1455,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                 ],
               ),
             ),
-            // 스크롤: 정보 행 + 태그
+            // ?ㅽ겕濡? ?뺣낫 ??+ ?쒓렇
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
@@ -1383,16 +1479,16 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                       _rowAppDesign(theme, dark, '성별', _toLabel('gender', pluck(['gender', 'sex'])?.toString())),
                       _rowAppDesign(theme, dark, '소속', _str(pluck(['affiliation', 'school', 'affiliationText', 'organization']))),
                       _rowAppDesign(theme, dark, '키', pluck(['heightCm', 'height']) != null ? '${pluck(['heightCm', 'height'])} cm' : '-'),
-                      _rowAppDesign(theme, dark, '학번', _toLabel('gradeYear', pluck(['grade', 'year', 'schoolYear', 'class']) )),
+                      _rowAppDesign(theme, dark, '학년', _toLabel('gradeYear', pluck(['grade', 'year', 'schoolYear', 'class']))),
                       _rowAppDesign(theme, dark, 'MBTI', _str(pluck(['mbti', 'mbtiType']))),
                       _rowAppDesign(theme, dark, '흡연', _toLabel('smoking', pluck(['smoking', 'smoke'])?.toString())),
                       _rowAppDesign(theme, dark, '음주', _toLabel('drinking', pluck(['drinking', 'alcohol'])?.toString())),
-                      _rowAppDesign(theme, dark, '자기 소개', _str(pluck(['oneLineIntroduce', 'introOneLine', 'bio', 'introduction']))),
+                      _rowAppDesign(theme, dark, '자기소개', _str(pluck(['oneLineIntroduce', 'introOneLine', 'bio', 'introduction']))),
                       _rowAppDesign(theme, dark, '요즘 빠진 것', _str(pluck(['intoLately', 'hobby', 'recentInterest']))),
                       _rowAppDesign(theme, dark, '이상형', _str(pluck(['idealType', 'ideal']))),
                       _rowAppDesign(theme, dark, '패션 스타일', _toLabel('fashionStyle', pluck(['fashionStyle', 'style']))),
                       _rowAppDesign(theme, dark, '선호 데이트', _toLabel('preferredDateType', pluck(['preferredDateType', 'preferredDate']))),
-                      _rowAppDesign(theme, dark, '활동 시간대', _toLabel('activityTime', pluck(['activityTime', 'activeTime']))),
+                      _rowAppDesign(theme, dark, '활동 시간', _toLabel('activityTime', pluck(['activityTime', 'activeTime']))),
                       if (listTags.isNotEmpty) ...[
                         const SizedBox(height: 8),
                         Row(
@@ -1401,7 +1497,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                             SizedBox(
                               width: 112,
                               child: Text(
-                                '나를 소개하는...',
+                                '나를 소개하는 태그',
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
                                 ),
@@ -1435,7 +1531,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                 ),
               ),
             ),
-            // 하단: 채팅방에서는 닫기만, 게시판에서는 넘기기 + 가져가기
+            // ?섎떒: 梨꾪똿諛⑹뿉?쒕뒗 ?リ린留? 寃뚯떆?먯뿉?쒕뒗 ?섍린湲?+ 媛?멸?湲?
             Container(
               padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + MediaQuery.of(context).padding.bottom),
               decoration: BoxDecoration(
@@ -1504,7 +1600,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                                     child: _taking
                                         ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                                         : const Text(
-                                            '매칭하기',
+                                            '留ㅼ묶?섍린',
                                             style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                                           ),
                                   ),
@@ -1575,7 +1671,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
   }
 }
 
-/// 매칭 완료 시 (가져가기 수락 등) 전용 오버레이. 앱 전역에서 호출 가능. 다이얼로그가 닫힐 때까지 완료.
+/// 留ㅼ묶 ?꾨즺 ??(媛?멸?湲??섎씫 ?? ?꾩슜 ?ㅻ쾭?덉씠. ???꾩뿭?먯꽌 ?몄텧 媛?? ?ㅼ씠?쇰줈洹멸? ?ロ옄 ?뚭퉴吏 ?꾨즺.
 Future<void> showMatchCompleteCelebration(BuildContext context) {
   return showDialog<void>(
     context: context,
@@ -1623,7 +1719,7 @@ class _MatchCompleteOnlyOverlayState extends State<_MatchCompleteOnlyOverlay> {
               Icon(LucideIcons.heart, size: 80, color: Theme.of(context).colorScheme.primary),
               const SizedBox(height: 16),
               Text(
-                '매칭 완료!',
+                '留ㅼ묶 ?꾨즺!',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -1632,7 +1728,7 @@ class _MatchCompleteOnlyOverlayState extends State<_MatchCompleteOnlyOverlay> {
               ),
               const SizedBox(height: 8),
               Text(
-                '이제 대화를 시작해보세요 💕',
+                '?댁젣 ??붾? ?쒖옉?대낫?몄슂 ?뮆',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
@@ -1648,7 +1744,7 @@ class _MatchCompleteOnlyOverlayState extends State<_MatchCompleteOnlyOverlay> {
   }
 }
 
-/// 가져가기 요청 전송 후: 카드 비행 + 성공 문구 (요청만 보낸 상태 → 상대 수락 시 매칭)
+/// 媛?멸?湲??붿껌 ?꾩넚 ?? 移대뱶 鍮꾪뻾 + ?깃났 臾멸뎄 (?붿껌留?蹂대궦 ?곹깭 ???곷? ?섎씫 ??留ㅼ묶)
 class _MatchCelebrationOverlay extends StatefulWidget {
   const _MatchCelebrationOverlay({
     required this.profile,
@@ -1658,7 +1754,7 @@ class _MatchCelebrationOverlay extends StatefulWidget {
 
   final Map<String, dynamic> profile;
   final Widget Function(BuildContext context, Map<String, dynamic> profile) buildAvatar;
-  /// true: 요청만 보냄 문구 / false: 카드 획득 문구
+  /// true: ?붿껌留?蹂대깂 臾멸뎄 / false: 移대뱶 ?띾뱷 臾멸뎄
   final bool requestOnly;
 
   @override
@@ -1865,7 +1961,7 @@ class _MatchCelebrationOverlayState extends State<_MatchCelebrationOverlay> with
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  widget.requestOnly ? '요청을 보냈어요!' : '카드 획득!',
+                  widget.requestOnly ? '?붿껌??蹂대깉?댁슂!' : '移대뱶 ?띾뱷!',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -1875,8 +1971,8 @@ class _MatchCelebrationOverlayState extends State<_MatchCelebrationOverlay> with
                 const SizedBox(height: 8),
                 Text(
                   widget.requestOnly
-                      ? '$nickname님이 수락하면\n매칭이 성사돼요 💕'
-                      : '$nickname님의 프로필을\n가져왔어요! 💕',
+                      ? '$nickname?섏씠 ?섎씫?섎㈃\n留ㅼ묶???깆궗?쇱슂 ?뮆'
+                      : '$nickname?섏쓽 ?꾨줈?꾩쓣\n媛?몄솕?댁슂! ?뮆',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,

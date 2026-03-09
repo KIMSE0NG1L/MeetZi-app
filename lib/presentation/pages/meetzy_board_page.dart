@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/core/theme/meetzy_design_tokens.dart';
 import 'package:nearo_app/core/theme/university_theme.dart';
@@ -8,7 +8,7 @@ import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/presentation/widgets/meetzy_profile_card.dart';
 import 'package:nearo_app/presentation/widgets/meetzy_stats_bar.dart';
 
-/// Shell 상단바/하단 네비가 따로 있을 때 사용. 스탯 바 + 그리드만 표시 (등록 버튼 없음).
+/// Shell ?곷떒諛??섎떒 ?ㅻ퉬媛 ?곕줈 ?덉쓣 ???ъ슜. ?ㅽ꺈 諛?+ 洹몃━?쒕쭔 ?쒖떆 (?깅줉 踰꾪듉 ?놁쓬).
 class MeetzyBoardContent extends StatelessWidget {
   const MeetzyBoardContent({
     super.key,
@@ -64,7 +64,7 @@ class MeetzyBoardContent extends StatelessWidget {
                           Icon(LucideIcons.users, size: 56, color: theme.colorScheme.onSurfaceVariant),
                           const SizedBox(height: 20),
                           Text(
-                            '게시판이 비어 있어요',
+                            '홈 카드가 아직 없어요',
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w700,
                               color: theme.colorScheme.onSurface,
@@ -135,11 +135,11 @@ class MeetzyBoardContent extends StatelessWidget {
   }
 }
 
-/// last MeetZyBoard 1:1 레이아웃: Header, Content, Bottom nav (등록 버튼 없음).
+/// last MeetZyBoard 1:1 ?덉씠?꾩썐: Header, Content, Bottom nav (?깅줉 踰꾪듉 ?놁쓬).
 class MeetzyBoardPage extends StatelessWidget {
   const MeetzyBoardPage({
     super.key,
-    this.schoolName = '세종대',
+    this.schoolName = '?몄쥌?',
     this.currentTab = 'board',
     this.onTabChange,
     this.onSettings,
@@ -250,7 +250,7 @@ class MeetzyBoardPage extends StatelessWidget {
                                       Icon(LucideIcons.users, size: 56, color: theme.colorScheme.onSurfaceVariant),
                                       const SizedBox(height: 20),
                                       Text(
-                                        '게시판이 비어 있어요',
+                                        '홈 카드가 아직 없어요',
                                         style: theme.textTheme.titleMedium?.copyWith(
                                           fontWeight: FontWeight.w700,
                                           color: theme.colorScheme.onSurface,
@@ -304,9 +304,9 @@ class MeetzyBoardPage extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    _navItem(context, 'ranking', LucideIcons.trophy, '대학교 랭킹', primary),
+                    _navItem(context, 'ranking', LucideIcons.trophy, '??숆탳 ??궧', primary),
                     _navItem(context, 'messages', LucideIcons.messageCircle, '메시지함', primary),
-                    _navItem(context, 'board', LucideIcons.layoutGrid, '게시판', primary),
+                    _navItem(context, 'board', LucideIcons.house, '홈', primary),
                     _navItem(context, 'profile', LucideIcons.user, '프로필', primary),
                     _navItem(context, 'shop', LucideIcons.shoppingBag, '상점', primary),
                   ],
@@ -364,7 +364,7 @@ class MeetzyBoardPage extends StatelessWidget {
   }
 }
 
-/// Board에 표시할 프로필 한 건 (Prisma Profile/User 필드명 참고: nickname, idealType 등).
+/// Board???쒖떆???꾨줈????嫄?(Prisma Profile/User ?꾨뱶紐?李멸퀬: nickname, idealType ??.
 class MeetzyBoardProfileItem {
   const MeetzyBoardProfileItem({
     required this.nickname,
@@ -380,3 +380,5 @@ class MeetzyBoardProfileItem {
   final Color? avatarBgColor;
   final bool isNew;
 }
+
+
