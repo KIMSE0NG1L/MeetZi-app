@@ -414,6 +414,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
     final content = post['content']?.toString() ?? '';
     final likeCount = (post['likeCount'] is int) ? post['likeCount'] as int : 0;
     final commentCount = (post['commentCount'] is int) ? post['commentCount'] as int : 0;
+    final viewCount = (post['viewCount'] is int) ? post['viewCount'] as int : 0;
     final liked = post['liked'] == true;
     final primary = Theme.of(context).colorScheme.primary;
 
@@ -577,6 +578,13 @@ class _CommunityScreenState extends State<CommunityScreen> {
                           const SizedBox(width: 6),
                           Text(
                             '$commentCount',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey.shade600),
+                          ),
+                          const SizedBox(width: 12),
+                          Icon(LucideIcons.eye, size: 16, color: Colors.grey.shade600),
+                          const SizedBox(width: 6),
+                          Text(
+                            '$viewCount',
                             style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey.shade600),
                           ),
                         ],
