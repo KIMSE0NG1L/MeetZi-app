@@ -29,74 +29,92 @@ class MeetzyProfileDetailModal extends StatelessWidget {
   /// 탭 시 크게 보기할 아바타 URL (dicebear 등)
   final String? avatarUrlForEnlarge;
 
-  /// 탭 시 사진/아바타 크게 보기 (photoUrlForEnlarge 또는 avatarUrlForEnlarge 있을 때만)
-  Widget _wrapAvatarWithEnlarge(BuildContext context, Widget child) {
-    final hasEnlarge = (photoUrlForEnlarge != null && photoUrlForEnlarge!.isNotEmpty) ||
-        (avatarUrlForEnlarge != null && avatarUrlForEnlarge!.isNotEmpty);
-    if (!hasEnlarge) return child;
-    return GestureDetector(
-      onTap: () {
-        showDialog<void>(
-          context: context,
-          barrierColor: Colors.black87,
-          barrierDismissible: true,
-          builder: (ctx) => GestureDetector(
-            onTap: () => Navigator.of(ctx).pop(),
-            behavior: HitTestBehavior.opaque,
-            child: Dialog(
-              backgroundColor: Colors.transparent,
-              insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
-              child: GestureDetector(
-                onTap: () {},
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Align(
-                      alignment: Alignment.topRight,
-                      child: IconButton(
-                        icon: const Icon(LucideIcons.x, color: Colors.white, size: 28),
-                        onPressed: () => Navigator.of(ctx).pop(),
-                      ),
+  /// 사진/아바타 크게 보기 다이얼로그 표시 (외부에서 재사용)
+  static void showPhotoEnlarge(
+    BuildContext context, {
+    String? photoUrl,
+    String? avatarUrl,
+  }) {
+    final hasPhoto = photoUrl != null && photoUrl.isNotEmpty;
+    final hasAvatar = avatarUrl != null && avatarUrl.isNotEmpty;
+    if (!hasPhoto && !hasAvatar) return;
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black87,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return GestureDetector(
+          onTap: () => Navigator.of(ctx).pop(),
+          behavior: HitTestBehavior.opaque,
+          child: Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
+            child: GestureDetector(
+              onTap: () {},
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: IconButton(
+                      icon: const Icon(LucideIcons.x, color: Colors.white, size: 28),
+                      onPressed: () => Navigator.of(ctx).pop(),
                     ),
-                    ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxWidth: MediaQuery.of(ctx).size.width - 48,
-                        maxHeight: MediaQuery.of(ctx).size.height * 0.6,
-                      ),
-                      child: InteractiveViewer(
-                          minScale: 1.0,
-                          maxScale: 4.0,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: (photoUrlForEnlarge != null && photoUrlForEnlarge!.isNotEmpty)
-                                ? Image.network(
-                                    photoUrlForEnlarge!,
+                  ),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: MediaQuery.of(ctx).size.width - 48,
+                      maxHeight: MediaQuery.of(ctx).size.height * 0.6,
+                    ),
+                    child: InteractiveViewer(
+                      minScale: 1.0,
+                      maxScale: 4.0,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: hasPhoto
+                            ? Image.network(
+                                photoUrl!,
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, __, ___) =>
+                                    const Icon(LucideIcons.user, size: 120, color: Colors.white54),
+                              )
+                            : hasAvatar
+                                ? SvgPicture.network(
+                                    avatarUrl!,
                                     fit: BoxFit.contain,
-                                    errorBuilder: (_, __, ___) => const Icon(LucideIcons.user, size: 120, color: Colors.white54),
+                                    placeholderBuilder: (_) =>
+                                        const Icon(LucideIcons.user, size: 120, color: Colors.white54),
                                   )
-                                : (avatarUrlForEnlarge != null && avatarUrlForEnlarge!.isNotEmpty)
-                                    ? SvgPicture.network(
-                                        avatarUrlForEnlarge!,
-                                        fit: BoxFit.contain,
-                                        placeholderBuilder: (_) => const Icon(LucideIcons.user, size: 120, color: Colors.white54),
-                                      )
-                                    : const SizedBox.shrink(),
-                          ),
-                        ),
+                                : const SizedBox.shrink(),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '탭하면 닫기 · 핀치로 확대',
-                      style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.7)),
-                    ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '탭하면 닫기 · 핀치로 확대',
+                    style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.7)),
+                  ),
+                ],
               ),
             ),
           ),
         );
       },
+    );
+  }
+
+  /// 탭 시 사진/아바타 크게 보기 (photoUrlForEnlarge 또는 avatarUrlForEnlarge 있을 때만)
+  Widget _wrapAvatarWithEnlarge(BuildContext context, Widget child) {
+    final hasEnlarge = (photoUrlForEnlarge != null && photoUrlForEnlarge!.isNotEmpty) ||
+        (avatarUrlForEnlarge != null && avatarUrlForEnlarge!.isNotEmpty);
+    if (!hasEnlarge) return child;
+
+    return GestureDetector(
+      onTap: () => showPhotoEnlarge(
+        context,
+        photoUrl: photoUrlForEnlarge,
+        avatarUrl: avatarUrlForEnlarge,
+      ),
       child: child,
     );
   }
@@ -369,7 +387,10 @@ class MeetzyProfileDetailModal extends StatelessWidget {
                     onPressed: onClose,
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: BorderSide(color: darkMode ? const Color(0xFF4B5563) : const Color(0xFFE5E7EB), width: 2),
+                      side: BorderSide(
+                        color: darkMode ? const Color(0xFF4B5563) : const Color(0xFFE5E7EB),
+                        width: 2,
+                      ),
                       foregroundColor: darkMode ? const Color(0xFFE5E7EB) : const Color(0xFF374151),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
@@ -412,6 +433,7 @@ class MeetzyProfileDetailModal extends StatelessWidget {
                         ),
                       ),
                     ),
+                  ),
                 ],
               ],
             ),
