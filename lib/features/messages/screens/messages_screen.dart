@@ -1,4 +1,6 @@
 import 'package:nearo_app/features/messages/data/chat_repository.dart';
+import 'package:nearo_app/features/messages/data/partner_profile_repository.dart';
+import 'package:nearo_app/features/matching_board/profile_detail_sheet.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/shared/utils/photo_url.dart';
@@ -20,6 +22,7 @@ class MessagesScreen extends StatefulWidget {
 class _MessagesScreenState extends State<MessagesScreen> {
   final _repository = ChatRepository();
   final _authRepository = AuthRepository();
+  final _partnerProfileRepository = PartnerProfileRepository();
   bool _loading = true;
   List<Map<String, dynamic>> _rooms = [];
   Map<String, int> _unreadCounts = {}; // roomId -> unread count
@@ -170,6 +173,101 @@ class _MessagesScreenState extends State<MessagesScreen> {
     _loadRooms();
   }
 
+  Future<void> _onAvatarTap(
+    BuildContext context,
+    Map<String, dynamic> room,
+    String roomId,
+    String? photoUrl,
+    String? avatarSeed,
+    Map<String, String> avatarOptions,
+    String partner,
+  ) async {
+    String? matchId = room['matchId']?.toString();
+    if (matchId == null || matchId.isEmpty) {
+      try {
+        final roomData = await _repository.getRoom(roomId: roomId);
+        matchId = roomData['matchId']?.toString();
+      } catch (_) {}
+    }
+    if (matchId == null || matchId.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('프로필을 불러올 수 없습니다.')),
+        );
+      }
+      return;
+    }
+    try {
+      final profile = await _partnerProfileRepository.getPartnerProfile(matchId: matchId);
+      if (!context.mounted) return;
+      String? profilePhotoUrl;
+      final displayType = profile['boardDisplayType']?.toString() ?? (profile['user'] as Map?)?['boardDisplayType']?.toString();
+      if (displayType == 'photo') {
+        final photos = (profile['user'] as Map?)?['photos'] ?? profile['photos'];
+        if (photos is List && photos.isNotEmpty && photos[0] is Map) {
+          final key = (photos[0] as Map)['storageKey']?.toString();
+          if (key != null) profilePhotoUrl = _resolvePhotoUrl(key);
+        }
+      }
+      final user = profile['user'] as Map<String, dynamic>?;
+      final seed = user?['avatarSeed']?.toString() ?? profile['avatarSeed']?.toString() ?? avatarSeed;
+      Map<String, String> optsMap = avatarOptions;
+      final rawOpts = user?['avatarOptions'] ?? profile['avatarOptions'];
+      if (rawOpts != null) {
+        if (rawOpts is Map) {
+          optsMap = rawOpts.map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
+        } else if (rawOpts is String) {
+          try {
+            final decoded = jsonDecode(rawOpts);
+            if (decoded is Map<String, dynamic>) {
+              optsMap = decoded.map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
+            }
+          } catch (_) {}
+        }
+      }
+      await showProfileDetailSheet(
+        context,
+        profile: profile,
+        buildAvatar: (ctx, p) => _buildProfileModalAvatar(ctx, profilePhotoUrl ?? photoUrl, seed, optsMap),
+        hideMatchButton: true,
+      );
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('프로필을 불러올 수 없습니다.')),
+        );
+      }
+    }
+  }
+
+  Widget _buildProfileModalAvatar(BuildContext context, String? photoUrl, String? avatarSeed, Map<String, String> avatarOptions) {
+    const double size = 96;
+    if (photoUrl != null && photoUrl.isNotEmpty) {
+      return ClipOval(
+        child: Image.network(
+          photoUrl,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Icon(LucideIcons.user, size: 48, color: Colors.grey.shade600),
+        ),
+      );
+    }
+    if (avatarSeed != null && avatarSeed.isNotEmpty) {
+      final url = diceBearAvatarUrl(avatarSeed, options: avatarOptions.isNotEmpty ? avatarOptions : null);
+      return ClipOval(
+        child: SvgPicture.network(
+          url,
+          fit: BoxFit.cover,
+          width: size,
+          height: size,
+          placeholderBuilder: (_) => Icon(LucideIcons.user, size: 48, color: Colors.grey.shade600),
+        ),
+      );
+    }
+    return Icon(LucideIcons.user, size: 48, color: Colors.grey.shade600);
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
@@ -284,13 +382,17 @@ class _MessagesScreenState extends State<MessagesScreen> {
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             child: Row(
                               children: [
-                                Container(
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white, width: 2),
-                                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 4)],
+                                GestureDetector(
+                                  onTap: () => _onAvatarTap(context, room, roomId, photoUrl, avatarSeed, avatarOptions, partner),
+                                  behavior: HitTestBehavior.opaque,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.white, width: 2),
+                                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 4)],
+                                    ),
+                                    child: _buildAvatar(photoUrl, avatarSeed, avatarOptions, partner),
                                   ),
-                                  child: _buildAvatar(photoUrl, avatarSeed, avatarOptions, partner),
                                 ),
                                 const SizedBox(width: 16),
                                 Expanded(

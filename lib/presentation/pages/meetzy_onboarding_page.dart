@@ -79,7 +79,6 @@ class _MeetzyOnboardingPageState extends State<MeetzyOnboardingPage>
 
   double _elapsedSeconds = 0;
   Ticker? _ticker;
-  late AnimationController _cardController;
   late AnimationController _particleController;
 
   @override
@@ -93,7 +92,6 @@ class _MeetzyOnboardingPageState extends State<MeetzyOnboardingPage>
       if (mounted) setState(() => _elapsedSeconds = elapsed.inMilliseconds / 1000);
     });
     _ticker!.start();
-    _cardController = AnimationController(vsync: this, duration: const Duration(seconds: 4))..repeat();
     _particleController = AnimationController(vsync: this, duration: const Duration(seconds: 2))..repeat();
   }
 
@@ -120,7 +118,6 @@ class _MeetzyOnboardingPageState extends State<MeetzyOnboardingPage>
     _stepController.removeStatusListener(_onStepTransitionStatus);
     _stepController.dispose();
     _ticker?.dispose();
-    _cardController.dispose();
     _particleController.dispose();
     super.dispose();
   }
@@ -220,7 +217,7 @@ class _MeetzyOnboardingPageState extends State<MeetzyOnboardingPage>
           children: [
             // last 효과: 스텝별 배경 애니메이션 (터치 무시)
             if (_currentStep == 0) Positioned.fill(child: IgnorePointer(child: _FloatingHearts(elapsed: _elapsedSeconds))),
-            if (_currentStep == 1) Positioned.fill(child: IgnorePointer(child: _SwipeCards(animation: _cardController))),
+            if (_currentStep == 1) Positioned.fill(child: IgnorePointer(child: const _SwipeCards())),
             // 3페이지(step 2)는 효과 없음
             if (_currentStep == 3) Positioned.fill(child: IgnorePointer(child: _MatchingParticles(animation: _particleController))),
             Positioned(
@@ -424,61 +421,28 @@ class _FloatingHearts extends StatelessWidget {
   }
 }
 
-/// last: 스와이프 카드 (step 1) — last 그대로 w-64 h-80 = 256×320
+/// last: 스와이프 카드 (step 1) — 정적 카드만 표시 (흔들림 애니메이션 제거)
 class _SwipeCards extends StatelessWidget {
-  const _SwipeCards({required this.animation});
-
-  final Animation<double> animation;
+  const _SwipeCards();
 
   static const _cardSize = Size(256.0, 320.0); // last: w-64 h-80
-  static const _slidePx = 50.0; // 화면에 맞게 슬라이드만 축소
-  static const _totalWidth = 356.0; // 256 + 50*2
+  static const _totalWidth = 356.0;
 
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: AnimatedBuilder(
-        animation: animation,
-        builder: (context, child) {
-          final t = animation.value;
-          final phase = t % 1.0;
-          double x;
-          if (phase < 0.25) {
-            x = _slidePx * (phase / 0.25);
-          } else if (phase < 0.5) {
-            x = _slidePx - _slidePx * 2 * ((phase - 0.25) / 0.25);
-          } else if (phase < 0.75) {
-            x = -_slidePx + _slidePx * 2 * ((phase - 0.5) / 0.25);
-          } else {
-            x = _slidePx - _slidePx * ((phase - 0.75) / 0.25);
-          }
-          final frontOpacity = phase < 0.25 || phase >= 0.75 ? 1.0 : 0.0;
-          final rot0 = -5 + 15 * math.sin(phase * math.pi * 2);
-          final rot1 = 0 + 15 * math.sin(phase * math.pi * 2);
-          final rot2 = 5 + 15 * math.sin(phase * math.pi * 2);
-          return SizedBox(
-            width: _totalWidth,
-            height: _cardSize.height,
-            child: Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.center,
-              children: [
-                _card(rot: rot2, scale: 0.95, color: const Color(0xFF60A5FA).withValues(alpha: 0.4)),
-                _card(rot: rot1, scale: 0.98, color: const Color(0xFFA78BFA).withValues(alpha: 0.4)),
-                Transform.translate(
-                  offset: Offset(x, 0),
-                  child: Transform.rotate(
-                    angle: rot0 * math.pi / 180,
-                    child: Opacity(
-                      opacity: frontOpacity.clamp(0.0, 1.0),
-                      child: _card(rot: 0, scale: 1, color: const Color(0xFFF472B6).withValues(alpha: 0.4)),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
+      child: SizedBox(
+        width: _totalWidth,
+        height: _cardSize.height,
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            _card(rot: 5, scale: 0.95, color: const Color(0xFF60A5FA).withValues(alpha: 0.4)),
+            _card(rot: 0, scale: 0.98, color: const Color(0xFFA78BFA).withValues(alpha: 0.4)),
+            _card(rot: -5, scale: 1, color: const Color(0xFFF472B6).withValues(alpha: 0.4)),
+          ],
+        ),
       ),
     );
   }

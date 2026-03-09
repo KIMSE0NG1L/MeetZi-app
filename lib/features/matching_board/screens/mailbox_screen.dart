@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/matching_board/data/matching_board_repository.dart';
+import 'package:nearo_app/features/matching_board/profile_detail_sheet.dart';
 import 'package:nearo_app/features/matching_board/screens/take_note_request_response_screen.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
@@ -87,8 +88,9 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
         child: Icon(LucideIcons.user, color: Colors.grey.shade600),
       );
     }
-    final displayType = recipient['boardDisplayType']?.toString();
-    final photos = recipient['photos'];
+    final user = recipient['user'] as Map<String, dynamic>?;
+    final displayType = recipient['boardDisplayType']?.toString() ?? user?['boardDisplayType']?.toString();
+    final photos = recipient['photos'] ?? user?['photos'];
     String? primaryPhotoKey;
     if (photos is List && photos.isNotEmpty && photos[0] is Map) {
       primaryPhotoKey = (photos[0] as Map<String, dynamic>)['storageKey']?.toString();
@@ -351,7 +353,20 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
           return _adLikeRequestCard(
             context: context,
             dark: Theme.of(context).brightness == Brightness.dark,
-            avatar: _buildRequesterAvatar(context, requester),
+            avatar: GestureDetector(
+              onTap: () {
+                if (requester != null) {
+                  showProfileDetailSheet(
+                    context,
+                    profile: requester,
+                    buildAvatar: (ctx, p) => _buildRecipientAvatar(ctx, p),
+                    hideMatchButton: true,
+                  );
+                }
+              },
+              behavior: HitTestBehavior.opaque,
+              child: _buildRequesterAvatar(context, requester),
+            ),
             title: nickname,
             subtitle: subtitle,
             timestamp: timeAgo,
@@ -519,7 +534,21 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
           return _adLikeRequestCard(
             context: context,
             dark: dark,
-            avatar: _buildRecipientAvatar(context, recipient),
+            avatar: GestureDetector(
+              onTap: () {
+                final p = recipient ?? profile;
+                if (p != null) {
+                  showProfileDetailSheet(
+                    context,
+                    profile: p,
+                    buildAvatar: (ctx, prof) => _buildRecipientAvatar(ctx, prof),
+                    hideMatchButton: true,
+                  );
+                }
+              },
+              behavior: HitTestBehavior.opaque,
+              child: _buildRecipientAvatar(context, recipient),
+            ),
             title: nickname,
             subtitle: subtitle,
             timestamp: timeAgo,

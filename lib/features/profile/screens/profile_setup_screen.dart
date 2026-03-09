@@ -319,6 +319,60 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     return '${AppConfig.baseUrl}/$storageKey';
   }
 
+  void _showPhotoLarge({String? imageUrl, File? file}) {
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black87,
+      barrierDismissible: true,
+      builder: (context) => GestureDetector(
+        onTap: () => Navigator.of(context).pop(),
+        behavior: HitTestBehavior.opaque,
+        child: Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
+          child: GestureDetector(
+            onTap: () {},
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Align(
+                  alignment: Alignment.topRight,
+                  child: IconButton(
+                    icon: const Icon(LucideIcons.x, color: Colors.white, size: 28),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ),
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width - 48,
+                    maxHeight: MediaQuery.of(context).size.height * 0.6,
+                  ),
+                  child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: imageUrl != null && imageUrl.isNotEmpty
+                          ? Image.network(
+                              imageUrl,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => const Icon(LucideIcons.imageOff, size: 80, color: Colors.white54),
+                            )
+                          : file != null
+                              ? Image.file(file, fit: BoxFit.contain)
+                              : const SizedBox.shrink(),
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                Text(
+                  '탭하면 닫기',
+                  style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.7)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _boardDisplayChip({required String label, required String value, required IconData icon}) {
     final selected = _boardDisplayType == value;
     return Material(
@@ -733,7 +787,13 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                           const SizedBox(height: 8),
                             Row(
                             children: [
-                              Container(
+                              GestureDetector(
+                                onTap: () {
+                                  if (_selectedPhoto != null) {
+                                    _showPhotoLarge(file: File(_selectedPhoto!.path));
+                                  }
+                                },
+                                child: Container(
                                 width: 80,
                                 height: 80,
                                 decoration: BoxDecoration(
@@ -747,6 +807,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                                         File(_selectedPhoto!.path),
                                         fit: BoxFit.cover,
                                       ),
+                              ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -814,7 +875,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                       final isPrimary = photo['isPrimary'] == true;
                       return Stack(
                         children: [
-                          Container(
+                          GestureDetector(
+                            onTap: () {
+                              if (storageKey.isNotEmpty) _showPhotoLarge(imageUrl: _resolvePhotoUrl(storageKey));
+                            },
+                            child: Container(
                             width: 88,
                             height: 88,
                             decoration: BoxDecoration(
@@ -834,6 +899,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                                     _resolvePhotoUrl(storageKey),
                                     fit: BoxFit.cover,
                                   ),
+                          ),
                           ),
                           if (isPrimary)
                             Positioned(

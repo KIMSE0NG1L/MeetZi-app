@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/matching_board/data/matching_board_repository.dart';
 import 'package:nearo_app/features/matching_board/screens/matching_board_screen.dart' as board;
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
+import 'package:nearo_app/shared/utils/photo_url.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 /// 상대가 나한테 가져가기 요청 → 알림에서 들어와서 상세 보기 + 받기/거절 (거절 시 요청자 매칭권 환불)
@@ -274,6 +275,29 @@ class _TakeNoteRequestResponseScreenState extends State<TakeNoteRequestResponseS
 
   Widget _buildAvatar(BuildContext context, Map<String, dynamic> profile) {
     final user = profile['user'] as Map<String, dynamic>?;
+    final displayType = profile['boardDisplayType']?.toString() ?? user?['boardDisplayType']?.toString();
+    dynamic photos = user?['photos'] ?? profile['photos'];
+    if (displayType == 'photo' && photos is List && photos.isNotEmpty && photos[0] is Map) {
+      final key = (photos[0] as Map)['storageKey']?.toString();
+      if (key != null) {
+        final photoUrl = photoUrlFromStorageKey(key);
+        if (photoUrl != null && photoUrl.isNotEmpty) {
+          return CircleAvatar(
+            radius: 44,
+            backgroundColor: Colors.grey.shade200,
+            child: ClipOval(
+              child: Image.network(
+                photoUrl,
+                fit: BoxFit.cover,
+                width: 88,
+                height: 88,
+                errorBuilder: (_, __, ___) => Icon(LucideIcons.user, size: 48, color: Colors.grey.shade600),
+              ),
+            ),
+          );
+        }
+      }
+    }
     final seed = user?['avatarSeed']?.toString() ?? profile['userId']?.toString();
     if (seed != null && seed.isNotEmpty) {
       return CircleAvatar(

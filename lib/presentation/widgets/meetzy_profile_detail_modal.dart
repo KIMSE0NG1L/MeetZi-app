@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/core/theme/university_theme.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
@@ -9,16 +10,91 @@ class MeetzyProfileDetailModal extends StatelessWidget {
     super.key,
     required this.profile,
     required this.onClose,
-    required this.onMatch,
+    this.onMatch,
     this.darkMode = false,
     this.avatarWidget,
+    this.hideMatchButton = false,
+    this.photoUrlForEnlarge,
+    this.avatarUrlForEnlarge,
   });
 
   final MeetzyProfileDetailData profile;
   final VoidCallback onClose;
-  final VoidCallback onMatch;
+  final VoidCallback? onMatch;
   final bool darkMode;
   final Widget? avatarWidget;
+  final bool hideMatchButton;
+  /// 탭 시 크게 보기할 사진 URL (프로필 사진)
+  final String? photoUrlForEnlarge;
+  /// 탭 시 크게 보기할 아바타 URL (dicebear 등)
+  final String? avatarUrlForEnlarge;
+
+  /// 탭 시 사진/아바타 크게 보기 (photoUrlForEnlarge 또는 avatarUrlForEnlarge 있을 때만)
+  Widget _wrapAvatarWithEnlarge(BuildContext context, Widget child) {
+    final hasEnlarge = (photoUrlForEnlarge != null && photoUrlForEnlarge!.isNotEmpty) ||
+        (avatarUrlForEnlarge != null && avatarUrlForEnlarge!.isNotEmpty);
+    if (!hasEnlarge) return child;
+    return GestureDetector(
+      onTap: () {
+        showDialog<void>(
+          context: context,
+          barrierColor: Colors.black87,
+          barrierDismissible: true,
+          builder: (ctx) => GestureDetector(
+            onTap: () => Navigator.of(ctx).pop(),
+            behavior: HitTestBehavior.opaque,
+            child: Dialog(
+              backgroundColor: Colors.transparent,
+              insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
+              child: GestureDetector(
+                onTap: () {},
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Align(
+                      alignment: Alignment.topRight,
+                      child: IconButton(
+                        icon: const Icon(LucideIcons.x, color: Colors.white, size: 28),
+                        onPressed: () => Navigator.of(ctx).pop(),
+                      ),
+                    ),
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(ctx).size.width - 48,
+                        maxHeight: MediaQuery.of(ctx).size.height * 0.6,
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: (photoUrlForEnlarge != null && photoUrlForEnlarge!.isNotEmpty)
+                            ? Image.network(
+                                photoUrlForEnlarge!,
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, __, ___) => const Icon(LucideIcons.user, size: 120, color: Colors.white54),
+                              )
+                            : (avatarUrlForEnlarge != null && avatarUrlForEnlarge!.isNotEmpty)
+                                ? SvgPicture.network(
+                                    avatarUrlForEnlarge!,
+                                    fit: BoxFit.contain,
+                                    placeholderBuilder: (_) => const Icon(LucideIcons.user, size: 120, color: Colors.white54),
+                                  )
+                                : const SizedBox.shrink(),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '탭하면 닫기',
+                      style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.7)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+      child: child,
+    );
+  }
 
   /// ad InfoTag: gradient pill, white text
   Widget _infoTag(String value, BuildContext context) {
@@ -91,8 +167,11 @@ class MeetzyProfileDetailModal extends StatelessWidget {
                                 ],
                               ),
                               child: ClipOval(
-                                child: avatarWidget ??
-                                    Icon(LucideIcons.user, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                                child: _wrapAvatarWithEnlarge(
+                                  context,
+                                  avatarWidget ??
+                                      Icon(LucideIcons.user, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                                ),
                               ),
                             ),
                             const SizedBox(height: 12),
@@ -266,7 +345,7 @@ class MeetzyProfileDetailModal extends StatelessWidget {
               ],
             ),
           ),
-          // ad: bottom border-t p-4 gap-3, 닫기 border-2 rounded-xl, 매칭하기 gradient rounded-xl
+          // ad: bottom border-t p-4 gap-3, 닫기 border-2 rounded-xl, 매칭하기 gradient rounded-xl (hideMatchButton 시 매칭하기 비표시)
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -287,34 +366,36 @@ class MeetzyProfileDetailModal extends StatelessWidget {
                     child: const Text('닫기'),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: ThemeController.getSheetGradient(),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.35),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: onMatch,
+                if (!hideMatchButton && onMatch != null) ...[
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: ThemeController.getSheetGradient(),
                         borderRadius: BorderRadius.circular(12),
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          child: Center(
-                            child: Text(
-                              '매칭하기',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.35),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: onMatch,
+                          borderRadius: BorderRadius.circular(12),
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            child: Center(
+                              child: Text(
+                                '매칭하기',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
                           ),
@@ -322,7 +403,7 @@ class MeetzyProfileDetailModal extends StatelessWidget {
                       ),
                     ),
                   ),
-                ),
+                ],
               ],
             ),
           ),

@@ -13,7 +13,7 @@ import 'package:nearo_app/shared/utils/photo_url.dart';
 import 'package:nearo_app/shared/utils/app_config.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/core/auth/auth_repository.dart';
-import 'package:nearo_app/features/matching_board/screens/matching_board_screen.dart';
+import 'package:nearo_app/features/matching_board/profile_detail_sheet.dart';
 import 'package:nearo_app/features/messages/data/report_repository.dart';
 import 'package:nearo_app/features/users/data/block_repository.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
@@ -425,7 +425,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
       if (_matchId != null) {
         try {
           final profile = await _partnerProfileRepository.getPartnerProfile(matchId: _matchId!);
-          if (mounted) setState(() => _partnerProfile = profile);
+          if (!mounted) return;
+          setState(() {
+            _partnerProfile = profile;
+            // room에 상대 사진 키가 없으면 프로필에서 채움 (사진 선택 시 채팅에서도 사진 노출)
+            if ((_partnerPhotoStorageKey == null || _partnerPhotoStorageKey!.trim().isEmpty)) {
+              _partnerPhotoStorageKey = _photoStorageKeyFromProfile(profile);
+            }
+          });
         } catch (_) {
           if (mounted) setState(() => _partnerProfile = null);
         }
@@ -1026,8 +1033,25 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
 
   Future<void> _openPartnerProfile() async {
     Future<Widget> avatarBuilder(Map<String, dynamic> profile) async {
-      final seed = profile['avatarSeed']?.toString() ?? profile['userId']?.toString() ?? _partnerAvatarSeed;
-      final raw = profile['avatarOptions']?.toString() ?? _partnerAvatarOptions;
+      // 프로필에서 사진을 골랐으면 사진 우선 표시
+      final photoUrl = _photoUrlFromProfile(profile);
+      if (photoUrl != null && photoUrl.isNotEmpty) {
+        return CircleAvatar(
+          radius: 40,
+          backgroundColor: Colors.grey.shade300,
+          child: ClipOval(
+            child: Image.network(
+              photoUrl,
+              fit: BoxFit.cover,
+              width: 80,
+              height: 80,
+              errorBuilder: (_, __, ___) => Icon(LucideIcons.user, size: 40, color: Colors.grey.shade600),
+            ),
+          ),
+        );
+      }
+      final seed = profile['avatarSeed']?.toString() ?? (profile['user'] as Map?)?['avatarSeed']?.toString() ?? profile['userId']?.toString() ?? _partnerAvatarSeed;
+      final raw = (profile['user'] as Map?)?['avatarOptions']?.toString() ?? profile['avatarOptions']?.toString() ?? _partnerAvatarOptions;
       Map<String, String> opts = {};
       if (raw != null && raw.isNotEmpty) {
         try {
@@ -1053,18 +1077,35 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
       }
       return CircleAvatar(radius: 40, backgroundColor: Colors.grey.shade300, child: Icon(LucideIcons.user, size: 40, color: Colors.grey.shade600));
     }
+
+    // room 정보만으로 최소 프로필 맵 구성 (API 실패/ matchId 없을 때 사용)
+    Map<String, dynamic> _minimalProfileFromRoom() {
+      final user = <String, dynamic>{
+        'avatarSeed': _partnerAvatarSeed,
+        'avatarOptions': _partnerAvatarOptions,
+      };
+      if (_partnerPhotoStorageKey != null && _partnerPhotoStorageKey!.trim().isNotEmpty) {
+        user['boardDisplayType'] = 'photo';
+        user['photos'] = [{'storageKey': _partnerPhotoStorageKey}];
+      }
+      return {
+        'nickname': _partnerNickname ?? '상대방',
+        'user': user,
+        'partnerPhotoStorageKey': _partnerPhotoStorageKey,
+        'avatarSeed': _partnerAvatarSeed,
+        'avatarOptions': _partnerAvatarOptions,
+      };
+    }
+
     if (_partnerProfile != null) {
-      await showBoardNoteSheet(
+      await showProfileDetailSheet(
         context,
-        profiles: [_partnerProfile!],
-        startIndex: 0,
+        profile: _partnerProfile!,
         buildAvatar: (ctx, profile) => FutureBuilder<Widget>(
           future: avatarBuilder(profile),
           builder: (ctx, snap) => snap.hasData ? snap.data! : const SizedBox.shrink(),
         ),
-        onPop: () {},
-        myMatchingTicket: 0,
-        hideActionButtons: true,
+        hideMatchButton: true,
       );
       return;
     }
@@ -1073,50 +1114,112 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
         final profile = await _partnerProfileRepository.getPartnerProfile(matchId: _matchId!);
         if (!mounted) return;
         setState(() => _partnerProfile = profile);
-        if (profile != null) {
-          await showBoardNoteSheet(
-            context,
-            profiles: [profile],
-            startIndex: 0,
-            buildAvatar: (ctx, profile) => FutureBuilder<Widget>(
-              future: avatarBuilder(profile),
-              builder: (ctx, snap) => snap.hasData ? snap.data! : const SizedBox.shrink(),
-            ),
-            onPop: () {},
-            myMatchingTicket: 0,
-            hideActionButtons: true,
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('프로필을 불러올 수 없습니다.')),
-          );
-        }
+        await showProfileDetailSheet(
+          context,
+          profile: profile,
+          buildAvatar: (ctx, profile) => FutureBuilder<Widget>(
+            future: avatarBuilder(profile),
+            builder: (ctx, snap) => snap.hasData ? snap.data! : const SizedBox.shrink(),
+          ),
+          hideMatchButton: true,
+        );
       } catch (_) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('프로필을 불러올 수 없습니다.')),
+        // API 실패 시 room 정보로 최소 프로필 표시
+        await showProfileDetailSheet(
+          context,
+          profile: _minimalProfileFromRoom(),
+          buildAvatar: (ctx, profile) => FutureBuilder<Widget>(
+            future: avatarBuilder(profile),
+            builder: (ctx, snap) => snap.hasData ? snap.data! : const SizedBox.shrink(),
+          ),
+          hideMatchButton: true,
         );
       }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('프로필을 불러올 수 없습니다.')),
-      );
+      return;
     }
+    // matchId 없음 — room 정보만으로 프로필 표시
+    await showProfileDetailSheet(
+      context,
+      profile: _minimalProfileFromRoom(),
+      buildAvatar: (ctx, profile) => FutureBuilder<Widget>(
+        future: avatarBuilder(profile),
+        builder: (ctx, snap) => snap.hasData ? snap.data! : const SizedBox.shrink(),
+      ),
+      hideMatchButton: true,
+    );
+  }
+
+  /// 프로필에서 사진(boardDisplayType:'photo')일 때 첫 번째 사진의 storageKey 추출 (room에 키가 없을 때 채움용)
+  String? _photoStorageKeyFromProfile(Map<String, dynamic>? profile) {
+    if (profile == null) return null;
+    final user = profile['user'] as Map<String, dynamic>?;
+    final partner = profile['partner'] as Map<String, dynamic>?;
+    final displayType = (profile['boardDisplayType'] ?? user?['boardDisplayType'] ?? partner?['boardDisplayType'])?.toString().trim().toLowerCase();
+    if (displayType != 'photo') return null;
+    final singleKey = profile['partnerPhotoStorageKey'] ?? profile['photoStorageKey'] ?? user?['photoStorageKey'];
+    if (singleKey != null) {
+      final s = singleKey.toString().trim();
+      if (s.isNotEmpty) return s;
+    }
+    dynamic photos = user?['photos'] ?? profile['photos'] ?? partner?['photos'];
+    if (photos is! List || photos.isEmpty) return null;
+    final first = photos[0];
+    if (first is Map) {
+      final key = (first as Map)['storageKey']?.toString()?.trim();
+      if (key != null && key.isNotEmpty) return key;
+    } else if (first is String && first.trim().isNotEmpty) return first.trim();
+    return null;
+  }
+
+  /// 프로필에서 사진(boardDisplayType:'photo')을 골랐을 때 사진 URL 추출
+  /// API 응답 형태: { user: { boardDisplayType, photos: [{storageKey}] } } 또는 { boardDisplayType, photos } 등
+  String? _photoUrlFromProfile(Map<String, dynamic>? profile) {
+    if (profile == null) return null;
+    final user = profile['user'] as Map<String, dynamic>?;
+    final partner = profile['partner'] as Map<String, dynamic>?;
+    final displayType = (profile['boardDisplayType'] ?? user?['boardDisplayType'] ?? partner?['boardDisplayType'])?.toString().trim().toLowerCase();
+    if (displayType != 'photo') return null;
+
+    // 단일 storageKey 필드 (일부 API는 첫 사진 키만 내려줌)
+    final singleKey = profile['partnerPhotoStorageKey'] ?? profile['photoStorageKey'] ?? profile['primaryPhotoStorageKey']
+        ?? user?['partnerPhotoStorageKey'] ?? user?['photoStorageKey'] ?? user?['primaryPhotoStorageKey'];
+    if (singleKey != null) {
+      final s = singleKey.toString().trim();
+      if (s.isNotEmpty) return photoUrlFromStorageKey(s);
+    }
+
+    dynamic photos = user?['photos'] ?? profile['photos'] ?? partner?['photos'];
+    if (photos is! List || photos.isEmpty) return null;
+
+    final first = photos[0];
+    if (first is Map) {
+      final key = (first as Map)['storageKey']?.toString()?.trim();
+      if (key != null && key.isNotEmpty) return photoUrlFromStorageKey(key);
+    } else if (first is String && first.trim().isNotEmpty) {
+      return photoUrlFromStorageKey(first.trim());
+    }
+    return null;
   }
 
   Widget _buildPartnerAvatar(BuildContext context) {
     Widget avatar;
-    final partnerPhotoUrl = photoUrlFromStorageKey(_partnerPhotoStorageKey);
+    // room API의 partnerPhotoStorageKey 우선, 없으면 partnerProfile에서 boardDisplayType:photo일 때 추출
+    String? partnerPhotoUrl = photoUrlFromStorageKey(_partnerPhotoStorageKey);
+    if ((partnerPhotoUrl == null || partnerPhotoUrl.isEmpty) && _partnerProfile != null) {
+      partnerPhotoUrl = _photoUrlFromProfile(_partnerProfile);
+    }
     if (partnerPhotoUrl != null && partnerPhotoUrl.isNotEmpty) {
       avatar = CircleAvatar(
         radius: _partnerAvatarRadius,
         backgroundImage: NetworkImage(partnerPhotoUrl),
       );
     } else {
-      final seed = _partnerProfile?['avatarSeed']?.toString() ?? _partnerProfile?['userId']?.toString() ?? _partnerAvatarSeed;
+      final userMap = _partnerProfile != null ? (_partnerProfile!['user'] as Map<String, dynamic>?) : null;
+      final seed = userMap?['avatarSeed']?.toString() ?? _partnerProfile?['avatarSeed']?.toString() ?? _partnerProfile?['userId']?.toString() ?? _partnerAvatarSeed;
       if (seed != null && seed.isNotEmpty) {
         Map<String, String> opts = {};
-        final raw = _partnerProfile?['avatarOptions']?.toString() ?? _partnerAvatarOptions;
+        final raw = userMap?['avatarOptions']?.toString() ?? _partnerProfile?['avatarOptions']?.toString() ?? _partnerAvatarOptions;
         if (raw != null && raw.isNotEmpty) {
           try {
             final decoded = jsonDecode(raw);
