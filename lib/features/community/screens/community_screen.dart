@@ -4,6 +4,7 @@ import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/community/data/community_repository.dart';
 import 'package:nearo_app/features/community/screens/community_post_detail_screen.dart';
 import 'package:nearo_app/features/community/screens/community_post_write_screen.dart';
+import 'package:nearo_app/features/home/screens/university_ranking_screen.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
@@ -18,7 +19,11 @@ class CommunityScreen extends StatefulWidget {
     super.key,
     required this.environmentId,
     required this.schoolName,
+    this.isRootTab = false,
   });
+
+  /// true면 탭 루트로 사용. 뒤로가기 대신 대학교 랭킹 버튼 표시.
+  final bool isRootTab;
 
   @override
   State<CommunityScreen> createState() => _CommunityScreenState();
@@ -225,13 +230,26 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
                 child: Row(
                   children: [
-                    IconButton(
-                      icon: const Icon(LucideIcons.arrowLeft, color: Colors.white),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
+                    if (widget.isRootTab)
+                      IconButton(
+                        icon: const Icon(LucideIcons.trophy, color: Colors.white),
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const UniversityRankingScreen(),
+                            ),
+                          );
+                        },
+                        tooltip: '대학교 랭킹',
+                      )
+                    else
+                      IconButton(
+                        icon: const Icon(LucideIcons.arrowLeft, color: Colors.white),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
                     Expanded(
                       child: Text(
-                        '${widget.schoolName} 커뮤니티 🏫',
+                        '${widget.schoolName} 커뮤니티',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 20,

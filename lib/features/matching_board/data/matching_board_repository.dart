@@ -1,4 +1,4 @@
-﻿import 'package:dio/dio.dart';
+import 'package:dio/dio.dart';
 import 'package:nearo_app/shared/api/api_client.dart';
 
 /// 怨꾩젙蹂??대엺沅?留ㅼ묶沅??깅줉沅??붾웾 (DB???щ젅?㏃쿂??蹂닿?)
@@ -17,12 +17,10 @@ class MyTickets {
 class MySummary {
   const MySummary({
     required this.user,
-    required this.credit,
     required this.tickets,
   });
 
   final Map<String, dynamic> user;
-  final int credit;
   final MyTickets tickets;
 }
 
@@ -169,12 +167,7 @@ class MatchingBoardRepository {
     }
   }
 
-  Future<int> fetchMyCredit() async {
-    final response = await _client.dio.get('/users/me/credit');
-    return response.data['credit'] as int;
-  }
-
-  /// GET /users/me/summary -> { user, credit, tickets }
+  /// GET /users/me/summary -> { user, tickets }
   Future<MySummary> fetchMySummary() async {
     final response = await _client.dio.get('/users/me/summary');
     final data = Map<String, dynamic>.from(response.data as Map);
@@ -187,18 +180,13 @@ class MatchingBoardRepository {
     );
     return MySummary(
       user: user,
-      credit: (data['credit'] as num?)?.toInt() ?? 0,
       tickets: tickets,
     );
   }
 
-  Future<void> buyCredit(int coins) async {
-    await _client.dio.post('/users/me/credit/increase', data: {'amount': coins});
-  }
-
-  /// ?곸젏: 肄붿씤?쇰줈 ?곗폆 援щℓ. 1肄붿씤=1?대엺沅? 5肄붿씤=1?깅줉沅?
-  Future<void> purchaseTicket(String product, {int quantity = 1}) async {
-    await _client.dio.post('/users/me/credit/increase', data: {'product': product, 'quantity': quantity});
+  /// 매칭권 직접 구매
+  Future<void> buyMatchingTickets({int quantity = 1}) async {
+    await _client.dio.post('/users/me/tickets/purchase', data: {'quantity': quantity});
   }
 }
 

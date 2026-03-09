@@ -20,8 +20,8 @@ class FaqScreen extends StatelessWidget {
           '가져가기 1회당 매칭권 1장이 소모돼요.',
     ),
     _FaqItem(
-      question: '코인·매칭권은 어떻게 구매하나요?',
-      answer: '앱 하단 상점 탭에서 코인을 충전할 수 있고, 코인으로 매칭권을 구매할 수 있어요. '
+      question: '매칭권은 어떻게 구매하나요?',
+      answer: '앱 하단 상점 탭에서 매칭권을 직접 구매할 수 있어요. '
           '매칭권은 마음에 드는 사람에게 가져가기 요청을 보낼 때 사용해요.',
     ),
     _FaqItem(

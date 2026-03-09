@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/matching_board/data/matching_board_repository.dart';
 import 'package:nearo_app/features/matching_board/screens/matching_board_screen.dart' as board;
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/shared/utils/photo_url.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
-/// ?곷?媛 ?섏뿉寃?蹂대궦 媛?멸?湲??붿껌 ?곸꽭 ?붾㈃.
-/// ?섎씫 ??留ㅼ묶 ?깆궗, 嫄곗젅 ??嫄곗젅 ?ъ쑀瑜??꾨떖?섍퀬 ?붿껌??留ㅼ묶沅뚯씠 ?섎텋?쒕떎.
+/// 상대가 나한테 가져가기 요청 → 알림에서 들어와서 상세 보기 + 받기/거절 (거절 시 요청자 매칭권 환불)
 class TakeNoteRequestResponseScreen extends StatefulWidget {
   const TakeNoteRequestResponseScreen({
     super.key,
@@ -24,12 +23,11 @@ class TakeNoteRequestResponseScreen extends StatefulWidget {
 
 class _TakeNoteRequestResponseScreenState extends State<TakeNoteRequestResponseScreen> {
   final MatchingBoardRepository _repository = MatchingBoardRepository();
-
   Map<String, dynamic>? _profile;
-  String? _senderMessage;
+  String? _senderMessage; // 요청자가 보낸 멘트 (상대에게 보임)
   bool _loading = true;
-  bool _actionLoading = false;
   String? _error;
+  bool _actionLoading = false;
 
   @override
   void initState() {
@@ -45,18 +43,16 @@ class _TakeNoteRequestResponseScreenState extends State<TakeNoteRequestResponseS
       });
       return;
     }
-
     try {
       final data = await _repository.fetchTakeNoteRequest(widget.requestId);
       final requester = data['requester'] as Map<String, dynamic>?;
       final senderMessage = data['senderMessage'] as String?;
       if (!mounted) return;
-
       setState(() {
         _profile = requester;
-        _senderMessage = senderMessage?.trim().isNotEmpty == true ? senderMessage!.trim() : null;
+        _senderMessage = senderMessage != null && senderMessage.trim().isNotEmpty ? senderMessage.trim() : null;
         _loading = false;
-        _error = requester == null ? '?붿껌 ?뺣낫瑜?遺덈윭?????놁뼱??' : null;
+        _error = requester == null ? '요청 정보를 불러올 수 없어요' : null;
       });
     } catch (e) {
       if (!mounted) return;
@@ -69,28 +65,26 @@ class _TakeNoteRequestResponseScreenState extends State<TakeNoteRequestResponseS
 
   Future<void> _accept() async {
     if (_actionLoading) return;
-
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) {
         final theme = Theme.of(ctx);
         final dark = theme.brightness == Brightness.dark;
-
         return AlertDialog(
-          title: const Text('?섎씫?좉퉴??'),
+          title: const Text('수락할까요?'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '?섎씫?섎㈃ 留ㅼ묶???깆궗?쇱슂.',
+                '수락하면 매칭이 성사돼요.',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: dark ? Colors.grey.shade300 : Colors.grey.shade700,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
-                '留ㅼ묶沅?1媛쒓? ?ъ슜?⑸땲??',
+                '매칭권 1개가 사용됩니다.',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.primary,
                   fontWeight: FontWeight.w600,
@@ -101,19 +95,17 @@ class _TakeNoteRequestResponseScreenState extends State<TakeNoteRequestResponseS
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('痍⑥냼'),
+              child: const Text('취소'),
             ),
             FilledButton(
               onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text('?섎씫'),
+              child: const Text('수락'),
             ),
           ],
         );
       },
     );
-
     if (confirmed != true || !mounted) return;
-
     setState(() => _actionLoading = true);
     try {
       await _repository.acceptTakeNoteRequest(widget.requestId);
@@ -133,21 +125,16 @@ class _TakeNoteRequestResponseScreenState extends State<TakeNoteRequestResponseS
 
   Future<void> _reject() async {
     if (_actionLoading) return;
-
     final rejectionMessage = await showDialog<String>(
       context: context,
-      builder: (_) => const _RejectMessageDialog(),
+      builder: (ctx) => _RejectMessageDialog(),
     );
-
     if (rejectionMessage == null || !mounted) return;
-
     setState(() => _actionLoading = true);
     try {
       await _repository.rejectTakeNoteRequest(widget.requestId, rejectionMessage);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('嫄곗젅?덉뼱?? ?곷? 留ㅼ묶沅뚯? ?섎텋?쇱슂.')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('거절했어요. 상대 매칭권은 환불돼요.')));
       Navigator.of(context).pop(false);
     } catch (e) {
       if (!mounted) return;
@@ -159,7 +146,7 @@ class _TakeNoteRequestResponseScreenState extends State<TakeNoteRequestResponseS
     }
   }
 
-  static String _str(dynamic v) => (v?.toString().trim().isNotEmpty ?? false) ? v.toString().trim() : '-';
+  static String _str(dynamic v) => v?.toString() ?? '-';
 
   @override
   Widget build(BuildContext context) {
@@ -172,7 +159,7 @@ class _TakeNoteRequestResponseScreenState extends State<TakeNoteRequestResponseS
     return Scaffold(
       backgroundColor: dark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
       appBar: AppBar(
-        title: const Text('媛?멸?湲??붿껌'),
+        title: const Text('가져가기 요청'),
         centerTitle: true,
       ),
       body: _loading
@@ -186,11 +173,11 @@ class _TakeNoteRequestResponseScreenState extends State<TakeNoteRequestResponseS
                       children: [
                         Icon(LucideIcons.circleAlert, size: 48, color: theme.colorScheme.error),
                         const SizedBox(height: 16),
-                        Text(_error ?? '?붿껌 ?뺣낫瑜?遺덈윭?????놁뼱??', textAlign: TextAlign.center),
+                        Text(_error ?? '요청 정보를 불러올 수 없어요', textAlign: TextAlign.center),
                         const SizedBox(height: 24),
                         FilledButton(
                           onPressed: () => Navigator.of(context).pop(),
-                          child: const Text('?リ린'),
+                          child: const Text('닫기'),
                         ),
                       ],
                     ),
@@ -202,7 +189,7 @@ class _TakeNoteRequestResponseScreenState extends State<TakeNoteRequestResponseS
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
-                        '?곷?媛 ?뱀떊???꾨줈?꾩쓣 媛?멸?怨??띠뼱?댁슂. 諛쏆쓣源뚯슂?',
+                        '누가 당신의 프로필을 가져가고 싶어해요. 받을까요?',
                         style: theme.textTheme.bodyLarge?.copyWith(color: onSurfaceVariant),
                       ),
                       if (_senderMessage != null && _senderMessage!.isNotEmpty) ...[
@@ -217,9 +204,15 @@ class _TakeNoteRequestResponseScreenState extends State<TakeNoteRequestResponseS
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('蹂대궦 硫붿떆吏', style: theme.textTheme.labelMedium?.copyWith(color: onSurfaceVariant)),
+                              Text(
+                                '보낸 멘트',
+                                style: theme.textTheme.labelMedium?.copyWith(color: onSurfaceVariant),
+                              ),
                               const SizedBox(height: 4),
-                              Text(_senderMessage!, style: theme.textTheme.bodyMedium?.copyWith(color: onSurface)),
+                              Text(
+                                _senderMessage!,
+                                style: theme.textTheme.bodyMedium?.copyWith(color: onSurface),
+                              ),
                             ],
                           ),
                         ),
@@ -241,9 +234,9 @@ class _TakeNoteRequestResponseScreenState extends State<TakeNoteRequestResponseS
                                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: onSurface),
                               ),
                               const SizedBox(height: 16),
-                              _infoRow('?숆낵', _str(_profile!['department'] ?? (_profile!['user'] as Map?)?['department']), onSurfaceVariant, onSurface),
-                              _infoRow('?깅퀎', _str(_profile!['gender'] ?? (_profile!['user'] as Map?)?['gender']), onSurfaceVariant, onSurface),
-                              _infoRow('?먭린 ?뚭컻', _str((_profile!['user'] as Map?)?['introOneLine']), onSurfaceVariant, onSurface),
+                              _infoRow('학과', _str(_profile!['department'] ?? (_profile!['user'] as Map?)?['department']), onSurfaceVariant, onSurface),
+                              _infoRow('성별', _str(_profile!['gender'] ?? (_profile!['user'] as Map?)?['gender']), onSurfaceVariant, onSurface),
+                              _infoRow('자기 소개', _str((_profile!['user'] as Map?)?['introOneLine']), onSurfaceVariant, onSurface),
                             ],
                           ),
                         ),
@@ -258,7 +251,7 @@ class _TakeNoteRequestResponseScreenState extends State<TakeNoteRequestResponseS
                                 padding: const EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               ),
-                              child: const Text('嫄곗젅'),
+                              child: const Text('거절'),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -269,13 +262,7 @@ class _TakeNoteRequestResponseScreenState extends State<TakeNoteRequestResponseS
                                 padding: const EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               ),
-                              child: _actionLoading
-                                  ? const SizedBox(
-                                      height: 22,
-                                      width: 22,
-                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                    )
-                                  : const Text('諛쏄린'),
+                              child: _actionLoading ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('받기'),
                             ),
                           ),
                         ],
@@ -289,19 +276,18 @@ class _TakeNoteRequestResponseScreenState extends State<TakeNoteRequestResponseS
   Widget _buildAvatar(BuildContext context, Map<String, dynamic> profile) {
     final user = profile['user'] as Map<String, dynamic>?;
     final displayType = profile['boardDisplayType']?.toString() ?? user?['boardDisplayType']?.toString();
-    final photos = user?['photos'] ?? profile['photos'];
-
+    dynamic photos = user?['photos'] ?? profile['photos'];
     if (displayType == 'photo' && photos is List && photos.isNotEmpty && photos[0] is Map) {
       final key = (photos[0] as Map)['storageKey']?.toString();
       if (key != null) {
-        final url = photoUrlFromStorageKey(key);
-        if (url != null && url.isNotEmpty) {
+        final photoUrl = photoUrlFromStorageKey(key);
+        if (photoUrl != null && photoUrl.isNotEmpty) {
           return CircleAvatar(
             radius: 44,
             backgroundColor: Colors.grey.shade200,
             child: ClipOval(
               child: Image.network(
-                url,
+                photoUrl,
                 fit: BoxFit.cover,
                 width: 88,
                 height: 88,
@@ -312,7 +298,6 @@ class _TakeNoteRequestResponseScreenState extends State<TakeNoteRequestResponseS
         }
       }
     }
-
     final seed = user?['avatarSeed']?.toString() ?? profile['userId']?.toString();
     if (seed != null && seed.isNotEmpty) {
       return CircleAvatar(
@@ -328,7 +313,6 @@ class _TakeNoteRequestResponseScreenState extends State<TakeNoteRequestResponseS
         ),
       );
     }
-
     return CircleAvatar(
       radius: 44,
       backgroundColor: Colors.grey.shade300,
@@ -344,23 +328,15 @@ class _TakeNoteRequestResponseScreenState extends State<TakeNoteRequestResponseS
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(width: 90, child: Text(label, style: TextStyle(fontSize: 14, color: labelColor))),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(fontSize: 14, color: valueColor),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
+          Expanded(child: Text(value, style: TextStyle(fontSize: 14, color: valueColor), maxLines: 3, overflow: TextOverflow.ellipsis)),
         ],
       ),
     );
   }
 }
 
+/// 거절 시 5자 이상 사유 입력 다이얼로그. 확인 시 입력 텍스트 반환, 취소 시 null.
 class _RejectMessageDialog extends StatefulWidget {
-  const _RejectMessageDialog();
-
   @override
   State<_RejectMessageDialog> createState() => _RejectMessageDialogState();
 }
@@ -382,17 +358,18 @@ class _RejectMessageDialogState extends State<_RejectMessageDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final len = _controller.text.trim().length;
-    final helperText = len > 0 && len < 5 ? '5???댁긽 ?낅젰??二쇱꽭??' : '5???댁긽 ?곸뼱 二쇱꽭?? ?붿껌?먯뿉寃??꾨떖?쇱슂.';
-
+    final String helperText = len > 0 && len < 5
+        ? '5자 이상 입력해 주세요'
+        : '5자 이상 적어 주세요. 요청자에게 전달돼요.';
     return AlertDialog(
-      title: const Text('嫄곗젅 ?ъ쑀'),
+      title: const Text('거절 사유'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '嫄곗젅?섎젮硫?5???댁긽 ?곸뼱 二쇱꽭?? ?붿껌?먯뿉寃??꾨떖?쇱슂.',
+              '거절하려면 5자 이상 적어 주세요. 요청자에게 전달돼요.',
               style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 12),
@@ -402,7 +379,7 @@ class _RejectMessageDialogState extends State<_RejectMessageDialog> {
               autofocus: true,
               maxLines: 3,
               decoration: InputDecoration(
-                hintText: '?? 吏湲덉? 留뚮궇 ?앷컖???놁뼱??',
+                hintText: '예: 지금은 만날 생각이 없어요',
                 border: const OutlineInputBorder(),
                 helperText: helperText,
                 helperStyle: TextStyle(
@@ -420,11 +397,11 @@ class _RejectMessageDialogState extends State<_RejectMessageDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop<String?>(null),
-          child: const Text('痍⑥냼'),
+          child: const Text('취소'),
         ),
         FilledButton(
           onPressed: _isValid ? () => Navigator.of(context).pop(_controller.text.trim()) : null,
-          child: const Text('嫄곗젅?섍린'),
+          child: const Text('거절하기'),
         ),
       ],
     );

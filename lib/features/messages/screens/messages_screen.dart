@@ -13,9 +13,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:convert';
 
 class MessagesScreen extends StatefulWidget {
-  const MessagesScreen({super.key, this.refreshTrigger});
-
-  final ValueListenable<int>? refreshTrigger;
+  const MessagesScreen({super.key});
 
   @override
   State<MessagesScreen> createState() => _MessagesScreenState();
@@ -34,27 +32,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
   @override
   void initState() {
     super.initState();
-    widget.refreshTrigger?.addListener(_onRefreshTriggerChanged);
     _initAndLoad();
-  }
-
-  @override
-  void didUpdateWidget(covariant MessagesScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.refreshTrigger != widget.refreshTrigger) {
-      oldWidget.refreshTrigger?.removeListener(_onRefreshTriggerChanged);
-      widget.refreshTrigger?.addListener(_onRefreshTriggerChanged);
-    }
-  }
-
-  @override
-  void dispose() {
-    widget.refreshTrigger?.removeListener(_onRefreshTriggerChanged);
-    super.dispose();
-  }
-
-  void _onRefreshTriggerChanged() {
-    _loadRooms();
   }
 
   Future<void> _initAndLoad() async {
@@ -70,7 +48,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   Future<void> _loadUnreadCountsAndTimes() async {
-    // 揶?獄쎻뫗????됱뵭?? 筌롫뗄?놅쭪? 揶쏆뮇??? 筌띾뜆?筌?筌롫뗄?놅쭪? ??볦퍢 ?④쑴沅?(??筌롫뗄?놅쭪?/?怨? 筌롫뗄?놅쭪? 餓???筌ㅼ뮄????볦퍢)
+    // 각 방의 안읽은 메시지 개수와 마지막 메시지 시간 계산 (내 메시지/상대 메시지 중 더 최근 시간)
     Map<String, int> unreadCounts = {};
     Map<String, DateTime?> lastTimes = {};
     for (final room in _rooms) {
@@ -81,13 +59,13 @@ class _MessagesScreenState extends State<MessagesScreen> {
         int count = 0;
         DateTime? lastTime;
         for (final m in messages) {
-          // ??userId揶쎛 ??곸몵筌?燁삳똻??紐낅릭筌왖 ??놁벉
+          // 내 userId가 없으면 카운트하지 않음
           if (_myUserId == null) continue;
-          // '?怨?揶쎛 癰귣?沅?筌롫뗄?놅쭪?'??욱? ??? ?袁⑹춦 ??? ??? 野껋럩??쭕?燁삳똻???
+          // '상대가 보낸 메시지'이고, 내가 아직 읽지 않은 경우만 카운트
           final isFromPartner = m['senderId']?.toString() != _myUserId;
           final isUnreadFromPartner = isFromPartner && m['readAt'] == null;
           if (isUnreadFromPartner) count++;
-          // 筌띾뜆?筌?筌롫뗄?놅쭪? ??볦퍢 ?곕뗄??(??筌롫뗄?놅쭪?/?怨? 筌롫뗄?놅쭪? 筌뤴뫀紐???釉?
+          // 마지막 메시지 시간 추출 (내 메시지/상대 메시지 모두 포함)
           final createdAtRaw = m['createdAt']?.toString();
           final createdAt = createdAtRaw != null ? DateTime.tryParse(createdAtRaw) : null;
           if (createdAt != null && (lastTime == null || createdAt.isAfter(lastTime))) {
@@ -113,21 +91,21 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   Widget _buildAvatar(String? photoUrl, String? avatarSeed, Map<String, String> avatarOptions, String partner) {
-    const double avatarRadius = 28; // ??????由경에?癰궰野?(疫꿸퀡??ListTile leading ??由??筌띿쉸??
+    const double avatarRadius = 28; // 더 큰 크기로 변경 (기본 ListTile leading 크기에 맞춤)
     
-    // 1. ?袁⑥쨮????彛????됱몵筌??袁⑥쨮????彛???뽯뻻
+    // 1. 프로필 사진이 있으면 프로필 사진 표시
     if (photoUrl != null && photoUrl.isNotEmpty) {
       return CircleAvatar(
         radius: avatarRadius,
         backgroundColor: Theme.of(context).colorScheme.primary,
         backgroundImage: NetworkImage(photoUrl),
         onBackgroundImageError: (_, __) {
-          // ???筌왖 嚥≪뮆諭???쎈솭 ???袁⑥뺍??嚥???媛?(???筌??袁⑹졐????쇰뻻 ??슢諭??????곸몵沃샕嚥???곕뼊 域밸챶?嚥???
+          // 이미지 로드 실패 시 아바타로 폴백 (하지만 위젯을 다시 빌드할 수 없으므로 일단 그대로 둠)
         },
       );
     }
     
-    // 2. ?袁⑥뺍?? ??뺣굡揶쎛 ??됱몵筌??袁⑥뺍?? ??뽯뻻 (chat_room_screen????덉뵬??獄쎻뫗??
+    // 2. 아바타 시드가 있으면 아바타 표시 (chat_room_screen과 동일한 방식)
     if (avatarSeed != null && avatarSeed.isNotEmpty) {
       final avatarUrl = diceBearAvatarUrl(avatarSeed, options: avatarOptions.isNotEmpty ? avatarOptions : null);
       return CircleAvatar(
@@ -145,7 +123,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
       );
     }
     
-    // 3. ??????곸몵筌???곌퐬??筌?疫꼲????뽯뻻 (fallback)
+    // 3. 둘 다 없으면 닉네임 첫 글자 표시 (fallback)
     return CircleAvatar(
       radius: avatarRadius,
       backgroundColor: Theme.of(context).colorScheme.primary,
@@ -183,10 +161,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
     if (time == null) return '';
     final now = DateTime.now();
     final diff = now.difference(time);
-    if (diff.inMinutes < 1) return '\uBC29\uAE08 \uC804';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}\uBD84 \uC804';
-    if (diff.inHours < 24) return '${diff.inHours}\uC2DC\uAC04 \uC804';
-    if (diff.inDays < 7) return '${diff.inDays}\uC77C \uC804';
+    if (diff.inMinutes < 1) return '방금 전';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}분 전';
+    if (diff.inHours < 24) return '${diff.inHours}시간 전';
+    if (diff.inDays < 7) return '${diff.inDays}일 전';
     return '${time.year}.${time.month.toString().padLeft(2, '0')}.${time.day.toString().padLeft(2, '0')}';
   }
 
@@ -214,7 +192,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
     if (matchId == null || matchId.isEmpty) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('\uD504\uB85C\uD544\uC744 \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.')),
+          const SnackBar(content: Text('프로필을 불러올 수 없습니다.')),
         );
       }
       return;
@@ -259,7 +237,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
     } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('\uD504\uB85C\uD544\uC744 \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.')),
+          const SnackBar(content: Text('프로필을 불러올 수 없습니다.')),
         );
       }
     }
@@ -321,13 +299,13 @@ class _MessagesScreenState extends State<MessagesScreen> {
                         Icon(LucideIcons.messageCircle, size: 64, color: onSurfaceVariant),
                         const SizedBox(height: 16),
                         Text(
-                          '\uC544\uC9C1 \uBA54\uC2DC\uC9C0\uAC00 \uC5C6\uC5B4\uC694',
+                          '아직 메시지가 없어요',
                           style: TextStyle(fontSize: 16, color: onSurfaceVariant),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          '\uAC8C\uC2DC\uD310\uC5D0\uC11C \uB9C8\uC74C\uC5D0 \uB4DC\uB294 \uD504\uB85C\uD544\uC744 \uCC3E\uC544\uBCF4\uC138\uC694.',
+                          '게시판에서 마음에 드는 프로필을 찾아보세요!',
                           style: TextStyle(fontSize: 14, color: onSurfaceVariant),
                           textAlign: TextAlign.center,
                         ),
@@ -345,7 +323,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                     separatorBuilder: (_, __) => Divider(height: 1, color: dark ? Colors.grey.shade800 : Colors.grey.shade200),
                     itemBuilder: (context, index) {
                       final room = _rooms[index];
-                      final partner = room['partnerNickname']?.toString() ?? '\uC54C \uC218 \uC5C6\uC74C';
+                      final partner = room['partnerNickname']?.toString() ?? '대화';
                       final last = room['lastMessage']?.toString() ?? '';
                       final photoKey = room['partnerPhotoStorageKey']?.toString();
                       final photoUrl = _resolvePhotoUrl(photoKey);
@@ -373,11 +351,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
                         return await showDialog<bool>(
                           context: context,
                           builder: (context) => AlertDialog(
-                            title: const Text('\uB300\uD654\uBC29 \uC0AD\uC81C'),
-                            content: const Text('\uC774 \uB300\uD654\uBC29\uC744 \uC0AD\uC81C\uD560\uAE4C\uC694?'),
+                            title: const Text('대화방 삭제'),
+                            content: const Text('이 대화방을 삭제할까요?'),
                             actions: [
-                              TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('\uCDE8\uC18C')),
-                              TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('\uC0AD\uC81C')),
+                              TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('취소')),
+                              TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('삭제')),
                             ],
                           ),
                         );
@@ -448,7 +426,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                         children: [
                                           Expanded(
                                             child: Text(
-                                              isActive ? last : '\uB9E4\uCE6D\uC774 \uCDE8\uC18C\uB41C \uB300\uD654\uC785\uB2C8\uB2E4.',
+                                              isActive ? last : '매칭이 취소된 대화입니다.',
                                               style: TextStyle(fontSize: 14, color: onSurfaceVariant),
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,

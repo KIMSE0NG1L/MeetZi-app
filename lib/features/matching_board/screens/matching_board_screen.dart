@@ -18,7 +18,7 @@ import 'package:nearo_app/shared/utils/photo_url.dart';
 import 'package:nearo_app/presentation/pages/meetzy_board_page.dart';
 import 'package:nearo_app/presentation/widgets/meetzy_profile_detail_modal.dart';
 
-/// ?袁⑥쨮??筌???MeetzyProfileDetailData (last ?怨멸쉭 筌뤴뫀???
+/// ?꾨줈??留???MeetzyProfileDetailData (last ?곸꽭 紐⑤떖??
 MeetzyProfileDetailData _profileMapToDetailData(Map<String, dynamic> profile) {
   final user = profile['user'] as Map<String, dynamic>?;
   dynamic pluck(List<String> keys) {
@@ -37,8 +37,8 @@ MeetzyProfileDetailData _profileMapToDetailData(Map<String, dynamic> profile) {
     switch (field) {
       case 'gender':
         switch (s.toLowerCase()) {
-          case 'male': return '?⑥꽦';
-          case 'female': return '?ъ꽦';
+          case 'male': return '남성';
+          case 'female': return '여성';
           default: return s;
         }
       case 'gradeYear':
@@ -48,51 +48,51 @@ MeetzyProfileDetailData _profileMapToDetailData(Map<String, dynamic> profile) {
           case 'three': return '3';
           case 'four': return '4';
           case 'five': return '5';
-          case 'graduation_deferred': return '議몄뾽?좎삁';
+          case 'graduation_deferred': return '졸업유예';
           default: return s;
         }
       case 'smoking':
         switch (s.toLowerCase()) {
-          case 'none': return '鍮꾪씉??;
-          case 'sometimes': return '媛??;
-          case 'often': return '?먯＜';
+          case 'none': return '비흡연';
+          case 'sometimes': return '가끔';
+          case 'often': return '자주';
           default: return s;
         }
       case 'drinking':
         switch (s.toLowerCase()) {
-          case 'none': return '鍮꾩쓬二?;
-          case 'sometimes': return '媛??;
-          case 'often': return '?먯＜';
+          case 'none': return '비음주';
+          case 'sometimes': return '가끔';
+          case 'often': return '자주';
           default: return s;
         }
       case 'fashionStyle':
         switch (s.toLowerCase()) {
-          case 'hood_casual': return '?꾨뱶/罹먯＜??;
-          case 'shirt_neat': return '?붿툩/?⑥젙';
-          case 'street': return '?ㅽ듃由?;
-          case 'knit': return '?덊듃/媛먯꽦';
-          case 'sporty': return '?ㅽ룷??;
-          case 'minimal': return '誘몃땲硫';
-          case 'hip': return '?숉븳';
+          case 'hood_casual': return '후드/캐주얼';
+          case 'shirt_neat': return '셔츠/단정';
+          case 'street': return '스트릿';
+          case 'knit': return '니트/감성';
+          case 'sporty': return '스포티';
+          case 'minimal': return '미니멀';
+          case 'hip': return '힙한';
           default: return s;
         }
       case 'preferredDateType':
         switch (s.toLowerCase()) {
-          case 'cafe': return '移댄럹';
-          case 'walk': return '?곗콉';
-          case 'movie': return '?곹솕';
-          case 'drink': return '?좎옄由?;
-          case 'exercise': return '?대룞';
-          case 'food_tour': return '留쏆쭛 ?먮갑';
-          case 'drive': return '?쒕씪?대툕';
+          case 'cafe': return '카페';
+          case 'walk': return '산책';
+          case 'movie': return '영화';
+          case 'drink': return '술자리';
+          case 'exercise': return '운동';
+          case 'food_tour': return '맛집 탐방';
+          case 'drive': return '드라이브';
           default: return s;
         }
       case 'activityTime':
         switch (s.toLowerCase()) {
-          case 'morning': return '?꾩묠??;
-          case 'daytime': return '二쇨컙??;
-          case 'evening': return '??곹삎';
-          case 'night_owl': return '?쇳뻾??;
+          case 'morning': return '아침형';
+          case 'daytime': return '주간형';
+          case 'evening': return '저녁형';
+          case 'night_owl': return '야행성';
           default: return s;
         }
       default:
@@ -129,7 +129,7 @@ MeetzyProfileDetailData _profileMapToDetailData(Map<String, dynamic> profile) {
   );
 }
 
-/// 筌?쑵?????紐??癒?퐣 ?袁⑥쨮????쀫뱜筌?癰???????(hideActionButtons: true ????띾┛疫?揶쎛?硫?疫???쑵紐??
+/// 梨꾪똿 ???몃??먯꽌 ?꾨줈???쒗듃留?蹂????ъ슜 (hideActionButtons: true ???섍린湲?媛?멸?湲?鍮꾪몴??
 Future<void> showBoardNoteSheet(
   BuildContext context, {
   required List<Map<String, dynamic>> profiles,
@@ -139,7 +139,7 @@ Future<void> showBoardNoteSheet(
   int myMatchingTicket = 0,
   Future<void> Function()? onRefreshTickets,
   Future<bool> Function(String profileId, Map<String, dynamic> profile)? onTakeNote,
-  /// true筌???띾┛疫?揶쎛?硫?疫?甕곌쑵????? (筌?쑵?욤쳸?밸퓠???袁⑥쨮??癰귣떯由??
+  /// true硫??섍린湲?媛?멸?湲?踰꾪듉 ?④? (梨꾪똿諛⑹뿉???꾨줈??蹂닿린??
   bool hideActionButtons = false,
 }) async {
   final sheetContent = _BoardNoteSheetContent(
@@ -156,7 +156,7 @@ Future<void> showBoardNoteSheet(
   showGeneralDialog<void>(
     context: context,
     barrierDismissible: true,
-    barrierLabel: '??る┛',
+    barrierLabel: '?リ린',
     barrierColor: Colors.transparent,
     transitionDuration: const Duration(milliseconds: 600),
     pageBuilder: (_, __, ___) => const SizedBox.shrink(),
@@ -230,8 +230,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   List<Map<String, dynamic>> _profiles = [];
   bool _loading = false;
   bool _isRegistering = false;
-  bool _isOpeningSheet = false; // 燁삳?諭??怨? 獄쎻뫗?: ??쀫뱜 ???????덈툧 ?곕떽? ???얜똻??
-  int? _myCredit;
+  bool _isOpeningSheet = false; // 移대뱶 ?고? 諛⑹?: ?쒗듃 ?대━???숈븞 異붽? ??臾댁떆
   MyTickets? _myTickets;
   int _receivedRequestCount = 0;
   late Future<Map<String, dynamic>> _myProfileFuture;
@@ -272,8 +271,8 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
 
   String? _normalizePreferredGender(dynamic rawGender) {
     final g = rawGender?.toString().trim().toLowerCase();
-    if (g == 'male' || g == '??κ쉐') return 'female';
-    if (g == 'female' || g == '??苑?) return 'male';
+    if (g == 'male' || g == '?⑥꽦') return 'female';
+    if (g == 'female' || g == '?ъ꽦') return 'male';
     return null;
   }
 
@@ -287,10 +286,6 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     }
   }
 
-  Future<void> _fetchMyCredit() async {
-    await _fetchMySummary();
-  }
-
   Future<void> _fetchMyTickets() async {
     await _fetchMySummary();
   }
@@ -301,18 +296,16 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       _myProfileFuture = Future.value(summary.user);
       _preferredGender = _normalizePreferredGender(summary.user['gender']);
       setState(() {
-        _myCredit = summary.credit;
         _myTickets = summary.tickets;
       });
     } catch (_) {
       setState(() {
-        _myCredit = null;
         _myTickets = null;
       });
     }
   }
 
-  /// ???源낇??獄쏆꼶?筌?野껊슣??癒?퓠 ?紐꾪뀱 (??μ쁽 ?④쑴???????꾬쭕? ?????④쑴??????μ쁽筌?
+  /// ???깅퀎??諛섎?留?寃뚯떆?먯뿉 ?몄텧 (?⑥옄 怨꾩젙 ???ъ옄留? ?ъ옄 怨꾩젙 ???⑥옄留?
   Future<void> _fetchProfiles() async {
     setState(() => _loading = true);
     try {
@@ -321,9 +314,9 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
         final profile = await _myProfileFuture;
         final raw = profile['user'] is Map ? profile['user'] as Map : profile;
         final g = raw['gender']?.toString().trim().toLowerCase();
-        if (g == 'male' || g == '??κ쉐') {
+        if (g == 'male' || g == '?⑥꽦') {
           preferredGender = 'female';
-        } else if (g == 'female' || g == '??苑?) {
+        } else if (g == 'female' || g == '?ъ꽦') {
           preferredGender = 'male';
         }
       } catch (_) {}
@@ -342,7 +335,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     if (registerTicket <= 0) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('?깅줉沅뚯씠 遺議깊빐?? ?깅줉沅뚯쑝濡?寃뚯떆?먯뿉 ?깅줉?섎㈃ 留ㅼ묶沅?1?μ씠 吏湲됰맗?덈떎.')),
+        const SnackBar(content: Text('?깅줉沅뚯씠 遺議깊빐?? ?깅줉沅뚯쑝濡?寃뚯떆?먯뿉 ?깅줉?섎㈃ 留ㅼ묶沅?1?μ씠 吏湲됰뤌??')),
       );
       return;
     }
@@ -353,7 +346,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       final user = profile['user'] is Map ? profile['user'] as Map<String, dynamic> : profile;
       final nickname = user['nickname']?.toString();
       final gender = user['gender']?.toString();
-      String school = user['school']?.toString() ?? user['affiliationText']?.toString() ?? profile['affiliationText']?.toString() ?? '?紐꾩쪒??';
+      String school = user['school']?.toString() ?? user['affiliationText']?.toString() ?? profile['affiliationText']?.toString() ?? '?몄쥌?';
       final department = user['department']?.toString();
       final userEnvs = profile['userEnvironments'] ?? user['userEnvironments'];
       if ((school.isEmpty || school == 'null') && userEnvs != null && userEnvs is List && userEnvs.isNotEmpty) {
@@ -363,10 +356,10 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
           if (name != null && name.isNotEmpty) school = name;
         }
       }
-      if (school.isEmpty || school == 'null') school = '?紐꾩쪒??';
+      if (school.isEmpty || school == 'null') school = '?몄쥌?';
       if (nickname == null || nickname.isEmpty || gender == null || gender.isEmpty) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('?袁⑥쨮???類ｋ궖揶쎛 ??곷뮸??덈뼄.')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('?꾨줈???뺣낫媛 ?놁뒿?덈떎.')));
         return;
       }
       final payload = <String, dynamic>{
@@ -467,11 +460,11 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
             ? (raw['user'] as Map<String, dynamic>?) ?? raw
             : null;
         final myUserId = profileData?['id']?.toString() ?? raw?['id']?.toString();
-        final myNickname = profileData?['nickname']?.toString() ?? raw?['nickname']?.toString() ?? '??;
+        final myNickname = profileData?['nickname']?.toString() ?? raw?['nickname']?.toString() ?? '나';
         final meProfile = profileData != null
             ? {'user': profileData, 'userId': myUserId, 'nickname': myNickname}
             : null;
-        // ??? ?源낆쨯??燁삳?諭??野껊슣??癒?퓠 癰귣똻?좑쭪? ??낅즲嚥???뽰뇚
+        // ?닿? ?깅줉??移대뱶??寃뚯떆?먯뿉 蹂댁씠吏 ?딅룄濡??쒖쇅
         final displayProfiles = myUserId != null
             ? _profiles.where((p) {
                 final uid = p['userId']?.toString() ?? (p['user'] as Map<String, dynamic>?)?['id']?.toString();
@@ -526,7 +519,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                 context: context,
                 barrierDismissible: true,
                 barrierColor: Colors.black54,
-                barrierLabel: '?リ린',
+                barrierLabel: '닫기',
                 pageBuilder: (_, __, ___) => Padding(
                   padding: padding,
                   child: Center(
@@ -575,11 +568,11 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       final detailData = _profileMapToDetailData(tappedProfile);
       final (photoUrlForEnlarge, avatarUrlForEnlarge) = getEnlargeUrlsFromProfile(tappedProfile);
       final dark = Theme.of(context).brightness == Brightness.dark;
-      // ad ProfileDetailModal: ??용┛ = ?袁⑥삋?癒?퐣 ?????諭???+ 獄쏄퀗瑗???륁뵠?? ??る┛ = ?袁⑥삋嚥??????諭???쇱뒲 + 獄쏄퀗瑗???륁뵠??
+      // ad ProfileDetailModal: ?닿린 = ?꾨옒?먯꽌 ?щ씪?대뱶 ??+ 諛곌꼍 ?섏씠?? ?リ린 = ?꾨옒濡??щ씪?대뱶 ?ㅼ슫 + 諛곌꼍 ?섏씠??
       await showGeneralDialog<void>(
         context: context,
         barrierDismissible: true,
-        barrierLabel: '??る┛',
+        barrierLabel: '?リ린',
         barrierColor: Colors.transparent,
         transitionDuration: const Duration(milliseconds: 350),
         pageBuilder: (_, __, ___) => const SizedBox.shrink(),
@@ -587,7 +580,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
           final curve = Curves.easeOutCubic;
           final t = curve.transform(animation.value);
           final barrierOpacity = 0.6 * t;
-          final slideY = 700.0 * (1.0 - t); // ??용┛: 700??, ??る┛: 0??00
+          final slideY = 700.0 * (1.0 - t); // ?닿린: 700??, ?リ린: 0??00
           return AnimatedBuilder(
             animation: animation,
             builder: (context, _) {
@@ -617,8 +610,19 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                           avatarUrlForEnlarge: avatarUrlForEnlarge,
                           onClose: () => Navigator.of(ctx).pop(),
                           onMatch: () async {
-                            final ok = await _takeNote(profileId, tappedProfile);
                             if (!ctx.mounted) return;
+                            final message = await showModalBottomSheet<String?>(
+                              context: ctx,
+                              isScrollControlled: true,
+                              backgroundColor: Colors.transparent,
+                              builder: (sheetCtx) => _TakeNoteMessageSheet(profile: tappedProfile),
+                            );
+                            if (!ctx.mounted) return;
+                            if (message == null) return;
+                            Navigator.of(ctx).pop();
+                            if (!mounted) return;
+                            final ok = await _takeNote(profileId, tappedProfile, message: message);
+                            if (!mounted) return;
                             if (ok) {
                               await showDialog<void>(
                                 context: context,
@@ -629,8 +633,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                                   buildAvatar: _buildBoardAvatar,
                                 ),
                               );
-                              if (!ctx.mounted) return;
-                              Navigator.of(ctx).pop();
+                              if (!mounted) return;
                               _fetchProfiles();
                               _fetchMySummary();
                             }
@@ -654,7 +657,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     }
   }
 
-  Future<bool> _takeNote(String profileId, Map<String, dynamic> profile) async {
+  Future<bool> _takeNote(String profileId, Map<String, dynamic> profile, {String? message}) async {
     final matchingTicket = _myTickets?.matchingTicket ?? 0;
     if (matchingTicket <= 0) {
       if (!mounted) return false;
@@ -663,27 +666,16 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       );
       return false;
     }
-    final message = await showModalBottomSheet<String?>(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _TakeNoteMessageSheet(profile: profile),
-    );
-    if (!mounted || message == null) return false;
-    final trimmed = message.trim();
-    if (trimmed.length < 5) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('메시지는 5자 이상 입력해주세요')),
-      );
-      return false;
-    }
+    final nickname = (profile['nickname']?.toString().trim().isNotEmpty ?? false)
+        ? profile['nickname'].toString().trim()
+        : ((profile['user'] as Map<String, dynamic>?)?['nickname']?.toString().trim() ?? '상대');
+    final trimmed = message != null && message.trim().isNotEmpty
+        ? message.trim()
+        : '$nickname 님, 반가워요!';
     try {
       await _repository.takeNote(profileId, message: trimmed);
       if (!mounted) return false;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('요청을 보냈어요. 상대가 수락하면 매칭돼요.')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('요청을 보냈어요. 상대가 수락하면 매칭돼요.')));
       // Avoid keeping the match action blocked while refresh APIs are in flight.
       _fetchProfiles();
       _fetchMySummary();
@@ -696,7 +688,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   }
 }
 
-/// ad ProfileDetailModal "筌??紐꾧텢???袁る퉸癰귣똻苑?? 筌롫뗄?놅쭪? ??낆젾 ??쀫뱜: ??롫뼊 ??쀫뱜, 域밸챶??怨쀬뵠????삳쐭, ?袁⑥쨮??沃섎챶?곮퉪?용┛, 5????곴맒/200?? ?袁⑸꽊 甕곌쑵??
+/// ad ProfileDetailModal "泥??몄궗瑜??꾪빐蹂댁꽭?? 硫붿떆吏 ?낅젰 ?쒗듃: ?섎떒 ?쒗듃, 洹몃씪?곗씠???ㅻ뜑, ?꾨줈??誘몃━蹂닿린, 5???댁긽/200?? ?꾩넚 踰꾪듉.
 class _TakeNoteMessageSheet extends StatefulWidget {
   const _TakeNoteMessageSheet({required this.profile});
 
@@ -755,7 +747,7 @@ class _TakeNoteMessageSheetState extends State<_TakeNoteMessageSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Header (ad: gradient, "筌??紐꾧텢???袁る퉸癰귣똻苑??, X, subtitle)
+              // Header (ad: gradient, "泥??몄궗瑜??꾪빐蹂댁꽭??, X, subtitle)
               Container(
               padding: const EdgeInsets.fromLTRB(24, 20, 16, 16),
               decoration: const BoxDecoration(
@@ -769,7 +761,7 @@ class _TakeNoteMessageSheetState extends State<_TakeNoteMessageSheet> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        '泥??몄궗瑜??대낫?몄슂',
+                        '첫 인사를 해보세요',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 18,
@@ -788,7 +780,7 @@ class _TakeNoteMessageSheetState extends State<_TakeNoteMessageSheet> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${nickname.isNotEmpty ? nickname : '?곷?'}?섏뿉寃?蹂대궪 硫붿떆吏瑜??묒꽦?댁＜?몄슂',
+                    '${nickname.isNotEmpty ? nickname : '상대'}님에게 보낼 메시지를 작성해주세요',
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.9),
                       fontSize: 14,
@@ -803,7 +795,7 @@ class _TakeNoteMessageSheetState extends State<_TakeNoteMessageSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Profile preview (ad: avatar + nickname + school 夷?major)
+                  // Profile preview (ad: avatar + nickname + school 쨌 major)
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -819,7 +811,7 @@ class _TakeNoteMessageSheetState extends State<_TakeNoteMessageSheet> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                nickname.isNotEmpty ? nickname : '?꾨줈??,
+                                nickname.isNotEmpty ? nickname : '프로필',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
@@ -853,7 +845,7 @@ class _TakeNoteMessageSheetState extends State<_TakeNoteMessageSheet> {
                         maxLength: _maxLength,
                         decoration: InputDecoration(
                           counterText: '',
-                          hintText: '?덈뀞?섏꽭?? ?꾨줈?꾩쓣 蹂닿퀬 愿?ъ씠 ?앷꺼 硫붿떆吏 蹂대깄?덈떎 :)',
+                          hintText: '안녕하세요! 프로필을 보고 관심이 생겨 메시지 보냅니다 :)',
                           hintStyle: TextStyle(
                             color: dark ? Colors.grey.shade500 : Colors.grey.shade400,
                           ),
@@ -947,7 +939,7 @@ class _TakeNoteMessageSheetState extends State<_TakeNoteMessageSheet> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  // Send button (ad: "筌롫뗄?놅쭪? 癰귣?沅→?燁삳?諭?揶쎛?硫?疫?)
+                  // Send button (ad: "硫붿떆吏 蹂대궡怨?移대뱶 媛?멸?湲?)
                   Material(
                     color: Colors.transparent,
                     child: InkWell(
@@ -984,7 +976,7 @@ class _TakeNoteMessageSheetState extends State<_TakeNoteMessageSheet> {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              _isValid ? '硫붿떆吏 蹂대궡怨?移대뱶 媛?멸?湲? : '硫붿떆吏瑜??낅젰?댁＜?몄슂',
+                              _isValid ? '메시지 보내고 카드 가져가기' : '메시지를 입력해주세요',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -1057,7 +1049,7 @@ class _TakeNoteMessageSheetState extends State<_TakeNoteMessageSheet> {
   }
 }
 
-/// Design MeetZyBoard ????? ???뷸쾮??源낆쨯亦?筌띲끉臾뜻쾮?(??곌볼 + ???덌쭪? + 揶쏆뮇??
+/// Design MeetZyBoard ?ㅽ??? ?대엺沅??깅줉沅?留ㅼ묶沅?(?쇰꺼 + ?대え吏 + 媛쒖닔)
 class _DesignTicketChip extends StatelessWidget {
   const _DesignTicketChip({
     required this.label,
@@ -1127,7 +1119,7 @@ class _DesignTicketChip extends StatelessWidget {
   }
 }
 
-/// ?源낆쨯/????筌띲끉臾뜻쾮?獄?퍔? (?袁⑹뵠??+ 揶쏆뮇?뷂쭕?
+/// ?깅줉/?대엺/留ㅼ묶沅?諭껋? (?꾩씠肄?+ 媛쒖닔留?
 class _TicketChip extends StatelessWidget {
   const _TicketChip({
     required this.icon,
@@ -1243,7 +1235,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('留ㅼ묶沅뚯씠 遺議깊빐?? ?곸젏?먯꽌 留ㅼ묶沅뚯쓣 援щℓ??二쇱꽭??'),
+          content: const Text('留ㅼ묶沅뚯씠 遺議깊빐?? 留ㅼ묶沅뚯쓣 援щℓ????媛?멸?湲곕? ?쒕룄??二쇱꽭??'),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.all(16),
@@ -1257,14 +1249,14 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
     try {
       final profileId = _profile['id']?.toString();
       if (profileId == null || profileId.isEmpty) {
-        throw Exception('?꾨줈??ID瑜?李얠쓣 ???놁뒿?덈떎.');
+        throw Exception('프로필 ID를 찾을 수 없습니다.');
       }
       final sent = await widget.onTakeNote(profileId, _profile);
       if (widget.onRefreshTickets != null) await widget.onRefreshTickets!();
       if (!mounted) return;
       setState(() => _taking = false);
-      if (!sent) return; // ?띯뫁???뉕탢????쎈솭 ???곕벤釉?????
-      // AppDesign ProfileDetailModal: 燁삳?諭???쑵六?1.5??+ ??쎈솁??12 ???源껊궗 ?얜㈇??2??
+      if (!sent) return; // 痍⑥냼?덇굅???ㅽ뙣 ??異뺥븯 ????
+      // AppDesign ProfileDetailModal: 移대뱶 鍮꾪뻾 1.5珥?+ ?ㅽ뙆??12 ???깃났 臾멸뎄 2珥?
       await showDialog<void>(
         context: context,
         barrierDismissible: false,
@@ -1288,15 +1280,15 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
 
   static String _str(dynamic v) => v?.toString() ?? '-';
 
-  /// ?袁⑥쨮????륁젟 ??낆젾??????덉뵬????볥럢????곌볼嚥???뽯뻻
+  /// ?꾨줈???섏젙 ?낅젰?怨??숈씪???쒓뎅???쇰꺼濡??쒖떆
   static String _toLabel(String? field, dynamic v) {
     final s = v?.toString().trim();
     if (s == null || s.isEmpty) return '-';
     switch (field) {
       case 'gender':
         switch (s.toLowerCase()) {
-          case 'male': return '?⑥꽦';
-          case 'female': return '?ъ꽦';
+          case 'male': return '남성';
+          case 'female': return '여성';
           default: return s;
         }
       case 'gradeYear':
@@ -1306,51 +1298,51 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
           case 'three': return '3';
           case 'four': return '4';
           case 'five': return '5';
-          case 'graduation_deferred': return '議몄뾽?좎삁';
+          case 'graduation_deferred': return '졸업유예';
           default: return s;
         }
       case 'smoking':
         switch (s.toLowerCase()) {
-          case 'none': return '鍮꾪씉??;
-          case 'sometimes': return '媛??;
-          case 'often': return '?먯＜';
+          case 'none': return '비흡연';
+          case 'sometimes': return '가끔';
+          case 'often': return '자주';
           default: return s;
         }
       case 'drinking':
         switch (s.toLowerCase()) {
-          case 'none': return '鍮꾩쓬二?;
-          case 'sometimes': return '媛??;
-          case 'often': return '?먯＜';
+          case 'none': return '비음주';
+          case 'sometimes': return '가끔';
+          case 'often': return '자주';
           default: return s;
         }
       case 'fashionStyle':
         switch (s.toLowerCase()) {
-          case 'hood_casual': return '?꾨뱶/罹먯＜??;
-          case 'shirt_neat': return '?붿툩/?⑥젙';
-          case 'street': return '?ㅽ듃由?;
-          case 'knit': return '?덊듃/媛먯꽦';
-          case 'sporty': return '?ㅽ룷??;
-          case 'minimal': return '誘몃땲硫';
-          case 'hip': return '?숉븳';
+          case 'hood_casual': return '후드/캐주얼';
+          case 'shirt_neat': return '셔츠/단정';
+          case 'street': return '스트릿';
+          case 'knit': return '니트/감성';
+          case 'sporty': return '스포티';
+          case 'minimal': return '미니멀';
+          case 'hip': return '힙한';
           default: return s;
         }
       case 'preferredDateType':
         switch (s.toLowerCase()) {
-          case 'cafe': return '移댄럹';
-          case 'walk': return '?곗콉';
-          case 'movie': return '?곹솕';
-          case 'drink': return '?좎옄由?;
-          case 'exercise': return '?대룞';
-          case 'food_tour': return '留쏆쭛 ?먮갑';
-          case 'drive': return '?쒕씪?대툕';
+          case 'cafe': return '카페';
+          case 'walk': return '산책';
+          case 'movie': return '영화';
+          case 'drink': return '술자리';
+          case 'exercise': return '운동';
+          case 'food_tour': return '맛집 탐방';
+          case 'drive': return '드라이브';
           default: return s;
         }
       case 'activityTime':
         switch (s.toLowerCase()) {
-          case 'morning': return '?꾩묠??;
-          case 'daytime': return '二쇨컙??;
-          case 'evening': return '??곹삎';
-          case 'night_owl': return '?쇳뻾??;
+          case 'morning': return '아침형';
+          case 'daytime': return '주간형';
+          case 'evening': return '저녁형';
+          case 'night_owl': return '야행성';
           default: return s;
         }
       default:
@@ -1374,7 +1366,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
       return null;
     }
 
-    // AppDesign ProfileDetailModal: ???춳 primary 域밸챶??怨쀬뵠????삳쐭, ?袁⑥뺍??+??곌퐬?? ??쎄쾿嚥??類ｋ궖+??볥젃, ??롫뼊 ??る┛/揶쎛?硫?疫?
+    // AppDesign ProfileDetailModal: ?뚮쭏 primary 洹몃씪?곗씠???ㅻ뜑, ?꾨컮?+?됰꽕?? ?ㅽ겕濡??뺣낫+?쒓렇, ?섎떒 ?リ린/媛?멸?湲?
     final primaryGradient = ThemeController.getSheetGradient();
     final dark = theme.brightness == Brightness.dark;
     final listTags = <String>[];
@@ -1399,7 +1391,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
         borderRadius: BorderRadius.circular(32),
         child: Column(
           children: [
-            // ??삳쐭: 域밸챶??怨쀬뵠??+ ??뺤삋域??紐껊굶 + X + ?袁⑥뺍?? + ??곌퐬??(?誘れ뵠 200??곗쨮 ??살쒔???쨮??獄쎻뫗?)
+            // ?ㅻ뜑: 洹몃씪?곗씠??+ ?쒕옒洹??몃뱾 + X + ?꾨컮? + ?됰꽕??(?믪씠 200?쇰줈 ?ㅻ쾭?뚮줈??諛⑹?)
             Container(
               height: 200,
               decoration: BoxDecoration(gradient: primaryGradient),
@@ -1501,7 +1493,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                 ],
               ),
             ),
-            // ??쎄쾿嚥? ?類ｋ궖 ??+ ??볥젃
+            // ?ㅽ겕濡? ?뺣낫 ??+ ?쒓렇
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
@@ -1521,20 +1513,20 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _rowAppDesign(theme, dark, '?숆낵', _str(pluck(['department', 'major', 'departmentName']))),
-                      _rowAppDesign(theme, dark, '?깅퀎', _toLabel('gender', pluck(['gender', 'sex'])?.toString())),
-                      _rowAppDesign(theme, dark, '?뚯냽', _str(pluck(['affiliation', 'school', 'affiliationText', 'organization']))),
-                      _rowAppDesign(theme, dark, '??, pluck(['heightCm', 'height']) != null ? '${pluck(['heightCm', 'height'])} cm' : '-'),
-                      _rowAppDesign(theme, dark, '?숇뀈', _toLabel('gradeYear', pluck(['grade', 'year', 'schoolYear', 'class']))),
+                      _rowAppDesign(theme, dark, '학과', _str(pluck(['department', 'major', 'departmentName']))),
+                      _rowAppDesign(theme, dark, '성별', _toLabel('gender', pluck(['gender', 'sex'])?.toString())),
+                      _rowAppDesign(theme, dark, '소속', _str(pluck(['affiliation', 'school', 'affiliationText', 'organization']))),
+                      _rowAppDesign(theme, dark, '키', pluck(['heightCm', 'height']) != null ? '${pluck(['heightCm', 'height'])} cm' : '-'),
+                      _rowAppDesign(theme, dark, '학년', _toLabel('gradeYear', pluck(['grade', 'year', 'schoolYear', 'class']))),
                       _rowAppDesign(theme, dark, 'MBTI', _str(pluck(['mbti', 'mbtiType']))),
-                      _rowAppDesign(theme, dark, '?≪뿰', _toLabel('smoking', pluck(['smoking', 'smoke'])?.toString())),
-                      _rowAppDesign(theme, dark, '?뚯＜', _toLabel('drinking', pluck(['drinking', 'alcohol'])?.toString())),
-                      _rowAppDesign(theme, dark, '?먭린?뚭컻', _str(pluck(['oneLineIntroduce', 'introOneLine', 'bio', 'introduction']))),
-                      _rowAppDesign(theme, dark, '?붿쬁 鍮좎쭊 寃?, _str(pluck(['intoLately', 'hobby', 'recentInterest']))),
-                      _rowAppDesign(theme, dark, '?댁긽??, _str(pluck(['idealType', 'ideal']))),
-                      _rowAppDesign(theme, dark, '?⑥뀡 ?ㅽ???, _toLabel('fashionStyle', pluck(['fashionStyle', 'style']))),
-                      _rowAppDesign(theme, dark, '?좏샇 ?곗씠??, _toLabel('preferredDateType', pluck(['preferredDateType', 'preferredDate']))),
-                      _rowAppDesign(theme, dark, '?쒕룞 ?쒓컙', _toLabel('activityTime', pluck(['activityTime', 'activeTime']))),
+                      _rowAppDesign(theme, dark, '흡연', _toLabel('smoking', pluck(['smoking', 'smoke'])?.toString())),
+                      _rowAppDesign(theme, dark, '음주', _toLabel('drinking', pluck(['drinking', 'alcohol'])?.toString())),
+                      _rowAppDesign(theme, dark, '자기소개', _str(pluck(['oneLineIntroduce', 'introOneLine', 'bio', 'introduction']))),
+                      _rowAppDesign(theme, dark, '요즘 빠진 것', _str(pluck(['intoLately', 'hobby', 'recentInterest']))),
+                      _rowAppDesign(theme, dark, '이상형', _str(pluck(['idealType', 'ideal']))),
+                      _rowAppDesign(theme, dark, '패션 스타일', _toLabel('fashionStyle', pluck(['fashionStyle', 'style']))),
+                      _rowAppDesign(theme, dark, '선호 데이트', _toLabel('preferredDateType', pluck(['preferredDateType', 'preferredDate']))),
+                      _rowAppDesign(theme, dark, '활동 시간', _toLabel('activityTime', pluck(['activityTime', 'activeTime']))),
                       if (listTags.isNotEmpty) ...[
                         const SizedBox(height: 8),
                         Row(
@@ -1543,7 +1535,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                             SizedBox(
                               width: 112,
                               child: Text(
-                                '?섎? ?뚭컻?섎뒗 ?쒓렇',
+                                '나를 소개하는 태그',
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
                                 ),
@@ -1577,7 +1569,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                 ),
               ),
             ),
-            // ??롫뼊: 筌?쑵?욤쳸?밸퓠??뺣뮉 ??る┛筌? 野껊슣??癒?퓠??뺣뮉 ??띾┛疫?+ 揶쎛?硫?疫?
+            // ?섎떒: 梨꾪똿諛⑹뿉?쒕뒗 ?リ린留? 寃뚯떆?먯뿉?쒕뒗 ?섍린湲?+ 媛?멸?湲?
             Container(
               padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + MediaQuery.of(context).padding.bottom),
               decoration: BoxDecoration(
@@ -1598,7 +1590,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                           side: BorderSide(color: dark ? Colors.grey.shade600 : Colors.grey.shade300),
                         ),
                         child: Text(
-                          '?リ린',
+                          '닫기',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: dark ? Colors.grey.shade200 : Colors.grey.shade700,
@@ -1617,7 +1609,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                               side: BorderSide(color: dark ? Colors.grey.shade600 : Colors.grey.shade300),
                             ),
                             child: Text(
-                              '?섍린湲?,
+                              '넘기기',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: dark ? Colors.grey.shade200 : Colors.grey.shade700,
@@ -1717,7 +1709,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
   }
 }
 
-/// 筌띲끉臾??袁⑥┷ ??(揶쎛?硫?疫???롮뵭 ?? ?袁⑹뒠 ??살쒔??됱뵠. ???袁⑸열?癒?퐣 ?紐꾪뀱 揶쎛?? ??쇱뵠??곗쨮域밸㈇? ???쁽 ???돱筌왖 ?袁⑥┷.
+/// 留ㅼ묶 ?꾨즺 ??(媛?멸?湲??섎씫 ?? ?꾩슜 ?ㅻ쾭?덉씠. ???꾩뿭?먯꽌 ?몄텧 媛?? ?ㅼ씠?쇰줈洹멸? ?ロ옄 ?뚭퉴吏 ?꾨즺.
 Future<void> showMatchCompleteCelebration(BuildContext context) {
   return showDialog<void>(
     context: context,
@@ -1774,7 +1766,7 @@ class _MatchCompleteOnlyOverlayState extends State<_MatchCompleteOnlyOverlay> {
               ),
               const SizedBox(height: 8),
               Text(
-                '??곸젫 ???遺? ??뽰삂????紐꾩뒄 ?裕?,
+                '?댁젣 ??붾? ?쒖옉?대낫?몄슂 ?뮆',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
@@ -1790,7 +1782,7 @@ class _MatchCompleteOnlyOverlayState extends State<_MatchCompleteOnlyOverlay> {
   }
 }
 
-/// 揶쎛?硫?疫??遺욧퍕 ?袁⑸꽊 ?? 燁삳?諭???쑵六?+ ?源껊궗 ?얜㈇??(?遺욧퍕筌?癰귣?沅??怨밴묶 ???怨? ??롮뵭 ??筌띲끉臾?
+/// 媛?멸?湲??붿껌 ?꾩넚 ?? 移대뱶 鍮꾪뻾 + ?깃났 臾멸뎄 (?붿껌留?蹂대궦 ?곹깭 ???곷? ?섎씫 ??留ㅼ묶)
 class _MatchCelebrationOverlay extends StatefulWidget {
   const _MatchCelebrationOverlay({
     required this.profile,
@@ -1800,172 +1792,30 @@ class _MatchCelebrationOverlay extends StatefulWidget {
 
   final Map<String, dynamic> profile;
   final Widget Function(BuildContext context, Map<String, dynamic> profile) buildAvatar;
-  /// true: ?遺욧퍕筌?癰귣?源??얜㈇??/ false: 燁삳?諭???얜굣 ?얜㈇??
+  /// true: ?붿껌留?蹂대깂 臾멸뎄 / false: 移대뱶 ?띾뱷 臾멸뎄
   final bool requestOnly;
 
   @override
   State<_MatchCelebrationOverlay> createState() => _MatchCelebrationOverlayState();
 }
 
-class _MatchCelebrationOverlayState extends State<_MatchCelebrationOverlay> with TickerProviderStateMixin {
-  static const _flyingDuration = Duration(milliseconds: 1500);
+class _MatchCelebrationOverlayState extends State<_MatchCelebrationOverlay> {
   static const _successDuration = Duration(milliseconds: 2000);
-
-  late AnimationController _flyController;
-  late AnimationController _heartController;
-  bool _showSuccess = false;
 
   @override
   void initState() {
     super.initState();
-    _flyController = AnimationController(vsync: this, duration: _flyingDuration);
-    _heartController = AnimationController(vsync: this, duration: const Duration(milliseconds: 600))
-      ..repeat(reverse: true);
-    _flyController.forward().then((_) {
+    Future.delayed(_successDuration, () {
       if (!mounted) return;
-      setState(() => _showSuccess = true);
-      Future.delayed(_successDuration, () {
-        if (!mounted) return;
-        Navigator.of(context).pop();
-      });
+      Navigator.of(context).pop();
     });
-  }
-
-  @override
-  void dispose() {
-    _flyController.dispose();
-    _heartController.dispose();
-    super.dispose();
-  }
-
-  static double _lerp(List<double> keyframes, double t) {
-    final n = keyframes.length - 1;
-    final seg = (t * n).clamp(0.0, n.toDouble());
-    final i = seg.floor().clamp(0, n - 1);
-    final f = seg - i;
-    return keyframes[i] + f * (keyframes[i + 1] - keyframes[i]);
   }
 
   @override
   Widget build(BuildContext context) {
     final nickname = widget.profile['nickname']?.toString() ?? '';
     final dark = Theme.of(context).brightness == Brightness.dark;
-    const cardW = 256.0;
-    const cardH = 320.0;
-    final cardBg = Colors.grey.shade300;
-
-    if (_showSuccess) {
-      return _buildSuccessPhase(dark, nickname);
-    }
-    return AnimatedBuilder(
-      animation: _flyController,
-      builder: (context, _) {
-        final t = Curves.easeInOut.transform(_flyController.value);
-        final x = _lerp([0.0, -100.0, 100.0, 0.0], t);
-        final y = _lerp([0.0, -200.0, -400.0, -600.0], t);
-        final scale = _lerp([0.3, 0.5, 0.7, 0.2], t);
-        final rotateDeg = _lerp([-15.0, 5.0, -10.0, 360.0], t);
-        final rotateRad = rotateDeg * (math.pi / 180.0);
-        final opacity = _lerp([0.8, 1.0, 1.0, 0.0], t).clamp(0.0, 1.0);
-        return Stack(
-          alignment: Alignment.center,
-          children: [
-            IgnorePointer(
-              child: Center(
-                child: Transform.translate(
-                  offset: Offset(x, y),
-                  child: Transform.scale(
-                    scale: scale,
-                    child: Transform.rotate(
-                      angle: rotateRad,
-                      child: Opacity(
-                        opacity: opacity,
-                        child: Container(
-                          width: cardW,
-                          height: cardH,
-                          decoration: BoxDecoration(
-                            color: cardBg,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 24, offset: const Offset(0, 8)),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [Colors.white.withOpacity(0.25), Colors.transparent],
-                                    ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(24),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Container(
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          border: Border.all(color: Colors.white, width: 4),
-                                          boxShadow: [
-                                            BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 2)),
-                                          ],
-                                        ),
-                                        child: ClipOval(
-                                          child: SizedBox(
-                                            width: 128,
-                                            height: 128,
-                                            child: widget.buildAvatar(context, widget.profile),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 16),
-                                      Text(
-                                        nickname,
-                                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF111827)),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            ...List.generate(12, (i) {
-              final angleRad = i * 30 * (math.pi / 180);
-              final progress = _flyController.value;
-              final rad = 150.0 * (progress < 0.5 ? progress * 2 : 1.0);
-              final ox = rad * math.cos(angleRad);
-              final oy = rad * math.sin(angleRad);
-              final sparkOpacity = progress < 0.6 ? (progress / 0.6) : ((1 - progress) / 0.4).clamp(0.0, 1.0);
-              return Positioned(
-                left: MediaQuery.of(context).size.width / 2 + ox - 12,
-                top: MediaQuery.of(context).size.height / 2 + oy - 12,
-                child: IgnorePointer(
-                  child: Opacity(
-                    opacity: sparkOpacity,
-                    child: Icon(LucideIcons.sparkles, color: Colors.amber.shade400, size: 24),
-                  ),
-                ),
-              );
-            }),
-          ],
-        );
-      },
-    );
+    return _buildSuccessPhase(dark, nickname);
   }
 
   Widget _buildSuccessPhase(bool dark, String nickname) {
@@ -1990,21 +1840,7 @@ class _MatchCelebrationOverlayState extends State<_MatchCelebrationOverlay> with
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                AnimatedBuilder(
-                  animation: _heartController,
-                  builder: (context, _) {
-                    final v = _heartController.value;
-                    final scale = 1.0 + 0.2 * math.sin(math.pi * v);
-                    final rotateDeg = 10 * math.sin(2 * math.pi * v);
-                    return Transform.rotate(
-                      angle: rotateDeg * (math.pi / 180),
-                      child: Transform.scale(
-                        scale: scale,
-                        child: Icon(LucideIcons.heart, size: 80, color: Theme.of(context).colorScheme.primary),
-                      ),
-                    );
-                  },
-                ),
+                Icon(LucideIcons.heart, size: 80, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(height: 16),
                 Text(
                   widget.requestOnly ? '?붿껌??蹂대깉?댁슂!' : '移대뱶 ?띾뱷!',
@@ -2017,8 +1853,8 @@ class _MatchCelebrationOverlayState extends State<_MatchCelebrationOverlay> with
                 const SizedBox(height: 8),
                 Text(
                   widget.requestOnly
-                      ? '$nickname?섏씠 ?섎씫?섎㈃\n留ㅼ묶???깆궗?쇱슂.'
-                      : '$nickname?섏쓽 ?꾨줈?꾩쓣\n媛?몄솕?댁슂!',
+                      ? '$nickname?섏씠 ?섎씫?섎㈃\n留ㅼ묶???깆궗?쇱슂 ?뮆'
+                      : '$nickname?섏쓽 ?꾨줈?꾩쓣\n媛?몄솕?댁슂! ?뮆',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
