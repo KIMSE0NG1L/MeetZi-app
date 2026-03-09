@@ -33,6 +33,18 @@ void _enlargeUrlsFromProfile(Map<String, dynamic> profile, void Function(String?
       : null;
   setUrls(photoUrl, avatarUrl);
 }
+
+/// 프로필 맵에서 크게 보기용 사진/아바타 URL 반환 (탭 시 확대 다이얼로그용)
+(String?, String?) getEnlargeUrlsFromProfile(Map<String, dynamic> profile) {
+  String? photoUrl;
+  String? avatarUrl;
+  _enlargeUrlsFromProfile(profile, (p, a) {
+    photoUrl = p;
+    avatarUrl = a;
+  });
+  return (photoUrl, avatarUrl);
+}
+
 MeetzyProfileDetailData profileMapToDetailData(Map<String, dynamic> profile) {
   final user = profile['user'] as Map<String, dynamic>?;
   dynamic pluck(List<String> keys) {

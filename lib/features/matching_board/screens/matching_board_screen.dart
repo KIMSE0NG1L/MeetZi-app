@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/matching_board/data/matching_board_repository.dart';
+import 'package:nearo_app/features/matching_board/profile_detail_sheet.dart';
 import 'package:nearo_app/features/matching_board/screens/mailbox_screen.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
@@ -572,6 +573,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       if (profileId == null || profileId.isEmpty) return;
       if (!mounted) return;
       final detailData = _profileMapToDetailData(tappedProfile);
+      final (photoUrlForEnlarge, avatarUrlForEnlarge) = getEnlargeUrlsFromProfile(tappedProfile);
       final dark = Theme.of(context).brightness == Brightness.dark;
       // ad ProfileDetailModal: ?닿린 = ?꾨옒?먯꽌 ?щ씪?대뱶 ??+ 諛곌꼍 ?섏씠?? ?リ린 = ?꾨옒濡??щ씪?대뱶 ?ㅼ슫 + 諛곌꼍 ?섏씠??
       await showGeneralDialog<void>(
@@ -611,13 +613,26 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                           profile: detailData,
                           darkMode: dark,
                           avatarWidget: _buildBoardAvatar(ctx, tappedProfile),
+                          photoUrlForEnlarge: photoUrlForEnlarge,
+                          avatarUrlForEnlarge: avatarUrlForEnlarge,
                           onClose: () => Navigator.of(ctx).pop(),
                           onMatch: () async {
-                            final ok = await _takeNote(profileId, tappedProfile);
                             if (!ctx.mounted) return;
+                            final message = await showModalBottomSheet<String?>(
+                              context: ctx,
+                              isScrollControlled: true,
+                              backgroundColor: Colors.transparent,
+                              builder: (sheetCtx) => _TakeNoteMessageSheet(profile: tappedProfile),
+                            );
+                            if (!ctx.mounted) return;
+                            if (message == null) return;
+                            Navigator.of(ctx).pop();
+                            if (!mounted) return;
+                            final ok = await _takeNote(profileId, tappedProfile, message: message);
+                            if (!mounted) return;
                             if (ok) {
                               await showDialog<void>(
-                                context: ctx,
+                                context: context,
                                 barrierDismissible: false,
                                 barrierColor: Colors.black54,
                                 builder: (dialogCtx) => _MatchCelebrationOverlay(
@@ -625,8 +640,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                                   buildAvatar: _buildBoardAvatar,
                                 ),
                               );
-                              if (!ctx.mounted) return;
-                              Navigator.of(ctx).pop();
+                              if (!mounted) return;
                               _fetchProfiles();
                               _fetchMySummary();
                             }
@@ -650,25 +664,25 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     }
   }
 
-  Future<bool> _takeNote(String profileId, Map<String, dynamic> profile) async {
+  Future<bool> _takeNote(String profileId, Map<String, dynamic> profile, {String? message}) async {
     final matchingTicket = _myTickets?.matchingTicket ?? 0;
     if (matchingTicket <= 0) {
       if (!mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('留ㅼ묶沅뚯씠 遺議깊빐?? 留ㅼ묶沅뚯쓣 援щℓ????媛?멸?湲곕? ?쒕룄??二쇱꽭??')),
+        const SnackBar(content: Text('매칭권이 부족해요. 매칭권을 구매한 뒤 매칭 요청을 보내주세요.')),
       );
       return false;
     }
-    // Avoid nested modal(bottom sheet over profile dialog) which can appear as a gray overlay
-    // and block the action flow on some devices. Send request immediately with a default message.
     final nickname = (profile['nickname']?.toString().trim().isNotEmpty ?? false)
         ? profile['nickname'].toString().trim()
         : ((profile['user'] as Map<String, dynamic>?)?['nickname']?.toString().trim() ?? '상대');
-    final trimmed = '$nickname 님, 반가워요!';
+    final trimmed = message != null && message.trim().isNotEmpty
+        ? message.trim()
+        : '$nickname 님, 반가워요!';
     try {
       await _repository.takeNote(profileId, message: trimmed);
       if (!mounted) return false;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('?붿껌??蹂대깉?댁슂. ?곷?媛 ?섎씫?섎㈃ 留ㅼ묶?쇱슂.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('요청을 보냈어요. 상대가 수락하면 매칭돼요.')));
       // Avoid keeping the match action blocked while refresh APIs are in flight.
       _fetchProfiles();
       _fetchMySummary();
@@ -917,8 +931,8 @@ class _TakeNoteMessageSheetState extends State<_TakeNoteMessageSheet> {
                         Expanded(
                           child: Text(
                             _isValid
-                                ? '醫뗭븘?? ?댁젣 ?꾩넚?????덉뼱???뮆'
-                                : '理쒖냼 $_minLength???댁긽 ?낅젰?댁＜?몄슂 (?꾩옱 ${_controller.text.length}??',
+                                ? '좋아요! 이제 전송할 수 있어요 💕'
+                                : '최소 $_minLength자 이상 입력해주세요 (현재 ${_controller.text.length}자)',
                             style: TextStyle(
                               fontSize: 14,
                               color: _isValid
@@ -1407,19 +1421,35 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                                 ),
                               ),
                               const SizedBox(height: 20),
-                              Container(
-                                width: 96,
-                                height: 96,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white, width: 4),
-                                  boxShadow: [
-                                    BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 2)),
-                                  ],
-                                ),
-                                child: ClipOval(
-                                  child: widget.buildAvatar(context, profile),
-                                ),
+                              Builder(
+                                builder: (context) {
+                                  final (photoUrl, avatarUrl) = getEnlargeUrlsFromProfile(profile);
+                                  final hasEnlarge = (photoUrl != null && photoUrl.isNotEmpty) ||
+                                      (avatarUrl != null && avatarUrl.isNotEmpty);
+                                  Widget avatarChild = widget.buildAvatar(context, profile);
+                                  if (hasEnlarge) {
+                                    avatarChild = GestureDetector(
+                                      onTap: () => MeetzyProfileDetailModal.showPhotoEnlarge(
+                                        context,
+                                        photoUrl: photoUrl,
+                                        avatarUrl: avatarUrl,
+                                      ),
+                                      child: avatarChild,
+                                    );
+                                  }
+                                  return Container(
+                                    width: 96,
+                                    height: 96,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.white, width: 4),
+                                      boxShadow: [
+                                        BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 2)),
+                                      ],
+                                    ),
+                                    child: ClipOval(child: avatarChild),
+                                  );
+                                },
                               ),
                               const SizedBox(height: 12),
                               ConstrainedBox(

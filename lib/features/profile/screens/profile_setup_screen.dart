@@ -1129,7 +1129,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 items: _mbtiOptions.map((e) => DropdownMenuItem(value: e, child: Text(e, style: TextStyle(color: onSurface)))).toList(),
                 onChanged: (v) { if (v != null) setState(() => _mbtiController.text = v); },
               ),
-              if (!_isEditing) ...[
               const SizedBox(height: 16),
               Text('자기 소개 (20~100자)', style: labelStyle),
               const SizedBox(height: 8),
@@ -1148,7 +1147,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   counterText: '',
                 ),
               ),
-              ],
                         ],
                       ),
                     ),
