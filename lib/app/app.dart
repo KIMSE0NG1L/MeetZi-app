@@ -1,4 +1,4 @@
-
+﻿
 import 'package:app_links/app_links.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -53,7 +53,7 @@ class _NearoAppState extends State<NearoApp> {
   final _environmentStatusRepository = EnvironmentStatusRepository();
   StreamSubscription<Uri>? _linkSub;
   Map<String, dynamic>? _pendingNotificationData;
-  /// 앱 진입 시 세션 확인 후 결정. null이면 아직 확인 중(스플래시만 표시).
+  /// ??吏꾩엯 ???몄뀡 ?뺤씤 ??寃곗젙. null?대㈃ ?꾩쭅 ?뺤씤 以??ㅽ뵆?섏떆留??쒖떆).
   String? _initialRoute;
 
   @override
@@ -64,11 +64,11 @@ class _NearoAppState extends State<NearoApp> {
     _initDeepLinks();
   }
 
-  /// 세션 확인 후 첫 화면 라우트만 결정. 최소 3.3초 스플래시 표시 후 설정.
+  /// ?몄뀡 ?뺤씤 ??泥??붾㈃ ?쇱슦?몃쭔 寃곗젙. 理쒖냼 3.3珥??ㅽ뵆?섏떆 ?쒖떆 ???ㅼ젙.
   Future<void> _resolveInitialRoute() async {
     final stopwatch = Stopwatch()..start();
     String? route;
-    // 로그인 성공 딥링크 등 초기 링크 먼저 처리(토큰 저장) 후 토큰 기준으로 라우트 결정
+    // 濡쒓렇???깃났 ?λ쭅????珥덇린 留곹겕 癒쇱? 泥섎━(?좏겙 ??? ???좏겙 湲곗??쇰줈 ?쇱슦??寃곗젙
     final initialLink = await _appLinks.getInitialLink();
     final isLoginSuccessLink = initialLink != null &&
         initialLink.scheme == 'nearo' &&
@@ -80,44 +80,45 @@ class _NearoAppState extends State<NearoApp> {
     }
 
     if (isLoginSuccessLink) {
-      // 로그인 직후: 학교 선택 → 메일 인증 → 프로필 생성 순서로 진행
-      route = AppRoutes.universitySelect;
-    } else {
-      final token = await _tokenStorage.readAccessToken();
-      if (token == null || token.isEmpty) {
-        route = AppRoutes.onboarding;
-      } else {
-        try {
-          final profile = await _authRepository.getProfile();
-          final user = (profile['user'] as Map?) ?? profile;
-          final hasProfile = user['nickname'] != null;
-          final hasAffiliation =
-              (user['affiliationText'] as String?)?.trim().isNotEmpty ?? false;
-          if (!hasProfile || !hasAffiliation) {
-            // 프로필 미완성: 옛날 프로필 등록 대신 학교 선택 → 메일 인증 → 프로필 생성 순서로
-            route = AppRoutes.universitySelect;
-          } else {
-            try {
-              final status =
-                  await _environmentStatusRepository.getMyEnvironmentStatus();
-              if (status == null || status['environmentId'] == null) {
-                route = AppRoutes.environment;
-              } else if (status['verified'] == true) {
-                route = AppRoutes.home;
-              } else {
-                route = AppRoutes.environment;
-              }
-            } catch (_) {
-              route = AppRoutes.environment;
-            }
-          }
-        } catch (_) {
-          await _tokenStorage.clear();
-          route = AppRoutes.onboarding;
-        }
+      final tokenFromLink = (initialLink.queryParameters['token'] ?? '').trim();
+      if (tokenFromLink.isNotEmpty) {
+        await _tokenStorage.saveAccessToken(tokenFromLink);
       }
     }
-    // Design 스플래시: 최소 3.3초 표시 후 화면 전환
+
+    final token = await _tokenStorage.readAccessToken();
+    if (token == null || token.isEmpty) {
+      route = AppRoutes.onboarding;
+    } else {
+      try {
+        final profile = await _authRepository.getProfile();
+        final user = (profile['user'] as Map?) ?? profile;
+        final hasProfile = user['nickname'] != null;
+        final hasAffiliation =
+            (user['affiliationText'] as String?)?.trim().isNotEmpty ?? false;
+        if (!hasProfile || !hasAffiliation) {
+          route = AppRoutes.universitySelect;
+        } else {
+          try {
+            final status =
+                await _environmentStatusRepository.getMyEnvironmentStatus();
+            if (status['environmentId'] == null) {
+              route = AppRoutes.environment;
+            } else if (status['verified'] == true) {
+              route = AppRoutes.home;
+            } else {
+              route = AppRoutes.environment;
+            }
+          } catch (_) {
+            route = AppRoutes.environment;
+          }
+        }
+      } catch (_) {
+        await _tokenStorage.clear();
+        route = AppRoutes.onboarding;
+      }
+    }
+    // Design ?ㅽ뵆?섏떆: 理쒖냼 3.3珥??쒖떆 ???붾㈃ ?꾪솚
     final elapsed = stopwatch.elapsedMilliseconds;
     if (elapsed < 3300) {
       await Future.delayed(Duration(milliseconds: 3300 - elapsed));
@@ -170,7 +171,7 @@ class _NearoAppState extends State<NearoApp> {
     if (roomId != null && roomId.isNotEmpty) {
       _navigatorKey.currentState?.pushNamed(
         AppRoutes.chatRoom,
-        arguments: {'roomId': roomId, 'partnerNickname': '대화'},
+        arguments: {'roomId': roomId, 'partnerNickname': '상대'},
       );
     }
   }
@@ -196,11 +197,11 @@ class _NearoAppState extends State<NearoApp> {
             false;
         if (hasProfile && hasAffiliation) {
           try {
-            // 환경 정보 확인
+            // ?섍꼍 ?뺣낫 ?뺤씤
             final status =
                 await _environmentStatusRepository.getMyEnvironmentStatus();
-            if (status != null && status['environmentId'] != null) {
-              // 환경이 설정되어 있음
+            if (status['environmentId'] != null) {
+              // ?섍꼍???ㅼ젙?섏뼱 ?덉쓬
               if (status['verified'] == true) {
                 _navigatorKey.currentState?.pushNamedAndRemoveUntil(
                   AppRoutes.home,
@@ -213,14 +214,14 @@ class _NearoAppState extends State<NearoApp> {
                 );
               }
             } else {
-              // 환경이 설정되지 않았으면 환경 선택 화면으로
+              // ?섍꼍???ㅼ젙?섏? ?딆븯?쇰㈃ ?섍꼍 ?좏깮 ?붾㈃?쇰줈
               _navigatorKey.currentState?.pushNamedAndRemoveUntil(
                 AppRoutes.environment,
                 (route) => false,
               );
             }
           } catch (_) {
-            // 환경 조회 실패 시 환경 선택 화면으로
+            // ?섍꼍 議고쉶 ?ㅽ뙣 ???섍꼍 ?좏깮 ?붾㈃?쇰줈
             _navigatorKey.currentState?.pushNamedAndRemoveUntil(
               AppRoutes.environment,
               (route) => false,
@@ -228,7 +229,7 @@ class _NearoAppState extends State<NearoApp> {
           }
         } else {
           _navigatorKey.currentState?.pushNamedAndRemoveUntil(
-            AppRoutes.profileSetup,
+            AppRoutes.universitySelect,
             (route) => false,
           );
         }
@@ -244,13 +245,10 @@ class _NearoAppState extends State<NearoApp> {
       if (token != null && token.isNotEmpty) {
         _tokenStorage.saveAccessToken(token);
       }
-      // 콜드 스타트가 아닐 때만(앱이 이미 떠 있는 상태에서 딥링크로 복귀) 학교 선택으로 이동
+      // 코드 시작이 아닌 동안(앱이 이미 떠 있는 상태에서 링크로 복귀) 세션 복원 분기로 이동
       if (!isInitial) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          _navigatorKey.currentState?.pushNamedAndRemoveUntil(
-            AppRoutes.universitySelect,
-            (route) => false,
-          );
+          _restoreSession();
         });
       }
     }
@@ -273,7 +271,7 @@ class _NearoAppState extends State<NearoApp> {
             return ValueListenableBuilder<bool>(
               valueListenable: ThemeController.secretMode,
               builder: (context, secret, ___) {
-                // 세션 확인이 끝나기 전에는 Design 스타일 스플래시 표시
+                // ?몄뀡 ?뺤씤???앸굹湲??꾩뿉??Design ?ㅽ????ㅽ뵆?섏떆 ?쒖떆
                 if (_initialRoute == null) {
                   final theme = secret
                       ? NearoTheme.secret(seedColor: color)
@@ -310,7 +308,7 @@ class _NearoAppState extends State<NearoApp> {
                         builder: (ctx) => MeetzyEmailVerificationPage(
                           onBack: () => Navigator.of(ctx).pushReplacementNamed(AppRoutes.universitySelect),
                           onComplete: () => Navigator.of(ctx).pushReplacementNamed(
-                            AppRoutes.profileSetup,
+                            AppRoutes.universitySelect,
                             arguments: {'isInitialSetup': true},
                           ),
                         ),
@@ -360,3 +358,4 @@ class _NearoAppState extends State<NearoApp> {
     );
   }
 }
+

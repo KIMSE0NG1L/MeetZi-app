@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/app/app.dart';
@@ -17,7 +17,7 @@ import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/features/auth/data/environment_status_repository.dart';
 import 'package:nearo_app/presentation/widgets/meetzy_coach_mark.dart';
 
-/// AppDesign 기준: 탭별 헤더 그라데이션 + 하단 5탭 네비 (대학교 랭킹 / 메시지함 / 게시판 / 프로필 / 상점)
+/// AppDesign 湲곗?: ??퀎 ?ㅻ뜑 洹몃씪?곗씠??+ ?섎떒 5???ㅻ퉬 (??숆탳 ??궧 / 硫붿떆吏??/ 寃뚯떆??/ ?꾨줈??/ ?곸젏)
 class HomeShellScreen extends StatefulWidget {
   const HomeShellScreen({super.key});
 
@@ -80,8 +80,8 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
       barrierDismissible: false,
       builder: (ctx) {
         return AlertDialog(
-          title: const Text('가져가기 요청'),
-          content: const Text('누군가 내 카드를 가져가려고 해요.\n지금 확인해 볼까요?'),
+          title: const Text('媛?멸?湲??붿껌'),
+          content: const Text('?꾧뎔媛 ??移대뱶瑜?媛?멸??ㅺ퀬 ?댁슂.\n吏湲??뺤씤??蹂쇨퉴??'),
           actions: [
             TextButton(
               onPressed: () {
@@ -103,7 +103,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
                   ),
                 );
               },
-              child: const Text('보기'),
+              child: const Text('蹂닿린'),
             ),
           ],
         );
@@ -134,7 +134,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
 
   @override
   void didPopNext() {
-    // 다른 화면(프로필 수정 등)에서 홈으로 돌아왔을 때 게시판 목록 갱신
+    // ?ㅻⅨ ?붾㈃(?꾨줈???섏젙 ???먯꽌 ?덉쑝濡??뚯븘?붿쓣 ??寃뚯떆??紐⑸줉 媛깆떊
     _boardRefreshTrigger.value++;
   }
 
@@ -163,7 +163,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
   String get _affiliationShort {
     final affiliation = _profile?['affiliationText']?.toString();
     if (affiliation == null || affiliation.isEmpty) return '';
-    return affiliation.endsWith('학교')
+    return affiliation.endsWith('?숆탳')
         ? affiliation.substring(0, affiliation.length - 2)
         : affiliation;
   }
@@ -175,7 +175,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
     String? subtitle;
     switch (_currentIndex) {
       case 0:
-        title = '대학교 랭킹';
+        title = '??숆탳 ??궧';
         subtitle = null;
         break;
       case 1:
@@ -191,7 +191,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
         subtitle = null;
         break;
       case 4:
-        title = '코인 상점';
+        title = '肄붿씤 ?곸젏';
         subtitle = null;
         break;
       default:
@@ -258,7 +258,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
                     MaterialPageRoute(builder: (_) => const NotificationsScreen()),
                   );
                 },
-                tooltip: '알림',
+                tooltip: '?뚮┝',
               ),
               IconButton(
                 icon: const Icon(LucideIcons.settings, color: Colors.white, size: 26),
@@ -267,7 +267,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
                     MaterialPageRoute(builder: (_) => const SettingsScreen()),
                   );
                 },
-                tooltip: '설정',
+                tooltip: '?ㅼ젙',
               ),
             ],
           ),
@@ -280,11 +280,11 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
     const inactiveColor = Color(0xFF9CA3AF); // gray-400 (last)
     // last: active tab = bg-gradient-to-br themeColors.gradient (from-rose-300 via-pink-300 to-rose-400), text white
     final activeGradient = ThemeController.getActiveAccentGradient();
-    final labels = ['대학교 랭킹', '메시지함', '게시판', '프로필', '상점'];
+    final labels = ['대학교 랭킹', '메시지함', '홈', '프로필', '상점'];
     final icons = [
       LucideIcons.trophy,
       LucideIcons.messageCircle,
-      LucideIcons.grid3x3,
+      LucideIcons.house,
       LucideIcons.user,
       LucideIcons.shoppingBag,
     ];
@@ -393,3 +393,5 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
     );
   }
 }
+
+

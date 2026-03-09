@@ -1,8 +1,8 @@
-import 'package:dio/dio.dart';
+﻿import 'package:dio/dio.dart';
 import 'package:nearo_app/shared/api/api_client.dart';
 
-/// 계정별 열람권/매칭권/등록권 잔량 (DB에 크레딧처럼 보관)
-/// 등록권 1장 사용 → 게시판 등록 → 매칭권 1장 지급
+/// 怨꾩젙蹂??대엺沅?留ㅼ묶沅??깅줉沅??붾웾 (DB???щ젅?㏃쿂??蹂닿?)
+/// ?깅줉沅?1???ъ슜 ??寃뚯떆???깅줉 ??留ㅼ묶沅?1??吏湲?
 class MyTickets {
   const MyTickets({
     required this.viewTicket,
@@ -30,8 +30,24 @@ class MatchingBoardRepository {
   final ApiClient _client;
 
   MatchingBoardRepository({ApiClient? client}) : _client = client ?? ApiClient();
+  static String _dioMessage(DioException e, {String fallback = '요청 처리 중 오류가 발생했습니다.'}) {
+    final data = e.response?.data;
+    if (data is Map) {
+      final message = data['message'];
+      if (message is String && message.trim().isNotEmpty) return message.trim();
+      if (message is List && message.isNotEmpty) {
+        final joined = message.map((m) => m.toString().trim()).where((m) => m.isNotEmpty).join('\\n');
+        if (joined.isNotEmpty) return joined;
+      }
+      final error = data['error'];
+      if (error is String && error.trim().isNotEmpty) return error.trim();
+    } else if (data is String && data.trim().isNotEmpty) {
+      return data.trim();
+    }
+    return e.message?.trim().isNotEmpty == true ? e.message!.trim() : fallback;
+  }
 
-  /// 게시판 프로필 목록. preferredGender: 보여줄 상대 성별 (남자 계정이면 'female', 여자 계정이면 'male')
+  /// 寃뚯떆???꾨줈??紐⑸줉. preferredGender: 蹂댁뿬以??곷? ?깅퀎 (?⑥옄 怨꾩젙?대㈃ 'female', ?ъ옄 怨꾩젙?대㈃ 'male')
   Future<List<Map<String, dynamic>>> fetchProfiles({String? preferredGender}) async {
     final query = <String, dynamic>{};
     if (preferredGender != null && preferredGender.isNotEmpty) {
@@ -48,7 +64,7 @@ class MatchingBoardRepository {
     return list;
   }
 
-  /// 서버 응답이 Profile+user 형태여도 카드에서 nickname/userId/idealType을 항상 읽을 수 있도록 보강
+  /// ?쒕쾭 ?묐떟??Profile+user ?뺥깭?щ룄 移대뱶?먯꽌 nickname/userId/idealType????긽 ?쎌쓣 ???덈룄濡?蹂닿컯
   static Map<String, dynamic> _normalizeBoardProfile(Map<String, dynamic> p) {
     final user = p['user'] is Map ? p['user'] as Map<String, dynamic> : null;
     final out = Map<String, dynamic>.from(p);
@@ -75,22 +91,30 @@ class MatchingBoardRepository {
         options: Options(sendTimeout: const Duration(seconds: 25), receiveTimeout: const Duration(seconds: 25)),
       );
     } on DioException catch (e) {
-      final msg = e.response?.data is Map && e.response?.data['message'] != null
-          ? e.response?.data['message'].toString()
-          : e.message;
-      throw msg ?? '등록 중 오류가 발생했습니다.';
+      throw _dioMessage(e, fallback: '매칭 요청 중 오류가 발생했습니다.');
     }
   }
 
-  /// 가져가기 요청 전송 (상대에게 알림 감, 수락 시에만 매칭 성사 / 거절 시 매칭권 환불)
-  /// [message]: 보낼 멘트 (선택). 상대방 요청 상세 화면에 표시됨.
+  /// 媛?멸?湲??붿껌 ?꾩넚 (?곷??먭쾶 ?뚮┝ 媛? ?섎씫 ?쒖뿉留?留ㅼ묶 ?깆궗 / 嫄곗젅 ??留ㅼ묶沅??섎텋)
+  /// [message]: 蹂대궪 硫섑듃 (?좏깮). ?곷?諛??붿껌 ?곸꽭 ?붾㈃???쒖떆??
   Future<void> takeNote(String profileId, {String? message}) async {
     final body = <String, dynamic>{'profileId': profileId};
     if (message != null && message.trim().isNotEmpty) body['message'] = message.trim();
-    await _client.dio.post('/matching-board/take-note', data: body);
+    try {
+      await _client.dio.post(
+        '/matching-board/take-note',
+        data: body,
+        options: Options(
+          sendTimeout: const Duration(seconds: 15),
+          receiveTimeout: const Duration(seconds: 15),
+        ),
+      );
+    } on DioException catch (e) {
+      throw _dioMessage(e, fallback: '등록 중 오류가 발생했습니다.');
+    }
   }
 
-  /// 내가 받은 가져가기 요청 목록 (매칭대기함용, pending만)
+  /// ?닿? 諛쏆? 媛?멸?湲??붿껌 紐⑸줉 (留ㅼ묶?湲고븿?? pending留?
   Future<List<Map<String, dynamic>>> fetchMyTakeNoteRequests() async {
     final response = await _client.dio.get('/matching-board/take-note-requests');
     final list = response.data;
@@ -98,7 +122,7 @@ class MatchingBoardRepository {
     return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
-  /// 내가 보낸 가져가기 요청 목록 (상대방 읽음 여부 포함)
+  /// ?닿? 蹂대궦 媛?멸?湲??붿껌 紐⑸줉 (?곷?諛??쎌쓬 ?щ? ?ы븿)
   Future<List<Map<String, dynamic>>> fetchMySentTakeNoteRequests() async {
     final response = await _client.dio.get('/matching-board/take-note-requests/sent');
     final list = response.data;
@@ -106,18 +130,18 @@ class MatchingBoardRepository {
     return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
-  /// 가져가기 요청 상세 조회 (요청자 프로필 포함)
+  /// 媛?멸?湲??붿껌 ?곸꽭 議고쉶 (?붿껌???꾨줈???ы븿)
   Future<Map<String, dynamic>> fetchTakeNoteRequest(String requestId) async {
     final response = await _client.dio.get('/matching-board/take-note-requests/$requestId');
     return Map<String, dynamic>.from(response.data as Map);
   }
 
-  /// 가져가기 요청 수락 → 매칭 성사
+  /// 媛?멸?湲??붿껌 ?섎씫 ??留ㅼ묶 ?깆궗
   Future<void> acceptTakeNoteRequest(String requestId) async {
     await _client.dio.post('/matching-board/take-note-requests/$requestId/accept');
   }
 
-  /// 가져가기 요청 거절 → 요청자 매칭권 환불. [rejectionMessage] 5자 이상 필수.
+  /// 媛?멸?湲??붿껌 嫄곗젅 ???붿껌??留ㅼ묶沅??섎텋. [rejectionMessage] 5???댁긽 ?꾩닔.
   Future<void> rejectTakeNoteRequest(String requestId, String rejectionMessage) async {
     await _client.dio.post(
       '/matching-board/take-note-requests/$requestId/reject',
@@ -125,12 +149,12 @@ class MatchingBoardRepository {
     );
   }
 
-  /// 열람권 1장 소비 후 프로필 상세 열람 (카드 탭 시 호출)
+  /// ?대엺沅?1???뚮퉬 ???꾨줈???곸꽭 ?대엺 (移대뱶 ?????몄텧)
   Future<void> consumeViewTicket(String profileId) async {
     await _client.dio.post('/matching-board/consume-view-ticket', data: {'profileId': profileId});
   }
 
-  /// GET /users/me/tickets → { viewTicket, matchingTicket, registerTicket }
+  /// GET /users/me/tickets ??{ viewTicket, matchingTicket, registerTicket }
   Future<MyTickets> fetchMyTickets() async {
     try {
       final response = await _client.dio.get('/users/me/tickets');
@@ -172,8 +196,9 @@ class MatchingBoardRepository {
     await _client.dio.post('/users/me/credit/increase', data: {'amount': coins});
   }
 
-  /// 상점: 코인으로 티켓 구매. 1코인=1열람권, 5코인=1등록권
+  /// ?곸젏: 肄붿씤?쇰줈 ?곗폆 援щℓ. 1肄붿씤=1?대엺沅? 5肄붿씤=1?깅줉沅?
   Future<void> purchaseTicket(String product, {int quantity = 1}) async {
     await _client.dio.post('/users/me/credit/increase', data: {'product': product, 'quantity': quantity});
   }
 }
+
