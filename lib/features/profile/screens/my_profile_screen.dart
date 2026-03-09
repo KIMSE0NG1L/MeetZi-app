@@ -181,6 +181,89 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     );
   }
 
+  /// 사진/아바타 탭 시 크게 보기
+  void _showAvatarLarge() {
+    final displayType = _profile?['boardDisplayType']?.toString();
+    dynamic photos = _profile?['photos'];
+    if (photos is! List && _profile?['user'] is Map) {
+      photos = (_profile!['user'] as Map)['photos'];
+    }
+    String? photoUrl;
+    if (displayType == 'photo' && photos is List && photos.isNotEmpty && photos[0] is Map) {
+      final first = photos[0] as Map<String, dynamic>;
+      final storageKey = first['storageKey']?.toString();
+      if (storageKey != null && storageKey.isNotEmpty) {
+        photoUrl = photoUrlFromStorageKey(storageKey);
+      }
+    }
+    final seed = _profile?['avatarSeed']?.toString() ?? _profile?['id']?.toString();
+    final options = _parseAvatarOptions(_profile?['avatarOptions']);
+    final avatarUrl = seed != null && seed.isNotEmpty
+        ? diceBearAvatarUrl(seed, options: options.isNotEmpty ? options : null)
+        : null;
+
+    if (photoUrl == null && avatarUrl == null) return;
+
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black87,
+      barrierDismissible: true,
+      builder: (context) => GestureDetector(
+        onTap: () => Navigator.of(context).pop(),
+        behavior: HitTestBehavior.opaque,
+        child: Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
+          child: GestureDetector(
+            onTap: () {}, // 내부 탭 시 닫히지 않게
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Align(
+                  alignment: Alignment.topRight,
+                  child: IconButton(
+                    icon: const Icon(LucideIcons.x, color: Colors.white, size: 28),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ),
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width - 48,
+                    maxHeight: MediaQuery.of(context).size.height * 0.6,
+                  ),
+                  child: AspectRatio(
+                    aspectRatio: 1,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: photoUrl != null && photoUrl.isNotEmpty
+                          ? Image.network(
+                              photoUrl,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => Icon(LucideIcons.user, size: 120, color: Colors.grey.shade400),
+                            )
+                          : avatarUrl != null
+                              ? SvgPicture.network(
+                                  avatarUrl,
+                                  fit: BoxFit.contain,
+                                  placeholderBuilder: (_) => Icon(LucideIcons.user, size: 120, color: Colors.grey.shade400),
+                                )
+                              : Icon(LucideIcons.user, size: 120, color: Colors.grey.shade400),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '탭하면 닫기',
+                  style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.7)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
@@ -236,7 +319,11 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                             border: Border.all(color: primary.withValues(alpha: 0.4), width: 4),
                                             boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 16)],
                                           ),
-                                          child: _buildMyProfileAvatar(),
+                                          child: GestureDetector(
+                                            onTap: _showAvatarLarge,
+                                            behavior: HitTestBehavior.opaque,
+                                            child: _buildMyProfileAvatar(),
+                                          ),
                                         ),
                                         const SizedBox(height: 16),
                                         Text(
