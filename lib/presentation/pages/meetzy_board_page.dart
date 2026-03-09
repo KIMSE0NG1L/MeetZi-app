@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/core/theme/meetzy_design_tokens.dart';
 import 'package:nearo_app/core/theme/university_theme.dart';
@@ -15,6 +15,7 @@ class MeetzyBoardContent extends StatelessWidget {
     this.myNickname,
     this.myAvatarWidget,
     this.matchingTicket = 0,
+    this.receivedRequestCount = 0,
     this.profiles = const [],
     this.onProfileTap,
     this.onRefresh,
@@ -25,6 +26,7 @@ class MeetzyBoardContent extends StatelessWidget {
   final String? myNickname;
   final Widget? myAvatarWidget;
   final int matchingTicket;
+  final int receivedRequestCount;
   final List<MeetzyBoardProfileItem> profiles;
   final void Function(int index, MeetzyBoardProfileItem item)? onProfileTap;
   final Future<void> Function()? onRefresh;
@@ -52,6 +54,7 @@ class MeetzyBoardContent extends StatelessWidget {
                   nickname: myNickname ?? '닉네임',
                   avatarWidget: myAvatarWidget ?? _defaultAvatar(),
                   matchingTicket: matchingTicket,
+                  receivedRequestCount: receivedRequestCount,
                   onMatchingInboxTap: onMatchingInboxTap,
                 ),
                 const SizedBox(height: MeetzyDesignTokens.space6),

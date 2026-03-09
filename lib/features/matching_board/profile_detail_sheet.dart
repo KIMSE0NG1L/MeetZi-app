@@ -144,11 +144,13 @@ MeetzyProfileDetailData profileMapToDetailData(Map<String, dynamic> profile) {
 }
 
 /// 채팅방·메시지함 등에서 프로필 상세만 볼 때 사용 — 게시판 카드와 동일한 슬라이드 업 효과 + MeetzyProfileDetailModal, hideMatchButton 시 매칭하기 비표시
+/// [overridePhotoUrlForEnlarge]: 프로필에 photos가 없어도(동의 전 등) 목록에서 쓰는 사진 URL이 있으면 탭 시 확대용으로 전달
 Future<void> showProfileDetailSheet(
   BuildContext context, {
   required Map<String, dynamic> profile,
   required Widget Function(BuildContext context, Map<String, dynamic> profile) buildAvatar,
   bool hideMatchButton = false,
+  String? overridePhotoUrlForEnlarge,
 }) async {
   final detailData = profileMapToDetailData(profile);
   String? photoUrlForEnlarge;
@@ -157,6 +159,9 @@ Future<void> showProfileDetailSheet(
     photoUrlForEnlarge = photo;
     avatarUrlForEnlarge = avatar;
   });
+  if ((photoUrlForEnlarge == null || photoUrlForEnlarge!.isEmpty) && overridePhotoUrlForEnlarge != null && overridePhotoUrlForEnlarge.isNotEmpty) {
+    photoUrlForEnlarge = overridePhotoUrlForEnlarge;
+  }
   final dark = Theme.of(context).brightness == Brightness.dark;
   if (!context.mounted) return;
   await showGeneralDialog<void>(

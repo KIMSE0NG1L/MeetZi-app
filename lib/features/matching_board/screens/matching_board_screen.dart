@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -232,6 +232,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   bool _isOpeningSheet = false; // 移대뱶 ?고? 諛⑹?: ?쒗듃 ?대━???숈븞 異붽? ??臾댁떆
   int? _myCredit;
   MyTickets? _myTickets;
+  int _receivedRequestCount = 0;
   late Future<Map<String, dynamic>> _myProfileFuture;
   String? _preferredGender;
 
@@ -242,6 +243,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     _primePreferredGender();
     _fetchProfiles();
     _fetchMySummary();
+    _fetchReceivedRequestCount();
     widget.refreshTrigger?.addListener(_onRefreshTriggered);
   }
 
@@ -254,6 +256,17 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   void _onRefreshTriggered() {
     _fetchProfiles();
     _fetchMySummary();
+    _fetchReceivedRequestCount();
+  }
+
+  Future<void> _fetchReceivedRequestCount() async {
+    try {
+      final list = await _repository.fetchMyTakeNoteRequests();
+      if (!mounted) return;
+      setState(() => _receivedRequestCount = list.length);
+    } catch (_) {
+      if (mounted) setState(() => _receivedRequestCount = 0);
+    }
   }
 
   String? _normalizePreferredGender(dynamic rawGender) {
@@ -480,6 +493,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                   )
                 : null,
             matchingTicket: _myTickets?.matchingTicket ?? 0,
+            receivedRequestCount: _receivedRequestCount,
             profiles: displayProfiles.asMap().entries.map((e) {
               final i = e.key;
               final p = e.value;
@@ -499,6 +513,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
             onRefresh: () async {
               await _fetchProfiles();
               await _fetchMySummary();
+              await _fetchReceivedRequestCount();
             },
             onMatchingInboxTap: () {
               final size = MediaQuery.of(context).size;
@@ -536,7 +551,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                     ),
                   ),
                 ),
-              );
+              ).then((_) => _fetchReceivedRequestCount());
             },
             isLoading: _loading,
           ),
