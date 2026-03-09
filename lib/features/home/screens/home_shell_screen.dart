@@ -1,9 +1,9 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/app/app.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
-import 'package:nearo_app/features/home/screens/university_ranking_screen.dart';
+import 'package:nearo_app/features/community/screens/community_tab_screen.dart';
 import 'package:nearo_app/features/matching_board/screens/matching_board_screen.dart';
 import 'package:nearo_app/features/messages/screens/messages_screen.dart';
 import 'package:nearo_app/features/notifications/screens/notifications_screen.dart';
@@ -32,14 +32,13 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
   Map<String, dynamic>? _profile;
   bool _profileLoading = true;
   final ValueNotifier<int> _boardRefreshTrigger = ValueNotifier<int>(0);
-  final ValueNotifier<int> _messagesRefreshTrigger = ValueNotifier<int>(0);
   bool _routeObserverSubscribed = false;
   bool _takeNoteDialogShown = false;
   bool _showCoachMark = false;
 
   List<Widget> get _pages => [
-    const UniversityRankingScreen(),
-    MessagesScreen(refreshTrigger: _messagesRefreshTrigger),
+    const CommunityTabScreen(),
+    const MessagesScreen(),
     MatchingBoardScreen(refreshTrigger: _boardRefreshTrigger),
     const MyProfileScreen(),
     RatingsScreen(),
@@ -129,7 +128,6 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
     PendingTakeNoteStore.instance.pending.removeListener(_onPendingTakeNote);
     routeObserver.unsubscribe(this);
     _boardRefreshTrigger.dispose();
-    _messagesRefreshTrigger.dispose();
     _pageController.dispose();
     super.dispose();
   }
@@ -177,7 +175,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
     String? subtitle;
     switch (_currentIndex) {
       case 0:
-        title = '??숆탳 ??궧';
+        title = '커뮤니티';
         subtitle = null;
         break;
       case 1:
@@ -193,7 +191,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
         subtitle = null;
         break;
       case 4:
-        title = '肄붿씤 ?곸젏';
+        title = '상점';
         subtitle = null;
         break;
       default:
@@ -282,9 +280,9 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
     const inactiveColor = Color(0xFF9CA3AF); // gray-400 (last)
     // last: active tab = bg-gradient-to-br themeColors.gradient (from-rose-300 via-pink-300 to-rose-400), text white
     final activeGradient = ThemeController.getActiveAccentGradient();
-    final labels = ['대학교 랭킹', '메시지함', '홈', '프로필', '상점'];
+    final labels = ['커뮤니티', '메시지함', '홈', '프로필', '상점'];
     final icons = [
-      LucideIcons.trophy,
+      LucideIcons.users,
       LucideIcons.messageCircle,
       LucideIcons.house,
       LucideIcons.user,
@@ -314,9 +312,6 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
                     onTap: () {
                       if (i == _currentIndex) return;
                       setState(() => _currentIndex = i);
-                      if (i == 1) {
-                        _messagesRefreshTrigger.value++;
-                      }
                       _pageController.animateToPage(
                         i,
                         duration: const Duration(milliseconds: 300),
@@ -367,6 +362,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
 
   @override
   Widget build(BuildContext context) {
+    final hideTopBarForCommunity = _currentIndex == 0;
     return Scaffold(
       backgroundColor: Theme.of(context).brightness == Brightness.dark
           ? const Color(0xFF111827)
@@ -376,17 +372,12 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildTopBar(),
+              if (!hideTopBarForCommunity) _buildTopBar(),
               Expanded(
                 child: PageView.builder(
                   controller: _pageController,
                   itemCount: _pages.length,
-                  onPageChanged: (index) {
-                    setState(() => _currentIndex = index);
-                    if (index == 1) {
-                      _messagesRefreshTrigger.value++;
-                    }
-                  },
+                  onPageChanged: (index) => setState(() => _currentIndex = index),
                   itemBuilder: (_, index) => _pages[index],
                 ),
               ),
