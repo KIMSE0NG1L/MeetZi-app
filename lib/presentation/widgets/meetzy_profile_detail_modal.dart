@@ -63,26 +63,31 @@ class MeetzyProfileDetailModal extends StatelessWidget {
                         maxWidth: MediaQuery.of(ctx).size.width - 48,
                         maxHeight: MediaQuery.of(ctx).size.height * 0.6,
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: (photoUrlForEnlarge != null && photoUrlForEnlarge!.isNotEmpty)
-                            ? Image.network(
-                                photoUrlForEnlarge!,
-                                fit: BoxFit.contain,
-                                errorBuilder: (_, __, ___) => const Icon(LucideIcons.user, size: 120, color: Colors.white54),
-                              )
-                            : (avatarUrlForEnlarge != null && avatarUrlForEnlarge!.isNotEmpty)
-                                ? SvgPicture.network(
-                                    avatarUrlForEnlarge!,
+                      child: InteractiveViewer(
+                          minScale: 1.0,
+                          maxScale: 4.0,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: (photoUrlForEnlarge != null && photoUrlForEnlarge!.isNotEmpty)
+                                ? Image.network(
+                                    photoUrlForEnlarge!,
                                     fit: BoxFit.contain,
-                                    placeholderBuilder: (_) => const Icon(LucideIcons.user, size: 120, color: Colors.white54),
+                                    errorBuilder: (_, __, ___) => const Icon(LucideIcons.user, size: 120, color: Colors.white54),
                                   )
-                                : const SizedBox.shrink(),
+                                : (avatarUrlForEnlarge != null && avatarUrlForEnlarge!.isNotEmpty)
+                                    ? SvgPicture.network(
+                                        avatarUrlForEnlarge!,
+                                        fit: BoxFit.contain,
+                                        placeholderBuilder: (_) => const Icon(LucideIcons.user, size: 120, color: Colors.white54),
+                                      )
+                                    : const SizedBox.shrink(),
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '탭하면 닫기',
+                      '탭하면 닫기 · 핀치로 확대',
                       style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.7)),
                     ),
                   ],
@@ -167,10 +172,15 @@ class MeetzyProfileDetailModal extends StatelessWidget {
                                 ],
                               ),
                               child: ClipOval(
-                                child: _wrapAvatarWithEnlarge(
-                                  context,
-                                  avatarWidget ??
-                                      Icon(LucideIcons.user, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                                child: SizedBox.expand(
+                                  child: FittedBox(
+                                    fit: BoxFit.cover,
+                                    child: _wrapAvatarWithEnlarge(
+                                      context,
+                                      avatarWidget ??
+                                          Icon(LucideIcons.user, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
@@ -402,7 +412,6 @@ class MeetzyProfileDetailModal extends StatelessWidget {
                         ),
                       ),
                     ),
-                  ),
                 ],
               ],
             ),

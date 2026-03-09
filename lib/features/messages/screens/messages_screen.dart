@@ -209,6 +209,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
           if (key != null) profilePhotoUrl = _resolvePhotoUrl(key);
         }
       }
+      // 목록에서 이미 사진이 보이면(photoUrl) 그걸 우선 사용 (getPartnerProfile은 동의 전 photos:[] 반환)
+      final effectivePhotoUrl = photoUrl ?? profilePhotoUrl;
       final user = profile['user'] as Map<String, dynamic>?;
       final seed = user?['avatarSeed']?.toString() ?? profile['avatarSeed']?.toString() ?? avatarSeed;
       Map<String, String> optsMap = avatarOptions;
@@ -228,8 +230,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
       await showProfileDetailSheet(
         context,
         profile: profile,
-        buildAvatar: (ctx, p) => _buildProfileModalAvatar(ctx, profilePhotoUrl ?? photoUrl, seed, optsMap),
+        buildAvatar: (ctx, p) => _buildProfileModalAvatar(ctx, effectivePhotoUrl, seed, optsMap),
         hideMatchButton: true,
+        overridePhotoUrlForEnlarge: effectivePhotoUrl,
       );
     } catch (_) {
       if (context.mounted) {
@@ -373,6 +376,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                   'roomId': roomId,
                                   'partnerNickname': partner,
                                   'isActive': isActive,
+                                  'partnerPhotoStorageKey': photoKey,
+                                  'partnerAvatarSeed': avatarSeed,
+                                  'partnerAvatarOptions': avatarOptionsRaw,
                                 })
                                 .then((value) {
                               if (value == true) _loadRooms();

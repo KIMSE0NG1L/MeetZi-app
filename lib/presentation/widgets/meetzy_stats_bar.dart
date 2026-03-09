@@ -12,6 +12,7 @@ class MeetzyStatsBar extends StatelessWidget {
     required this.nickname,
     required this.avatarWidget,
     required this.matchingTicket,
+    this.receivedRequestCount = 0,
     this.onMatchingTap,
     this.onMatchingInboxTap,
   });
@@ -19,6 +20,8 @@ class MeetzyStatsBar extends StatelessWidget {
   final String nickname;
   final Widget avatarWidget;
   final int matchingTicket;
+  /// 매칭대기함 아이콘에 표시할 받은 요청 개수
+  final int receivedRequestCount;
   /// 매칭권 칩 탭 시 호출
   final VoidCallback? onMatchingTap;
   /// 매칭대기함 열기
@@ -64,7 +67,7 @@ class MeetzyStatsBar extends StatelessWidget {
           ),
           const SizedBox(width: MeetzyDesignTokens.statsBarGap),
           if (onMatchingInboxTap != null) ...[
-            _MatchingInboxChip(onTap: onMatchingInboxTap!),
+            _MatchingInboxChip(onTap: onMatchingInboxTap!, badgeCount: receivedRequestCount),
             const SizedBox(width: MeetzyDesignTokens.space2),
           ],
           _wrapMatchingChip(context),
@@ -87,9 +90,10 @@ class MeetzyStatsBar extends StatelessWidget {
 
 /// 매칭대기함 진입 칩
 class _MatchingInboxChip extends StatelessWidget {
-  const _MatchingInboxChip({required this.onTap});
+  const _MatchingInboxChip({required this.onTap, this.badgeCount = 0});
 
   final VoidCallback onTap;
+  final int badgeCount;
 
   @override
   Widget build(BuildContext context) {
@@ -104,7 +108,42 @@ class _MatchingInboxChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          child: Icon(LucideIcons.mail, size: 26, color: fg),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Icon(LucideIcons.mail, size: 26, color: fg),
+              if (badgeCount > 0)
+                Positioned(
+                  right: -4,
+                  bottom: -4,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.error,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 4,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                    child: Center(
+                      child: Text(
+                        badgeCount > 99 ? '99+' : '$badgeCount',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
