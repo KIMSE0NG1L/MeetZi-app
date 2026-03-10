@@ -28,9 +28,6 @@ String diceBearAvatarUrl(
     if (params.containsKey('earrings') && params['earrings']!.isNotEmpty) {
       params['earringsProbability'] = '100';
     }
-    if (params.containsKey('freckles') && params['freckles']!.isNotEmpty) {
-      params['frecklesProbability'] = '100';
-    }
     if (params.containsKey('hairAccessories') && params['hairAccessories']!.isNotEmpty) {
       params['hairAccessoriesProbability'] = '100';
     }
