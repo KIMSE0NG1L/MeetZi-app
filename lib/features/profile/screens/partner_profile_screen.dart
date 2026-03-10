@@ -177,7 +177,7 @@ class PartnerProfileScreen extends StatelessWidget {
       _infoRow('MBTI', _pluck(profile, ['mbti', 'mbtiType']) ?? '-'),
       _infoRow('흡연', _smokingToKr(_pluck(profile, ['smoking', 'smoke'])?.toString())),
       _infoRow('음주', _drinkingToKr(_pluck(profile, ['drinking', 'alcohol'])?.toString())),
-      _infoRow('한 줄 소개', _pluck(profile, ['oneLineIntroduce', 'bio', 'introduction']) ?? '-'),
+      _infoRow('자기 소개', _pluck(profile, ['oneLineIntroduce', 'bio', 'introduction']) ?? '-'),
       _infoRow('이상형', _pluck(profile, ['idealType', 'ideal']) ?? '-'),
       _infoRow('패션 스타일', _pluck(profile, ['fashionStyle', 'style']) ?? '-'),
       _infoRow('선호 데이트', _pluck(profile, ['preferredDate', 'preferredDating']) ?? '-'),

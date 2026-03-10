@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/matching_board/data/matching_board_repository.dart';
 import 'package:nearo_app/features/matching_board/screens/matching_board_screen.dart' as board;
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
+import 'package:nearo_app/shared/utils/photo_url.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 /// 상대가 나한테 가져가기 요청 → 알림에서 들어와서 상세 보기 + 받기/거절 (거절 시 요청자 매칭권 환불)
@@ -64,6 +65,47 @@ class _TakeNoteRequestResponseScreenState extends State<TakeNoteRequestResponseS
 
   Future<void> _accept() async {
     if (_actionLoading) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+        final dark = theme.brightness == Brightness.dark;
+        return AlertDialog(
+          title: const Text('수락할까요?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '수락하면 매칭이 성사돼요.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: dark ? Colors.grey.shade300 : Colors.grey.shade700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '매칭권 1개가 사용됩니다.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('취소'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('수락'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !mounted) return;
     setState(() => _actionLoading = true);
     try {
       await _repository.acceptTakeNoteRequest(widget.requestId);
@@ -194,7 +236,7 @@ class _TakeNoteRequestResponseScreenState extends State<TakeNoteRequestResponseS
                               const SizedBox(height: 16),
                               _infoRow('학과', _str(_profile!['department'] ?? (_profile!['user'] as Map?)?['department']), onSurfaceVariant, onSurface),
                               _infoRow('성별', _str(_profile!['gender'] ?? (_profile!['user'] as Map?)?['gender']), onSurfaceVariant, onSurface),
-                              _infoRow('한 줄 소개', _str((_profile!['user'] as Map?)?['introOneLine']), onSurfaceVariant, onSurface),
+                              _infoRow('자기 소개', _str((_profile!['user'] as Map?)?['introOneLine']), onSurfaceVariant, onSurface),
                             ],
                           ),
                         ),
@@ -233,6 +275,29 @@ class _TakeNoteRequestResponseScreenState extends State<TakeNoteRequestResponseS
 
   Widget _buildAvatar(BuildContext context, Map<String, dynamic> profile) {
     final user = profile['user'] as Map<String, dynamic>?;
+    final displayType = profile['boardDisplayType']?.toString() ?? user?['boardDisplayType']?.toString();
+    dynamic photos = user?['photos'] ?? profile['photos'];
+    if (displayType == 'photo' && photos is List && photos.isNotEmpty && photos[0] is Map) {
+      final key = (photos[0] as Map)['storageKey']?.toString();
+      if (key != null) {
+        final photoUrl = photoUrlFromStorageKey(key);
+        if (photoUrl != null && photoUrl.isNotEmpty) {
+          return CircleAvatar(
+            radius: 44,
+            backgroundColor: Colors.grey.shade200,
+            child: ClipOval(
+              child: Image.network(
+                photoUrl,
+                fit: BoxFit.cover,
+                width: 88,
+                height: 88,
+                errorBuilder: (_, __, ___) => Icon(LucideIcons.user, size: 48, color: Colors.grey.shade600),
+              ),
+            ),
+          );
+        }
+      }
+    }
     final seed = user?['avatarSeed']?.toString() ?? profile['userId']?.toString();
     if (seed != null && seed.isNotEmpty) {
       return CircleAvatar(

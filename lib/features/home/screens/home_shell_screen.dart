@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/app/app.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
-import 'package:nearo_app/features/home/screens/university_ranking_screen.dart';
+import 'package:nearo_app/features/community/screens/community_tab_screen.dart';
 import 'package:nearo_app/features/matching_board/screens/matching_board_screen.dart';
 import 'package:nearo_app/features/messages/screens/messages_screen.dart';
 import 'package:nearo_app/features/notifications/screens/notifications_screen.dart';
@@ -13,9 +13,11 @@ import 'package:nearo_app/features/profile/screens/my_profile_screen.dart';
 import 'package:nearo_app/features/ratings/screens/ratings_screen.dart';
 import 'package:nearo_app/features/settings/screens/settings_screen.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
+import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/features/auth/data/environment_status_repository.dart';
+import 'package:nearo_app/presentation/widgets/meetzy_coach_mark.dart';
 
-/// AppDesign 기준: 탭별 헤더 그라데이션 + 하단 5탭 네비 (대학교 랭킹 / 메시지함 / 게시판 / 프로필 / 상점)
+/// 설명 주석
 class HomeShellScreen extends StatefulWidget {
   const HomeShellScreen({super.key});
 
@@ -32,9 +34,10 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
   final ValueNotifier<int> _boardRefreshTrigger = ValueNotifier<int>(0);
   bool _routeObserverSubscribed = false;
   bool _takeNoteDialogShown = false;
+  bool _showCoachMark = false;
 
   List<Widget> get _pages => [
-    const UniversityRankingScreen(),
+    const CommunityTabScreen(),
     const MessagesScreen(),
     MatchingBoardScreen(refreshTrigger: _boardRefreshTrigger),
     const MyProfileScreen(),
@@ -52,6 +55,12 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
     super.initState();
     _loadThemeAndProfile();
     PendingTakeNoteStore.instance.pending.addListener(_onPendingTakeNote);
+    _checkCoachMark();
+  }
+
+  Future<void> _checkCoachMark() async {
+    final shouldShow = await MeetzyCoachMark.shouldShow();
+    if (mounted && shouldShow) setState(() => _showCoachMark = true);
   }
 
   void _onPendingTakeNote() {
@@ -71,8 +80,8 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
       barrierDismissible: false,
       builder: (ctx) {
         return AlertDialog(
-          title: const Text('가져가기 요청'),
-          content: const Text('누군가 내 카드를 가져가려고 해요.\n지금 확인해 볼까요?'),
+          title: const Text('매칭 요청'),
+          content: const Text('누군가 당신의 프로필을 가져갔어요.\n매칭 대기함에서 확인해 보세요.'),
           actions: [
             TextButton(
               onPressed: () {
@@ -94,7 +103,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
                   ),
                 );
               },
-              child: const Text('보기'),
+              child: const Text('확인'),
             ),
           ],
         );
@@ -125,20 +134,23 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
 
   @override
   void didPopNext() {
-    // 다른 화면(프로필 수정 등)에서 홈으로 돌아왔을 때 게시판 목록 갱신
+    // 설명 주석
     _boardRefreshTrigger.value++;
   }
 
   Future<void> _loadThemeAndProfile() async {
     try {
+      await ThemeController.loadThemeColorMode();
+      if (ThemeController.themeColorMode.value == 'school') {
+        try {
+          final status = await EnvironmentStatusRepository().getMyEnvironmentStatus();
+          final primaryHex = (status['environment'] as Map?)?['primaryColor']?.toString();
+          final primary = ThemeController.parsePrimaryColor(primaryHex);
+          if (primary != null) ThemeController.setSeedColor(primary);
+        } catch (_) {}
+      }
       final result = await _authRepository.getProfile();
       final user = (result['user'] as Map?)?.cast<String, dynamic>() ?? result as Map<String, dynamic>;
-      try {
-        final status = await EnvironmentStatusRepository().getMyEnvironmentStatus();
-        final primaryHex = (status['environment'] as Map?)?['primaryColor']?.toString();
-        final primary = ThemeController.parsePrimaryColor(primaryHex);
-        if (primary != null) ThemeController.setSeedColor(primary);
-      } catch (_) {}
       setState(() {
         _profile = user;
         _profileLoading = false;
@@ -151,20 +163,19 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
   String get _affiliationShort {
     final affiliation = _profile?['affiliationText']?.toString();
     if (affiliation == null || affiliation.isEmpty) return '';
-    return affiliation.endsWith('학교')
+    return affiliation.endsWith('대학교')
         ? affiliation.substring(0, affiliation.length - 2)
         : affiliation;
   }
 
   Widget _buildTopBar() {
     final isRanking = _currentIndex == 0;
-    final primary = Theme.of(context).colorScheme.primary;
-    final gradient = isRanking ? _purpleGradient : ThemeController.gradientFromPrimary(primary);
+    final gradient = isRanking ? _purpleGradient : ThemeController.getHeaderGradient();
     String title = '';
     String? subtitle;
     switch (_currentIndex) {
       case 0:
-        title = '대학교 랭킹';
+        title = '커뮤니티';
         subtitle = null;
         break;
       case 1:
@@ -176,11 +187,11 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
         subtitle = _affiliationShort.isNotEmpty ? _affiliationShort : null;
         break;
       case 3:
-        title = '프로필';
+        title = '마이프로필';
         subtitle = null;
         break;
       case 4:
-        title = '코인 상점';
+        title = '상점';
         subtitle = null;
         break;
       default:
@@ -265,21 +276,23 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
   }
 
   Widget _buildBottomNav() {
-    final activeColor = Theme.of(context).colorScheme.primary;
-    const inactiveColor = Color(0xFF9CA3AF); // gray-400
-    final labels = ['대학교 랭킹', '메시지함', '게시판', '프로필', '상점'];
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    const inactiveColor = Color(0xFF9CA3AF); // gray-400 (last)
+    // last: active tab = bg-gradient-to-br themeColors.gradient (from-rose-300 via-pink-300 to-rose-400), text white
+    final activeGradient = ThemeController.getActiveAccentGradient();
+    final labels = ['커뮤니티', '메시지함', '홈', '마이프로필', '상점'];
     final icons = [
-      LucideIcons.trophy,
+      LucideIcons.users,
       LucideIcons.messageCircle,
-      LucideIcons.grid3x3,
+      LucideIcons.house,
       LucideIcons.user,
       LucideIcons.shoppingBag,
     ];
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border(top: BorderSide(color: Colors.grey.shade300)),
+        color: dark ? const Color(0xFF1F2937) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         boxShadow: [
           BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8, offset: const Offset(0, -2)),
         ],
@@ -287,46 +300,55 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: List.generate(5, (i) {
               final active = _currentIndex == i;
               return Expanded(
-                child: InkWell(
-                  onTap: () {
-                    if (i == _currentIndex) return;
-                    setState(() => _currentIndex = i);
-                    _pageController.animateToPage(
-                      i,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(12),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          icons[i],
-                          size: 24,
-                          color: active ? activeColor : inactiveColor,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          labels[i],
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: active ? FontWeight.bold : FontWeight.w500,
-                            color: active ? activeColor : inactiveColor,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      if (i == _currentIndex) return;
+                      setState(() => _currentIndex = i);
+                      _pageController.animateToPage(
+                        i,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        gradient: active ? activeGradient : null,
+                        color: active ? null : Colors.transparent,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: active ? [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 8, offset: const Offset(0, 2))] : null,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            icons[i],
+                            size: 24,
+                            color: active ? Colors.white : inactiveColor,
                           ),
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
+                          const SizedBox(height: 4),
+                          Text(
+                            labels[i],
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: active ? FontWeight.bold : FontWeight.w500,
+                              color: active ? Colors.white : inactiveColor,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -340,25 +362,38 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
 
   @override
   Widget build(BuildContext context) {
+    final hideTopBarForCommunity = _currentIndex == 0;
     return Scaffold(
       backgroundColor: Theme.of(context).brightness == Brightness.dark
           ? const Color(0xFF111827)
           : const Color(0xFFF9FAFB),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: Stack(
         children: [
-          _buildTopBar(),
-          Expanded(
-            child: PageView.builder(
-              controller: _pageController,
-              itemCount: _pages.length,
-              onPageChanged: (index) => setState(() => _currentIndex = index),
-              itemBuilder: (_, index) => _pages[index],
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (!hideTopBarForCommunity) _buildTopBar(),
+              Expanded(
+                child: PageView.builder(
+                  controller: _pageController,
+                  itemCount: _pages.length,
+                  onPageChanged: (index) => setState(() => _currentIndex = index),
+                  itemBuilder: (_, index) => _pages[index],
+                ),
+              ),
+              _buildBottomNav(),
+            ],
           ),
-          _buildBottomNav(),
+          if (_showCoachMark)
+            MeetzyCoachMark(
+              onComplete: () => setState(() => _showCoachMark = false),
+              onSkip: () => setState(() => _showCoachMark = false),
+            ),
         ],
       ),
     );
   }
 }
+
+
+

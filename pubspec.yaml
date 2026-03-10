@@ -89,8 +89,19 @@ flutter:
   assets:
     - assets/animations/
     - assets/images/
-    - assets/noise.png
     - assets/icon.png
+
+  # Pretendard: assets/fonts/README.md 참고. 파일 추가 후 아래 주석 해제.
+  # fonts:
+  #   - family: Pretendard
+  #     fonts:
+  #       - asset: assets/fonts/Pretendard-Regular.ttf
+  #       - asset: assets/fonts/Pretendard-Medium.ttf
+  #         weight: 500
+  #       - asset: assets/fonts/Pretendard-SemiBold.ttf
+  #         weight: 600
+  #       - asset: assets/fonts/Pretendard-Bold.ttf
+  #         weight: 700
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
