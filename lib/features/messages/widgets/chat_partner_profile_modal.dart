@@ -196,6 +196,7 @@ class _ModalCard extends StatelessWidget {
           default: return s;
         }
       case 'smoking':
+        if (v is bool) return v ? '흡연' : '비흡연';
         switch (s.toLowerCase()) {
           case 'none': return '비흡연';
           case 'sometimes': return '가끔';
@@ -203,6 +204,7 @@ class _ModalCard extends StatelessWidget {
           default: return s;
         }
       case 'drinking':
+        if (v is bool) return v ? '음주' : '비음주';
         switch (s.toLowerCase()) {
           case 'none': return '안 함';
           case 'sometimes': return '가끔';
@@ -455,8 +457,8 @@ class _ModalCard extends StatelessWidget {
                             _infoRow('키', p['heightCm'] != null ? '${p['heightCm']} cm' : (u?['heightCm'] != null ? '${u!['heightCm']} cm' : '-'), onSurfaceVariant, onSurface, borderColor),
                             _infoRow('학번', _toLabel('gradeYear', p['gradeYear'] ?? u?['gradeYear']), onSurfaceVariant, onSurface, borderColor),
                             _infoRow('MBTI', _str(p['mbti'] ?? u?['mbti']), onSurfaceVariant, onSurface, borderColor),
-                            _infoRow('흡연', _toLabel('smoking', p['smoking'] ?? u?['smoking']), onSurfaceVariant, onSurface, borderColor),
-                            _infoRow('음주', _toLabel('drinking', p['drinking'] ?? u?['drinking']), onSurfaceVariant, onSurface, borderColor),
+                            _infoRow('흡연', _toLabel('smoking', p['isSmoking'] ?? u?['isSmoking'] ?? p['smoking'] ?? u?['smoking']), onSurfaceVariant, onSurface, borderColor),
+                            _infoRow('음주', _toLabel('drinking', p['isDrinking'] ?? u?['isDrinking'] ?? p['drinking'] ?? u?['drinking']), onSurfaceVariant, onSurface, borderColor),
                             _infoRow('자기 소개', _str(p['introOneLine'] ?? u?['introOneLine']), onSurfaceVariant, onSurface, borderColor),
                             _infoRow('요즘 빠진 것', _str(p['intoLately'] ?? u?['intoLately']), onSurfaceVariant, onSurface, borderColor),
                             _infoRow('이상형', _str(p['idealType'] ?? u?['idealType']), onSurfaceVariant, onSurface, borderColor),

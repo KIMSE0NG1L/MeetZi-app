@@ -80,6 +80,7 @@ MeetzyProfileDetailData profileMapToDetailData(Map<String, dynamic> profile) {
           default: return s;
         }
       case 'smoking':
+        if (v is bool) return v ? '흡연' : '비흡연';
         switch (s.toLowerCase()) {
           case 'none': return '비흡연';
           case 'sometimes': return '가끔';
@@ -87,6 +88,7 @@ MeetzyProfileDetailData profileMapToDetailData(Map<String, dynamic> profile) {
           default: return s;
         }
       case 'drinking':
+        if (v is bool) return v ? '음주' : '비음주';
         switch (s.toLowerCase()) {
           case 'none': return '안 함';
           case 'sometimes': return '가끔';
@@ -145,8 +147,8 @@ MeetzyProfileDetailData profileMapToDetailData(Map<String, dynamic> profile) {
     height: heightStr,
     grade: toLabel('gradeYear', pluck(['grade', 'year', 'schoolYear', 'class'])),
     mbti: str(pluck(['mbti', 'mbtiType'])),
-    smoking: toLabel('smoking', pluck(['smoking', 'smoke'])),
-    drinking: toLabel('drinking', pluck(['drinking', 'alcohol'])),
+    smoking: toLabel('smoking', pluck(['isSmoking', 'smoking', 'smoke'])),
+    drinking: toLabel('drinking', pluck(['isDrinking', 'drinking', 'alcohol'])),
     intro: str(pluck(['oneLineIntroduce', 'introOneLine', 'bio', 'introduction'])),
     interest: str(pluck(['intoLately', 'hobby', 'recentInterest'])),
     idealType: str(pluck(['idealType', 'ideal'])),

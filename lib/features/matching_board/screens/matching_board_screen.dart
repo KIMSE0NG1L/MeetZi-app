@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -62,6 +62,7 @@ MeetzyProfileDetailData _profileMapToDetailData(Map<String, dynamic> profile) {
             return s;
         }
       case 'smoking':
+        if (v is bool) return v ? '흡연' : '비흡연';
         switch (s.toLowerCase()) {
           case 'none':
             return '비흡연';
@@ -73,6 +74,7 @@ MeetzyProfileDetailData _profileMapToDetailData(Map<String, dynamic> profile) {
             return s;
         }
       case 'drinking':
+        if (v is bool) return v ? '음주' : '비음주';
         switch (s.toLowerCase()) {
           case 'none':
             return '비음주';
@@ -156,8 +158,8 @@ MeetzyProfileDetailData _profileMapToDetailData(Map<String, dynamic> profile) {
     height: heightStr,
     grade: toLabel('gradeYear', pluck(['grade', 'year', 'schoolYear', 'class'])),
     mbti: str(pluck(['mbti', 'mbtiType'])),
-    smoking: toLabel('smoking', pluck(['smoking', 'smoke'])),
-    drinking: toLabel('drinking', pluck(['drinking', 'alcohol'])),
+    smoking: toLabel('smoking', pluck(['isSmoking', 'smoking', 'smoke'])),
+    drinking: toLabel('drinking', pluck(['isDrinking', 'drinking', 'alcohol'])),
     intro: str(pluck(['oneLineIntroduce', 'introOneLine', 'bio', 'introduction'])),
     interest: str(pluck(['intoLately', 'hobby', 'recentInterest'])),
     idealType: str(pluck(['idealType', 'ideal'])),
@@ -376,11 +378,29 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     }
   }
 
-  void _onDeveloperMatchTap() {
+  Future<void> _onDeveloperMatchTap() async {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('무료 개발자와 매칭하기 기능은 준비 중입니다.')),
-    );
+    try {
+      final myProfile = await _myProfileFuture;
+      final user = myProfile['user'] is Map ? myProfile['user'] as Map<String, dynamic> : myProfile;
+      final myGender = (user['gender'] ?? myProfile['gender'])?.toString().trim().toLowerCase();
+      if (myGender == 'male') {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('개발자는 남자라서 신청할 수 없어요.')),
+        );
+        return;
+      }
+      final developerProfile = await _repository.fetchDeveloperProfile();
+      if (!mounted) return;
+      // 일반 카드와 동일한 상세 모달 + 매칭 로직 사용
+      await _openNoteSheet(context, 0, [developerProfile], null);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('개발자 프로필을 불러오지 못했습니다: $e')),
+      );
+    }
   }
 
   int? _extractHeightCm(Map<String, dynamic> profile) {
@@ -396,13 +416,17 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
 
   bool _isNonSmoking(Map<String, dynamic> profile) {
     final user = profile['user'] as Map<String, dynamic>?;
-    final raw = (profile['smoking'] ?? profile['smoke'] ?? user?['smoking'] ?? user?['smoke'])?.toString().trim().toLowerCase();
+    final v = profile['isSmoking'] ?? user?['isSmoking'] ?? profile['smoking'] ?? profile['smoke'] ?? user?['smoking'] ?? user?['smoke'];
+    if (v is bool) return v == false;
+    final raw = v?.toString().trim().toLowerCase();
     return raw == 'none' || raw == '비흡연' || raw == '금연';
   }
 
   bool _isNonDrinking(Map<String, dynamic> profile) {
     final user = profile['user'] as Map<String, dynamic>?;
-    final raw = (profile['drinking'] ?? profile['alcohol'] ?? user?['drinking'] ?? user?['alcohol'])?.toString().trim().toLowerCase();
+    final v = profile['isDrinking'] ?? user?['isDrinking'] ?? profile['drinking'] ?? profile['alcohol'] ?? user?['drinking'] ?? user?['alcohol'];
+    if (v is bool) return v == false;
+    final raw = v?.toString().trim().toLowerCase();
     return raw == 'none' || raw == '비음주' || raw == '금주';
   }
 
@@ -1474,8 +1498,20 @@ class _TakeNoteMessageSheetState extends State<_TakeNoteMessageSheet> {
     }
     String? seed = profile['avatarSeed']?.toString() ?? (profile['user'] as Map?)?['avatarSeed']?.toString();
     if (seed != null && seed.isNotEmpty) {
-      final opts = profile['avatarOptions'] as Map<String, String>? ?? (profile['user'] as Map?)?['avatarOptions'] as Map<String, String>?;
-      final options = opts != null && opts.isNotEmpty ? opts : null;
+      // avatarOptions는 Map 또는 JSON String일 수 있으므로 안전하게 파싱
+      final rawOptions = profile['avatarOptions'] ?? (profile['user'] as Map?)?['avatarOptions'];
+      Map<String, String> opts = {};
+      if (rawOptions is Map) {
+        opts = rawOptions.map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
+      } else if (rawOptions != null && rawOptions.toString().trim().isNotEmpty) {
+        try {
+          final decoded = jsonDecode(rawOptions.toString());
+          if (decoded is Map) {
+            opts = decoded.map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
+          }
+        } catch (_) {}
+      }
+      final options = opts.isNotEmpty ? opts : null;
       return SizedBox(
         width: size,
         height: size,

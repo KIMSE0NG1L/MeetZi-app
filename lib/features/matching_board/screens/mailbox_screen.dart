@@ -612,7 +612,7 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
       return const Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(LucideIcons.heart, size: 16, color: Color(0xFF10B981)),
+          Icon(Icons.favorite, size: 16, color: Color(0xFF10B981)),
           SizedBox(width: 6),
           Text('수락됨', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF10B981))),
         ],
@@ -1116,7 +1116,7 @@ class TakeNoteSentDetailScreen extends StatelessWidget {
                         child: Row(
                           children: [
                             Icon(
-                              isRejected ? LucideIcons.heartCrack : (status == 'accepted' ? LucideIcons.heart : LucideIcons.clock),
+                              isRejected ? LucideIcons.heartCrack : (status == 'accepted' ? Icons.favorite : LucideIcons.clock),
                               size: 18,
                               color: isRejected
                                   ? const Color(0xFF9CA3AF)

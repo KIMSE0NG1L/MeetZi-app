@@ -64,37 +64,35 @@ class PartnerProfileScreen extends StatelessWidget {
   }
 
   // --- Localization helpers ---
-  String _smokingToKr(String? value) {
-    switch (value) {
-      case 'none':
-        return '비흡연';
-      case 'sometimes':
-        return '가끔';
-      case 'often':
-        return '자주';
+  String _smokingToKr(dynamic value) {
+    if (value is bool) return value ? '흡연' : '비흡연';
+    final s = value?.toString();
+    switch (s) {
+      case 'none': return '비흡연';
+      case 'sometimes': return '가끔';
+      case 'often': return '자주';
       case '비흡연':
       case '가끔':
       case '자주':
-        return value ?? '-';
+        return s ?? '-';
       default:
-        return value ?? '-';
+        return s ?? '-';
     }
   }
 
-  String _drinkingToKr(String? value) {
-    switch (value) {
-      case 'none':
-        return '안 함';
-      case 'sometimes':
-        return '가끔';
-      case 'often':
-        return '자주';
+  String _drinkingToKr(dynamic value) {
+    if (value is bool) return value ? '음주' : '비음주';
+    final s = value?.toString();
+    switch (s) {
+      case 'none': return '안 함';
+      case 'sometimes': return '가끔';
+      case 'often': return '자주';
       case '안 함':
       case '가끔':
       case '자주':
-        return value ?? '-';
+        return s ?? '-';
       default:
-        return value ?? '-';
+        return s ?? '-';
     }
   }
 
@@ -175,8 +173,8 @@ class PartnerProfileScreen extends StatelessWidget {
       _infoRow('키', _pluck(profile, ['heightCm', 'height']) != null ? '${_pluck(profile, ['heightCm', 'height'])} cm' : '-'),
       _infoRow('학년', _pluck(profile, ['grade', 'year', 'schoolYear', 'class']) ?? '-'),
       _infoRow('MBTI', _pluck(profile, ['mbti', 'mbtiType']) ?? '-'),
-      _infoRow('흡연', _smokingToKr(_pluck(profile, ['smoking', 'smoke'])?.toString())),
-      _infoRow('음주', _drinkingToKr(_pluck(profile, ['drinking', 'alcohol'])?.toString())),
+      _infoRow('흡연', _smokingToKr(_pluck(profile, ['isSmoking', 'smoking', 'smoke']))),
+      _infoRow('음주', _drinkingToKr(_pluck(profile, ['isDrinking', 'drinking', 'alcohol']))),
       _infoRow('자기 소개', _pluck(profile, ['oneLineIntroduce', 'bio', 'introduction']) ?? '-'),
       _infoRow('이상형', _pluck(profile, ['idealType', 'ideal']) ?? '-'),
       _infoRow('패션 스타일', _pluck(profile, ['fashionStyle', 'style']) ?? '-'),
