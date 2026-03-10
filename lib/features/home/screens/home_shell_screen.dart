@@ -187,7 +187,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
         subtitle = _affiliationShort.isNotEmpty ? _affiliationShort : null;
         break;
       case 3:
-        title = '프로필';
+        title = '마이프로필';
         subtitle = null;
         break;
       case 4:
@@ -280,7 +280,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
     const inactiveColor = Color(0xFF9CA3AF); // gray-400 (last)
     // last: active tab = bg-gradient-to-br themeColors.gradient (from-rose-300 via-pink-300 to-rose-400), text white
     final activeGradient = ThemeController.getActiveAccentGradient();
-    final labels = ['커뮤니티', '메시지함', '홈', '프로필', '상점'];
+    final labels = ['커뮤니티', '메시지함', '홈', '마이프로필', '상점'];
     final icons = [
       LucideIcons.users,
       LucideIcons.messageCircle,
