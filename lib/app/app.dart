@@ -53,7 +53,7 @@ class _NearoAppState extends State<NearoApp> {
   final _environmentStatusRepository = EnvironmentStatusRepository();
   StreamSubscription<Uri>? _linkSub;
   Map<String, dynamic>? _pendingNotificationData;
-  /// ??吏꾩엯 ???몄뀡 ?뺤씤 ??寃곗젙. null?대㈃ ?꾩쭅 ?뺤씤 以??ㅽ뵆?섏떆留??쒖떆).
+  /// 설명 주석
   String? _initialRoute;
 
   @override
@@ -64,11 +64,11 @@ class _NearoAppState extends State<NearoApp> {
     _initDeepLinks();
   }
 
-  /// ?몄뀡 ?뺤씤 ??泥??붾㈃ ?쇱슦?몃쭔 寃곗젙. 理쒖냼 3.3珥??ㅽ뵆?섏떆 ?쒖떆 ???ㅼ젙.
+  /// 설명 주석
   Future<void> _resolveInitialRoute() async {
     final stopwatch = Stopwatch()..start();
     String? route;
-    // 濡쒓렇???깃났 ?λ쭅????珥덇린 留곹겕 癒쇱? 泥섎━(?좏겙 ??? ???좏겙 湲곗??쇰줈 ?쇱슦??寃곗젙
+    // 설명 주석
     final initialLink = await _appLinks.getInitialLink();
     final isLoginSuccessLink = initialLink != null &&
         initialLink.scheme == 'nearo' &&
@@ -118,7 +118,7 @@ class _NearoAppState extends State<NearoApp> {
         route = AppRoutes.onboarding;
       }
     }
-    // Design ?ㅽ뵆?섏떆: 理쒖냼 3.3珥??쒖떆 ???붾㈃ ?꾪솚
+    // 설명 주석
     final elapsed = stopwatch.elapsedMilliseconds;
     if (elapsed < 3300) {
       await Future.delayed(Duration(milliseconds: 3300 - elapsed));
@@ -197,11 +197,11 @@ class _NearoAppState extends State<NearoApp> {
             false;
         if (hasProfile && hasAffiliation) {
           try {
-            // ?섍꼍 ?뺣낫 ?뺤씤
+            // 설명 주석
             final status =
                 await _environmentStatusRepository.getMyEnvironmentStatus();
             if (status['environmentId'] != null) {
-              // ?섍꼍???ㅼ젙?섏뼱 ?덉쓬
+              // 설명 주석
               if (status['verified'] == true) {
                 _navigatorKey.currentState?.pushNamedAndRemoveUntil(
                   AppRoutes.home,
@@ -214,14 +214,14 @@ class _NearoAppState extends State<NearoApp> {
                 );
               }
             } else {
-              // ?섍꼍???ㅼ젙?섏? ?딆븯?쇰㈃ ?섍꼍 ?좏깮 ?붾㈃?쇰줈
+              // 설명 주석
               _navigatorKey.currentState?.pushNamedAndRemoveUntil(
                 AppRoutes.environment,
                 (route) => false,
               );
             }
           } catch (_) {
-            // ?섍꼍 議고쉶 ?ㅽ뙣 ???섍꼍 ?좏깮 ?붾㈃?쇰줈
+            // 설명 주석
             _navigatorKey.currentState?.pushNamedAndRemoveUntil(
               AppRoutes.environment,
               (route) => false,
@@ -271,7 +271,7 @@ class _NearoAppState extends State<NearoApp> {
             return ValueListenableBuilder<bool>(
               valueListenable: ThemeController.secretMode,
               builder: (context, secret, ___) {
-                // ?몄뀡 ?뺤씤???앸굹湲??꾩뿉??Design ?ㅽ????ㅽ뵆?섏떆 ?쒖떆
+                // 설명 주석
                 if (_initialRoute == null) {
                   final theme = secret
                       ? NearoTheme.secret(seedColor: color)
@@ -358,4 +358,5 @@ class _NearoAppState extends State<NearoApp> {
     );
   }
 }
+
 

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/app/app.dart';
@@ -17,7 +17,7 @@ import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/features/auth/data/environment_status_repository.dart';
 import 'package:nearo_app/presentation/widgets/meetzy_coach_mark.dart';
 
-/// AppDesign 湲곗?: ??퀎 ?ㅻ뜑 洹몃씪?곗씠??+ ?섎떒 5???ㅻ퉬 (??숆탳 ??궧 / 硫붿떆吏??/ 寃뚯떆??/ ?꾨줈??/ ?곸젏)
+/// 설명 주석
 class HomeShellScreen extends StatefulWidget {
   const HomeShellScreen({super.key});
 
@@ -81,7 +81,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
       builder: (ctx) {
         return AlertDialog(
           title: const Text('매칭 요청'),
-          content: const Text('누구님이 당신의 프로필을 가져가고 싶어해요.\n매칭대기함에서 확인해보세요.'),
+          content: const Text('누군가 당신의 프로필을 가져갔어요.\n매칭 대기함에서 확인해 보세요.'),
           actions: [
             TextButton(
               onPressed: () {
@@ -134,7 +134,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
 
   @override
   void didPopNext() {
-    // ?ㅻⅨ ?붾㈃(?꾨줈???섏젙 ???먯꽌 ?덉쑝濡??뚯븘?붿쓣 ??寃뚯떆??紐⑸줉 媛깆떊
+    // 설명 주석
     _boardRefreshTrigger.value++;
   }
 
@@ -163,7 +163,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
   String get _affiliationShort {
     final affiliation = _profile?['affiliationText']?.toString();
     if (affiliation == null || affiliation.isEmpty) return '';
-    return affiliation.endsWith('?숆탳')
+    return affiliation.endsWith('대학교')
         ? affiliation.substring(0, affiliation.length - 2)
         : affiliation;
   }
@@ -394,5 +394,6 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
     );
   }
 }
+
 
 

@@ -1,8 +1,8 @@
-import 'package:dio/dio.dart';
+﻿import 'package:dio/dio.dart';
 import 'package:nearo_app/shared/api/api_client.dart';
 
-/// 怨꾩젙蹂??대엺沅?留ㅼ묶沅??깅줉沅??붾웾 (DB???щ젅?㏃쿂??蹂닿?)
-/// ?깅줉沅?1???ъ슜 ??寃뚯떆???깅줉 ??留ㅼ묶沅?1??吏湲?
+/// 설명 주석
+/// 설명 주석
 class MyTickets {
   const MyTickets({
     required this.viewTicket,
@@ -45,7 +45,7 @@ class MatchingBoardRepository {
     return e.message?.trim().isNotEmpty == true ? e.message!.trim() : fallback;
   }
 
-  /// 寃뚯떆???꾨줈??紐⑸줉. preferredGender: 蹂댁뿬以??곷? ?깅퀎 (?⑥옄 怨꾩젙?대㈃ 'female', ?ъ옄 怨꾩젙?대㈃ 'male')
+  /// 설명 주석
   Future<List<Map<String, dynamic>>> fetchProfiles({String? preferredGender}) async {
     final query = <String, dynamic>{};
     if (preferredGender != null && preferredGender.isNotEmpty) {
@@ -62,7 +62,7 @@ class MatchingBoardRepository {
     return list;
   }
 
-  /// ?쒕쾭 ?묐떟??Profile+user ?뺥깭?щ룄 移대뱶?먯꽌 nickname/userId/idealType????긽 ?쎌쓣 ???덈룄濡?蹂닿컯
+  /// 설명 주석
   static Map<String, dynamic> _normalizeBoardProfile(Map<String, dynamic> p) {
     final user = p['user'] is Map ? p['user'] as Map<String, dynamic> : null;
     final out = Map<String, dynamic>.from(p);
@@ -93,8 +93,8 @@ class MatchingBoardRepository {
     }
   }
 
-  /// 媛?멸?湲??붿껌 ?꾩넚 (?곷??먭쾶 ?뚮┝ 媛? ?섎씫 ?쒖뿉留?留ㅼ묶 ?깆궗 / 嫄곗젅 ??留ㅼ묶沅??섎텋)
-  /// [message]: 蹂대궪 硫섑듃 (?좏깮). ?곷?諛??붿껌 ?곸꽭 ?붾㈃???쒖떆??
+  /// 설명 주석
+  /// 설명 주석
   Future<void> takeNote(String profileId, {String? message}) async {
     final body = <String, dynamic>{'profileId': profileId};
     if (message != null && message.trim().isNotEmpty) body['message'] = message.trim();
@@ -112,7 +112,7 @@ class MatchingBoardRepository {
     }
   }
 
-  /// ?닿? 諛쏆? 媛?멸?湲??붿껌 紐⑸줉 (留ㅼ묶?湲고븿?? pending留?
+  /// 설명 주석
   Future<List<Map<String, dynamic>>> fetchMyTakeNoteRequests() async {
     final response = await _client.dio.get('/matching-board/take-note-requests');
     final list = response.data;
@@ -120,7 +120,7 @@ class MatchingBoardRepository {
     return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
-  /// ?닿? 蹂대궦 媛?멸?湲??붿껌 紐⑸줉 (?곷?諛??쎌쓬 ?щ? ?ы븿)
+  /// 설명 주석
   Future<List<Map<String, dynamic>>> fetchMySentTakeNoteRequests() async {
     final response = await _client.dio.get('/matching-board/take-note-requests/sent');
     final list = response.data;
@@ -128,18 +128,18 @@ class MatchingBoardRepository {
     return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
-  /// 媛?멸?湲??붿껌 ?곸꽭 議고쉶 (?붿껌???꾨줈???ы븿)
+  /// 설명 주석
   Future<Map<String, dynamic>> fetchTakeNoteRequest(String requestId) async {
     final response = await _client.dio.get('/matching-board/take-note-requests/$requestId');
     return Map<String, dynamic>.from(response.data as Map);
   }
 
-  /// 媛?멸?湲??붿껌 ?섎씫 ??留ㅼ묶 ?깆궗
+  /// 설명 주석
   Future<void> acceptTakeNoteRequest(String requestId) async {
     await _client.dio.post('/matching-board/take-note-requests/$requestId/accept');
   }
 
-  /// 媛?멸?湲??붿껌 嫄곗젅 ???붿껌??留ㅼ묶沅??섎텋. [rejectionMessage] 5???댁긽 ?꾩닔.
+  /// 설명 주석
   Future<void> rejectTakeNoteRequest(String requestId, String rejectionMessage) async {
     await _client.dio.post(
       '/matching-board/take-note-requests/$requestId/reject',
@@ -147,12 +147,12 @@ class MatchingBoardRepository {
     );
   }
 
-  /// ?대엺沅?1???뚮퉬 ???꾨줈???곸꽭 ?대엺 (移대뱶 ?????몄텧)
+  /// 설명 주석
   Future<void> consumeViewTicket(String profileId) async {
     await _client.dio.post('/matching-board/consume-view-ticket', data: {'profileId': profileId});
   }
 
-  /// GET /users/me/tickets ??{ viewTicket, matchingTicket, registerTicket }
+  /// 설명 주석
   Future<MyTickets> fetchMyTickets() async {
     try {
       final response = await _client.dio.get('/users/me/tickets');
@@ -184,9 +184,10 @@ class MatchingBoardRepository {
     );
   }
 
-  /// 매칭권 직접 구매
+  /// 설명 주석
   Future<void> buyMatchingTickets({int quantity = 1}) async {
     await _client.dio.post('/users/me/tickets/purchase', data: {'quantity': quantity});
   }
 }
+
 
