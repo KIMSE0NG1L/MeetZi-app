@@ -23,11 +23,12 @@ class AvatarOptionCategory {
   final bool allowNone;
 }
 
-/// variant01 ~ variantNN 생성
-List<AvatarOptionItem> _variants(int n, {String prefix = ''}) {
+/// variant01 ~ variantNN + 라벨 리스트
+List<AvatarOptionItem> _variantsWithLabels(int n, List<String> labels) {
+  assert(labels.length >= n, 'labels must have at least $n items');
   return List.generate(n, (i) {
     final v = 'variant${(i + 1).toString().padLeft(2, '0')}';
-    return AvatarOptionItem(value: v, label: prefix.isEmpty ? v : '$prefix ${i + 1}');
+    return AvatarOptionItem(value: v, label: labels[i]);
   });
 }
 
@@ -59,7 +60,17 @@ List<AvatarOptionCategory> getLoreleiCategories() {
     AvatarOptionCategory(
       apiKey: 'hair',
       label: '헤어',
-      options: _variants(48, prefix: '헤어'),
+      options: _variantsWithLabels(48, [
+        '숏컷', '볼륨 숏', '귀여운 숏', '뾰족 숏', '레이어드 숏', '이모 밥',
+        '세미 롱', '긴 생머리', '웨이브 롱', '컬 롱', '스트레이트', '세미 컬',
+        '포니테일', '묶은 머리', '올림 머리', '땋은 머리', '반묶음', '측면 가르마',
+        '앞머리 있음', '앞머리 없음', '뱅', '시스루 뱅', '자연스러운 숏', '보이쉬 컷',
+        '롱 웨이브', '롱 스트레이트', '미디움 웨이브', '미디움 스트레이트', '숏 웨이브',
+        '볼륨 롱', '플랫 롱', '레이어드 롱', '쉐기 컷', '울프 컷', '멀렛',
+        '픽시 컷', '밥 컷', 'A라인', 'H라인', '내추럴 컬', '타이트 컬',
+        '루즈 컬', '빅 컬', '스몰 컬', '웨이브 프린지', '스트레이트 프린지',
+        '미디움 컬', '롱 컬',
+      ]),
     ),
     AvatarOptionCategory(
       apiKey: 'hairColor',
@@ -77,17 +88,29 @@ List<AvatarOptionCategory> getLoreleiCategories() {
     AvatarOptionCategory(
       apiKey: 'eyes',
       label: '눈',
-      options: _variants(24, prefix: '눈'),
+      options: _variantsWithLabels(24, [
+        '둥근 눈', '가는 눈', '웃는 눈', '반짝 눈', '졸린 눈', '진지한 눈',
+        '동그란 눈', '살짝 감은 눈', '크게 뜬 눈', '부드러운 눈', '날카로운 눈',
+        '귀여운 눈', '시크한 눈', '밝은 눈', '어두운 눈', '쌍꺼풀 눈',
+        '외꺼풀 눈', '내추럴 눈', '도톰 눈', '가는 눈썹 눈', '미소 눈',
+        '찡그린 눈', '놀란 눈', '차분한 눈',
+      ]),
     ),
     AvatarOptionCategory(
       apiKey: 'eyebrows',
       label: '눈썹',
-      options: _variants(13, prefix: '눈썹'),
+      options: _variantsWithLabels(13, [
+        '얇은 눈썹', '진한 눈썹', '굵은 눈썹', '자연 눈썹', '올라간 눈썹',
+        '내려간 눈썹', '일자 눈썹', '활 눈썹', '부드러운 눈썹', '각진 눈썹',
+        '짧은 눈썹', '긴 눈썹', '뾰족 눈썹',
+      ]),
     ),
     AvatarOptionCategory(
       apiKey: 'nose',
       label: '코',
-      options: _variants(6, prefix: '코'),
+      options: _variantsWithLabels(6, [
+        '둥근 코', '뾰족한 코', '작은 코', '커다란 코', '버튼 코', '직선 코',
+      ]),
     ),
     AvatarOptionCategory(
       apiKey: 'mouth',
@@ -95,16 +118,22 @@ List<AvatarOptionCategory> getLoreleiCategories() {
       options: [
         ...List.generate(18, (i) => AvatarOptionItem(
             value: 'happy${(i + 1).toString().padLeft(2, '0')}',
-            label: '웃음 ${i + 1}')),
+            label: ['미소', '환한 웃음', '살짝 웃음', '넓은 웃음', '귀여운 웃음',
+              '시크 웃음', '부드러운 미소', '밝은 웃음', '자연스러운 웃음',
+              '도톰 입 웃음', '가는 입 웃음', '오므린 웃음', '벌린 웃음',
+              '쑥스러운 웃음', '장난스러운 웃음', '따뜻한 웃음', '차분한 웃음', '활짝 웃음'][i])),
         ...List.generate(9, (i) => AvatarOptionItem(
             value: 'sad${(i + 1).toString().padLeft(2, '0')}',
-            label: '슬픔 ${i + 1}')),
+            label: ['슬픈 입', '실망한 입', '찡그린 입', '내려간 입', '작은 슬픔',
+              '진지한 입', '무표정 입', '걱정 입', '한숨 입'][i])),
       ],
     ),
     AvatarOptionCategory(
       apiKey: 'head',
       label: '얼굴형',
-      options: _variants(4, prefix: '얼굴'),
+      options: _variantsWithLabels(4, [
+        '둥근 얼굴', '갸름한 얼굴', '각진 얼굴', '타원형 얼굴',
+      ]),
     ),
     AvatarOptionCategory(
       apiKey: 'glasses',
@@ -112,7 +141,9 @@ List<AvatarOptionCategory> getLoreleiCategories() {
       allowNone: true,
       options: [
         const AvatarOptionItem(value: '', label: '없음'),
-        ..._variants(5, prefix: '안경'),
+        ..._variantsWithLabels(5, [
+          '둥근 안경', '사각 안경', '각진 안경', '무테 안경', '캣아이 안경',
+        ]),
       ],
     ),
     AvatarOptionCategory(
@@ -121,7 +152,9 @@ List<AvatarOptionCategory> getLoreleiCategories() {
       allowNone: true,
       options: [
         const AvatarOptionItem(value: '', label: '없음'),
-        ..._variants(3, prefix: '귀걸이'),
+        ..._variantsWithLabels(3, [
+          '링 귀걸이', '드롭 귀걸이', '스터드 귀걸이',
+        ]),
       ],
     ),
     AvatarOptionCategory(
@@ -130,16 +163,9 @@ List<AvatarOptionCategory> getLoreleiCategories() {
       allowNone: true,
       options: [
         const AvatarOptionItem(value: '', label: '없음'),
-        ..._variants(2, prefix: '수염'),
-      ],
-    ),
-    AvatarOptionCategory(
-      apiKey: 'freckles',
-      label: '주근깨',
-      allowNone: true,
-      options: [
-        const AvatarOptionItem(value: '', label: '없음'),
-        const AvatarOptionItem(value: 'variant01', label: '있음'),
+        ..._variantsWithLabels(2, [
+          '콧수염', '턱수염',
+        ]),
       ],
     ),
     AvatarOptionCategory(

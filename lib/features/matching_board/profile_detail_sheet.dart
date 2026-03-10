@@ -18,7 +18,8 @@ void _enlargeUrlsFromProfile(Map<String, dynamic> profile, void Function(String?
     }
   }
   final seed = user?['avatarSeed']?.toString() ?? profile['avatarSeed']?.toString() ?? profile['userId']?.toString();
-  final style = (user?['avatarStyle'] ?? profile['avatarStyle'])?.toString() ?? 'lorelei';
+  // 프로필 카드 확대 시 항상 lorelei 사용 (avataaars/notionists 등 구 스타일 무시)
+  const style = 'lorelei';
   Map<String, String> opts = {};
   final raw = user?['avatarOptions'] ?? profile['avatarOptions'];
   if (raw is Map) {
