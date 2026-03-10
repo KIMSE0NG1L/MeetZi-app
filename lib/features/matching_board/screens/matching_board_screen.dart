@@ -1613,7 +1613,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                             SizedBox(
                               width: 112,
                               child: Text(
-                                '?섎? ?뚭컻?섎뒗 ?쒓렇',
+                                '나를 소개하는 태그',
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
                                 ),

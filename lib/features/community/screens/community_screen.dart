@@ -10,7 +10,7 @@ import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/shared/utils/post_time_format.dart';
 
-/// ?숆탳蹂?而ㅻ??덊떚 ?쇰뱶. ?꾧뎄??吏꾩엯 媛??
+/// 학교별 커뮤니티 피드 화면
 class CommunityScreen extends StatefulWidget {
   final String environmentId;
   final String schoolName;
@@ -22,7 +22,7 @@ class CommunityScreen extends StatefulWidget {
     this.isRootTab = false,
   });
 
-  /// true硫???猷⑦듃濡??ъ슜. ?ㅻ줈媛湲??????숆탳 ??궧 踰꾪듉 ?쒖떆.
+  /// true면 루트 탭으로 사용. 학교 랭킹 버튼을 노출한다.
   final bool isRootTab;
 
   @override
@@ -47,7 +47,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
   Future<void> _loadMyUserId() async {
     try {
       final res = await AuthRepository().getProfile();
-      // GET /users/me ??user 媛앹껜 洹몃?濡?諛섑솚. GET /auth/profile ? { user } 諛섑솚 媛??
+      // GET /users/me 는 user 객체를 그대로 반환한다.
       final id = (res['user'] as Map<String, dynamic>?)?['id']?.toString() ?? res['id']?.toString();
       if (mounted) setState(() => _myUserId = id);
     } catch (_) {
@@ -116,7 +116,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
       _load();
       if (deleted == true && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('湲????젣?섏뿀?댁슂.')),
+          const SnackBar(content: Text('글을 삭제했어요.')),
         );
       }
     });
@@ -126,8 +126,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('湲 ??젣'),
-        content: const Text('??湲????젣?좉퉴?? ??젣??湲? 蹂듦뎄?????놁뼱??'),
+        title: const Text('글 삭제'),
+        content: const Text('이 글을 삭제할까요? 삭제한 글은 복구할 수 없어요.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
@@ -136,7 +136,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('??젣'),
+            child: const Text('삭제'),
           ),
         ],
       ),
@@ -147,7 +147,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
       if (!mounted) return;
       _load();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('湲????젣?섏뿀?댁슂.')),
+        const SnackBar(content: Text('글을 삭제했어요.')),
       );
     } catch (e) {
       if (mounted) {
@@ -155,8 +155,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
           SnackBar(
             content: Text(
               e.toString().contains('403') || e.toString().contains('Forbidden')
-                  ? '蹂몄씤 湲留???젣?????덉뼱??'
-                  : '??젣???ㅽ뙣?덉뼱?? ?좎떆 ???ㅼ떆 ?쒕룄??二쇱꽭??',
+                  ? '본인 글만 삭제할 수 있어요.'
+                  : '삭제에 실패했어요. 잠시 후 다시 시도해 주세요.',
             ),
           ),
         );
@@ -214,7 +214,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
         ),
         child: Column(
           children: [
-          // Design: 洹몃씪?곗씠???깅컮 + ?ㅻ줈媛湲?+ "?숆탳紐?而ㅻ??덊떚 ?룶"
+          // 헤더: 학교 커뮤니티 타이틀과 랭킹 버튼
           Container(
             width: double.infinity,
             decoration: const BoxDecoration(
@@ -240,7 +240,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                             ),
                           );
                         },
-                        tooltip: '??숆탳 ??궧',
+                        tooltip: '학교 랭킹',
                       )
                     else
                       IconButton(
@@ -249,7 +249,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                       ),
                     Expanded(
                       child: Text(
-                        '${widget.schoolName} 而ㅻ??덊떚',
+                        '${widget.schoolName} 커뮤니티',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 20,
@@ -275,7 +275,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                             Icon(LucideIcons.messageSquare, size: 48, color: Colors.grey.shade400),
                             const SizedBox(height: 16),
                             Text(
-                              '?꾩쭅 湲???놁뼱??\n泥?湲???щ젮蹂댁꽭??',
+                              '아직 글이 없어요.\n첫 글을 올려보세요.',
                               textAlign: TextAlign.center,
                               style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
                             ),
@@ -290,10 +290,10 @@ class _CommunityScreenState extends State<CommunityScreen> {
                             if (bestPosts.isNotEmpty) ...[
                               Row(
                                 children: [
-                                  const Text('?뵦', style: TextStyle(fontSize: 22)),
+                                  const Text('🏆', style: TextStyle(fontSize: 22)),
                                   const SizedBox(width: 8),
                                   Text(
-                                    '踰좎뒪??湲',
+                                    '베스트 글',
                                     style: TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
@@ -321,7 +321,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                               const SizedBox(height: 24),
                             ],
                             Text(
-                              '?꾩껜 湲',
+                              '전체 글',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -351,7 +351,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                         )
                                       : TextButton(
                                           onPressed: _loadMore,
-                                          child: const Text('??蹂닿린'),
+                                          child: const Text('더보기'),
                                         ),
                                 ),
                               ),
@@ -407,11 +407,11 @@ class _CommunityScreenState extends State<CommunityScreen> {
     int? bestRank,
   }) {
     final author = post['author'] as Map<String, dynamic>? ?? {};
-    final nickname = author['nickname']?.toString() ?? '?????놁쓬';
+    final nickname = author['nickname']?.toString() ?? '알 수 없음';
     final authorId = author['id']?.toString();
     final isMe = _myUserId != null && authorId == _myUserId;
     final isDailyBest = post['isDailyBest'] == true;
-    final content = post['content']?.toString() ?? '';
+    final content = post['content']?.toString() ?? ' 참여';
     final likeCount = (post['likeCount'] is int) ? post['likeCount'] as int : 0;
     final commentCount = (post['commentCount'] is int) ? post['commentCount'] as int : 0;
     final viewCount = (post['viewCount'] is int) ? post['viewCount'] as int : 0;
@@ -420,8 +420,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
 
     return Padding(
       padding: EdgeInsets.only(
-        bottom: 2,
-        top: (isBest && bestRank != null) ? 8 : 0,
+        bottom: 1,
+        top: (isBest && bestRank != null) ? 4 : 0,
         left: (isBest && bestRank != null) ? 12 : 0,
       ),
       child: Stack(
@@ -443,7 +443,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 onTap: () => _openPost(post),
                 borderRadius: BorderRadius.circular(16),
                  child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 9, 12, 8),
+                  padding: const EdgeInsets.fromLTRB(10, 6, 10, 5),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -452,9 +452,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
                           DiceBearAvatar(
                             style: author['avatarStyle']?.toString() ?? 'lorelei',
                             seed: author['avatarSeed']?.toString() ?? nickname,
-                            size: 34,
+                            size: 28,
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -466,26 +466,26 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                         nickname,
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
-                                          fontSize: 13,
+                                          fontSize: 12,
                                           color: dark ? Colors.white : const Color(0xFF111827),
                                         ),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
-                                    if (isBest) const SizedBox(width: 4),
-                                    if (isBest) const Text('狩?, style: TextStyle(fontSize: 12)),
+                                    if (isBest) const SizedBox(width: 3),
+                                    if (isBest) const Text('🏆', style: TextStyle(fontSize: 10)),
                                     if (isMe) ...[
-                                      const SizedBox(width: 6),
+                                      const SizedBox(width: 4),
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                                         decoration: BoxDecoration(
                                           color: primary.withOpacity(0.2),
                                           borderRadius: BorderRadius.circular(4),
                                         ),
                                         child: Text(
-                                          '?묒꽦??,
+                                          '작성자',
                                           style: TextStyle(
-                                            fontSize: 11,
+                                            fontSize: 10,
                                             fontWeight: FontWeight.w600,
                                             color: primary,
                                           ),
@@ -493,9 +493,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                       ),
                                     ],
                                     if (isDailyBest) ...[
-                                      const SizedBox(width: 6),
+                                      const SizedBox(width: 4),
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                                         decoration: BoxDecoration(
                                           color: Colors.amber.withOpacity(0.3),
                                           borderRadius: BorderRadius.circular(4),
@@ -503,7 +503,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                         child: const Text(
                                           'HOT',
                                           style: TextStyle(
-                                            fontSize: 11,
+                                            fontSize: 10,
                                             fontWeight: FontWeight.w600,
                                             color: Color(0xFFB45309),
                                           ),
@@ -515,29 +515,29 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                 const SizedBox(height: 1),
                                 Text(
                                   formatPostTime(post['createdAt']),
-                                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                                  style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
                                 ),
                               ],
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 5),
+                      const SizedBox(height: 3),
                       Text(
                         content,
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: 12,
                           color: dark ? Colors.grey.shade300 : Colors.grey.shade700,
-                          height: 1.25,
+                          height: 1.15,
                         ),
-                        maxLines: 2,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       if (post['poll'] != null) ...[
-                        const SizedBox(height: 5),
+                        const SizedBox(height: 3),
                         _buildPollChip(context, post['poll'] as Map<String, dynamic>, dark),
                       ],
-                      const SizedBox(height: 5),
+                      const SizedBox(height: 3),
                       Row(
                         children: [
                           const Spacer(),
@@ -633,7 +633,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
   }
 
   Widget _buildPollChip(BuildContext context, Map<String, dynamic> poll, bool dark) {
-    final question = poll['question']?.toString() ?? '?ы몴';
+    final question = poll['question']?.toString() ?? '투표';
     final voteCounts = (poll['voteCounts'] as List<dynamic>?)?.map((e) => (e as num).toInt()).toList() ?? [];
     final total = voteCounts.fold<int>(0, (a, b) => a + b);
     return Container(
@@ -655,7 +655,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
             ),
           ),
           Text(
-            '$total紐?李몄뿬',
+            '$total명 참여',
             style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
           ),
         ],
@@ -663,4 +663,5 @@ class _CommunityScreenState extends State<CommunityScreen> {
     );
   }
 }
+
 
