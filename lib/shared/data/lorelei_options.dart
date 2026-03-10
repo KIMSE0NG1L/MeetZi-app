@@ -1,7 +1,5 @@
-/// DiceBear notionists 스타일의 모든 편집 가능 옵션 정의.
-/// 스키마(https://api.dicebear.com/9.x/notionists/schema.json) 기반으로
-/// 확장 가능한 구조로 두었으며, 향후 자체 레이어 시스템으로 교체해도
-/// [AvatarOptionCategory] / [AvatarOptionItem] 구조를 재사용할 수 있음.
+/// DiceBear lorelei 스타일의 편집 가능 옵션 정의.
+/// 스키마(https://api.dicebear.com/9.x/lorelei/schema.json) 기반.
 
 /// 단일 옵션 값 (value = API query param 값, label = 표시명)
 class AvatarOptionItem {
@@ -33,8 +31,8 @@ List<AvatarOptionItem> _variants(int n, {String prefix = ''}) {
   });
 }
 
-/// notionists 전체 카테고리 (style 제외, 선택형 옵션만)
-List<AvatarOptionCategory> getNotionistsCategories() {
+/// lorelei 전체 카테고리 (style 제외)
+List<AvatarOptionCategory> getLoreleiCategories() {
   return [
     AvatarOptionCategory(
       apiKey: 'backgroundColor',
@@ -61,30 +59,52 @@ List<AvatarOptionCategory> getNotionistsCategories() {
     AvatarOptionCategory(
       apiKey: 'hair',
       label: '헤어',
+      options: _variants(48, prefix: '헤어'),
+    ),
+    AvatarOptionCategory(
+      apiKey: 'hairColor',
+      label: '헤어색',
+      allowNone: true,
       options: [
-        const AvatarOptionItem(value: 'hat', label: '모자'),
-        ..._variants(63, prefix: '헤어'),
+        const AvatarOptionItem(value: '', label: '기본'),
+        const AvatarOptionItem(value: '000000', label: '검정'),
+        const AvatarOptionItem(value: '4a312c', label: '갈색'),
+        const AvatarOptionItem(value: '704214', label: '다크브라운'),
+        const AvatarOptionItem(value: 'c0a080', label: '블론드'),
+        const AvatarOptionItem(value: 'e6b87c', label: '골드'),
       ],
     ),
     AvatarOptionCategory(
       apiKey: 'eyes',
       label: '눈',
-      options: _variants(5, prefix: '눈'),
+      options: _variants(24, prefix: '눈'),
     ),
     AvatarOptionCategory(
-      apiKey: 'brows',
+      apiKey: 'eyebrows',
       label: '눈썹',
       options: _variants(13, prefix: '눈썹'),
     ),
     AvatarOptionCategory(
       apiKey: 'nose',
       label: '코',
-      options: _variants(20, prefix: '코'),
+      options: _variants(6, prefix: '코'),
     ),
     AvatarOptionCategory(
-      apiKey: 'lips',
+      apiKey: 'mouth',
       label: '입',
-      options: _variants(30, prefix: '입'),
+      options: [
+        ...List.generate(18, (i) => AvatarOptionItem(
+            value: 'happy${(i + 1).toString().padLeft(2, '0')}',
+            label: '웃음 ${i + 1}')),
+        ...List.generate(9, (i) => AvatarOptionItem(
+            value: 'sad${(i + 1).toString().padLeft(2, '0')}',
+            label: '슬픔 ${i + 1}')),
+      ],
+    ),
+    AvatarOptionCategory(
+      apiKey: 'head',
+      label: '얼굴형',
+      options: _variants(4, prefix: '얼굴'),
     ),
     AvatarOptionCategory(
       apiKey: 'glasses',
@@ -92,7 +112,16 @@ List<AvatarOptionCategory> getNotionistsCategories() {
       allowNone: true,
       options: [
         const AvatarOptionItem(value: '', label: '없음'),
-        ..._variants(11, prefix: '안경'),
+        ..._variants(5, prefix: '안경'),
+      ],
+    ),
+    AvatarOptionCategory(
+      apiKey: 'earrings',
+      label: '귀걸이',
+      allowNone: true,
+      options: [
+        const AvatarOptionItem(value: '', label: '없음'),
+        ..._variants(3, prefix: '귀걸이'),
       ],
     ),
     AvatarOptionCategory(
@@ -101,41 +130,25 @@ List<AvatarOptionCategory> getNotionistsCategories() {
       allowNone: true,
       options: [
         const AvatarOptionItem(value: '', label: '없음'),
-        ..._variants(12, prefix: '수염'),
+        ..._variants(2, prefix: '수염'),
       ],
     ),
     AvatarOptionCategory(
-      apiKey: 'body',
-      label: '옷',
-      options: _variants(25, prefix: '옷'),
-    ),
-    AvatarOptionCategory(
-      apiKey: 'bodyIcon',
-      label: '옷 아이콘',
+      apiKey: 'freckles',
+      label: '주근깨',
       allowNone: true,
       options: [
         const AvatarOptionItem(value: '', label: '없음'),
-        const AvatarOptionItem(value: 'electric', label: '전기'),
-        const AvatarOptionItem(value: 'galaxy', label: '은하'),
-        const AvatarOptionItem(value: 'saturn', label: '토성'),
+        const AvatarOptionItem(value: 'variant01', label: '있음'),
       ],
     ),
     AvatarOptionCategory(
-      apiKey: 'gesture',
-      label: '제스처',
+      apiKey: 'hairAccessories',
+      label: '헤어 악세서리',
       allowNone: true,
       options: [
-        const AvatarOptionItem(value: '', label: '기본'),
-        const AvatarOptionItem(value: 'hand', label: '손'),
-        const AvatarOptionItem(value: 'handPhone', label: '손+폰'),
-        const AvatarOptionItem(value: 'ok', label: 'OK'),
-        const AvatarOptionItem(value: 'okLongArm', label: 'OK 롱암'),
-        const AvatarOptionItem(value: 'point', label: '포인트'),
-        const AvatarOptionItem(value: 'pointLongArm', label: '포인트 롱암'),
-        const AvatarOptionItem(value: 'waveLongArm', label: '손 흔들기'),
-        const AvatarOptionItem(value: 'waveLongArms', label: '손 흔들기 양손'),
-        const AvatarOptionItem(value: 'waveOkLongArms', label: '손 흔들기+OK'),
-        const AvatarOptionItem(value: 'wavePointLongArms', label: '손 흔들기+포인트'),
+        const AvatarOptionItem(value: '', label: '없음'),
+        const AvatarOptionItem(value: 'flowers', label: '꽃'),
       ],
     ),
   ];

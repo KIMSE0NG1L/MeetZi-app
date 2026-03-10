@@ -335,7 +335,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     if (registerTicket <= 0) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('?깅줉沅뚯씠 遺議깊빐?? ?깅줉沅뚯쑝濡?寃뚯떆?먯뿉 ?깅줉?섎㈃ 留ㅼ묶沅?1?μ씠 吏湲됰뤌??')),
+        const SnackBar(content: Text('등록권이 부족해요. 등록권을 구매한 뒤 게시판에 등록하면 매칭권 1개가 지급돼요.')),
       );
       return;
     }
@@ -346,7 +346,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       final user = profile['user'] is Map ? profile['user'] as Map<String, dynamic> : profile;
       final nickname = user['nickname']?.toString();
       final gender = user['gender']?.toString();
-      String school = user['school']?.toString() ?? user['affiliationText']?.toString() ?? profile['affiliationText']?.toString() ?? '?몄쥌?';
+      String school = user['school']?.toString() ?? user['affiliationText']?.toString() ?? profile['affiliationText']?.toString() ?? '미정';
       final department = user['department']?.toString();
       final userEnvs = profile['userEnvironments'] ?? user['userEnvironments'];
       if ((school.isEmpty || school == 'null') && userEnvs != null && userEnvs is List && userEnvs.isNotEmpty) {
@@ -356,10 +356,10 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
           if (name != null && name.isNotEmpty) school = name;
         }
       }
-      if (school.isEmpty || school == 'null') school = '?몄쥌?';
+      if (school.isEmpty || school == 'null') school = '미정';
       if (nickname == null || nickname.isEmpty || gender == null || gender.isEmpty) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('?꾨줈???뺣낫媛 ?놁뒿?덈떎.')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('홈에서 프로필이 없어요.')));
         return;
       }
       final payload = <String, dynamic>{
@@ -374,7 +374,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       _myProfileFuture = _authRepository.getProfile(forceRefresh: true);
       await _primePreferredGender();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('?꾨줈???깅줉 ?꾨즺! 留ㅼ묶沅?1?μ씠 吏湲됰릱?댁슂.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('홈에서 등록 완료! 매칭권 1개가 지급돼요.')));
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1235,7 +1235,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('留ㅼ묶沅뚯씠 遺議깊빐?? 留ㅼ묶沅뚯쓣 援щℓ????媛?멸?湲곕? ?쒕룄??二쇱꽭??'),
+          content: const Text('매칭권이 부족해요. 매칭권을 구매한 뒤 매칭 요청을 보내주세요.'),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.all(16),
@@ -1638,7 +1638,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                                     child: _taking
                                         ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                                         : const Text(
-                                            '留ㅼ묶?섍린',
+                                            '받기',
                                             style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                                           ),
                                   ),
@@ -1757,7 +1757,7 @@ class _MatchCompleteOnlyOverlayState extends State<_MatchCompleteOnlyOverlay> {
               Icon(LucideIcons.heart, size: 80, color: Theme.of(context).colorScheme.primary),
               const SizedBox(height: 16),
               Text(
-                '留ㅼ묶 ?꾨즺!',
+                '매칭 완료!',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -1766,7 +1766,7 @@ class _MatchCompleteOnlyOverlayState extends State<_MatchCompleteOnlyOverlay> {
               ),
               const SizedBox(height: 8),
               Text(
-                '?댁젣 ??붾? ?쒖옉?대낫?몄슂 ?뮆',
+                '익명 대화를 시작해보세요 💕',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
@@ -1843,7 +1843,7 @@ class _MatchCelebrationOverlayState extends State<_MatchCelebrationOverlay> {
                 Icon(LucideIcons.heart, size: 80, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(height: 16),
                 Text(
-                  widget.requestOnly ? '?붿껌??蹂대깉?댁슂!' : '移대뱶 ?띾뱷!',
+                  widget.requestOnly ? '요청을 보냈어요!' : '매칭 성사!',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -1853,8 +1853,8 @@ class _MatchCelebrationOverlayState extends State<_MatchCelebrationOverlay> {
                 const SizedBox(height: 8),
                 Text(
                   widget.requestOnly
-                      ? '$nickname?섏씠 ?섎씫?섎㈃\n留ㅼ묶???깆궗?쇱슂 ?뮆'
-                      : '$nickname?섏쓽 ?꾨줈?꾩쓣\n媛?몄솕?댁슂! ?뮆',
+                      ? '$nickname 님, 수락하면\n대화를 시작해보세요 💕'
+                      : '$nickname 님의 홈으로\n매칭해보세요! 💕',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,

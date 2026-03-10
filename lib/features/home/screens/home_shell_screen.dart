@@ -80,8 +80,8 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
       barrierDismissible: false,
       builder: (ctx) {
         return AlertDialog(
-          title: const Text('媛?멸?湲??붿껌'),
-          content: const Text('?꾧뎔媛 ??移대뱶瑜?媛?멸??ㅺ퀬 ?댁슂.\n吏湲??뺤씤??蹂쇨퉴??'),
+          title: const Text('매칭 요청'),
+          content: const Text('누구님이 당신의 프로필을 가져가고 싶어해요.\n매칭대기함에서 확인해보세요.'),
           actions: [
             TextButton(
               onPressed: () {
@@ -103,7 +103,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
                   ),
                 );
               },
-              child: const Text('蹂닿린'),
+              child: const Text('확인'),
             ),
           ],
         );
@@ -258,7 +258,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
                     MaterialPageRoute(builder: (_) => const NotificationsScreen()),
                   );
                 },
-                tooltip: '?뚮┝',
+                tooltip: '알림',
               ),
               IconButton(
                 icon: const Icon(LucideIcons.settings, color: Colors.white, size: 26),
@@ -267,7 +267,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
                     MaterialPageRoute(builder: (_) => const SettingsScreen()),
                   );
                 },
-                tooltip: '?ㅼ젙',
+                tooltip: '설정',
               ),
             ],
           ),
