@@ -20,6 +20,8 @@ class MeetzyBoardContent extends StatelessWidget {
     this.onProfileTap,
     this.onRefresh,
     this.onMatchingInboxTap,
+    this.onDeveloperMatchTap,
+    this.onFilterTap,
     this.isLoading = false,
   });
 
@@ -31,6 +33,8 @@ class MeetzyBoardContent extends StatelessWidget {
   final void Function(int index, MeetzyBoardProfileItem item)? onProfileTap;
   final Future<void> Function()? onRefresh;
   final VoidCallback? onMatchingInboxTap;
+  final VoidCallback? onDeveloperMatchTap;
+  final VoidCallback? onFilterTap;
   final bool isLoading;
 
   @override
@@ -56,6 +60,33 @@ class MeetzyBoardContent extends StatelessWidget {
                   matchingTicket: matchingTicket,
                   receivedRequestCount: receivedRequestCount,
                   onMatchingInboxTap: onMatchingInboxTap,
+                ),
+                const SizedBox(height: MeetzyDesignTokens.space4),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _ActionButton(
+                        onTap: onDeveloperMatchTap,
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF6366F1), Color(0xFFE879F9)],
+                        ),
+                        icon: LucideIcons.sparkles,
+                        label: '무료 개발자와\n매칭 신청',
+                        textColor: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _ActionButton(
+                        onTap: onFilterTap,
+                        color: isDark ? const Color(0xFF1F2937) : const Color(0xFFF3F4F6),
+                        borderColor: isDark ? const Color(0xFF374151) : const Color(0xFFD1D5DB),
+                        icon: LucideIcons.funnel,
+                        label: '필터링',
+                        textColor: isDark ? Colors.white : const Color(0xFF111827),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: MeetzyDesignTokens.space6),
                 if (profiles.isEmpty)
@@ -134,6 +165,65 @@ class MeetzyBoardContent extends StatelessWidget {
     return Container(
       color: UniversityTheme.bgGradientStart,
       child: const Icon(LucideIcons.user, size: 32, color: Colors.grey),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.onTap,
+    required this.icon,
+    required this.label,
+    required this.textColor,
+    this.gradient,
+    this.color,
+    this.borderColor,
+  });
+
+  final VoidCallback? onTap;
+  final IconData icon;
+  final String label;
+  final Color textColor;
+  final Gradient? gradient;
+  final Color? color;
+  final Color? borderColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        height: 72,
+        decoration: BoxDecoration(
+          gradient: gradient,
+          color: gradient == null ? color : null,
+          borderRadius: BorderRadius.circular(18),
+          border: borderColor != null ? Border.all(color: borderColor!) : null,
+          boxShadow: const [
+            BoxShadow(color: Color(0x24000000), blurRadius: 8, offset: Offset(0, 2)),
+          ],
+        ),
+        child: Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 18, color: textColor),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: textColor,
+                  height: 1.2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

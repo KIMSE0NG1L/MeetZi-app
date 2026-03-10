@@ -274,6 +274,14 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   int _receivedRequestCount = 0;
   late Future<Map<String, dynamic>> _myProfileFuture;
   String? _preferredGender;
+  bool _hasAppliedFilter = false;
+  bool _filterNonSmokingOnly = false;
+  bool _filterNonDrinkingOnly = false;
+  int _filterMinHeight = 150;
+  int _filterMaxHeight = 190;
+
+  static const int _heightMinLimit = 120;
+  static const int _heightMaxLimit = 230;
 
   @override
   void initState() {
@@ -366,6 +374,282 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     } finally {
       setState(() => _loading = false);
     }
+  }
+
+  void _onDeveloperMatchTap() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('무료 개발자와 매칭하기 기능은 준비 중입니다.')),
+    );
+  }
+
+  int? _extractHeightCm(Map<String, dynamic> profile) {
+    final user = profile['user'] as Map<String, dynamic>?;
+    final raw = profile['heightCm'] ?? profile['height'] ?? user?['heightCm'] ?? user?['height'];
+    if (raw is num) return raw.toInt();
+    if (raw is String) {
+      final digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
+      return int.tryParse(digits);
+    }
+    return null;
+  }
+
+  bool _isNonSmoking(Map<String, dynamic> profile) {
+    final user = profile['user'] as Map<String, dynamic>?;
+    final raw = (profile['smoking'] ?? profile['smoke'] ?? user?['smoking'] ?? user?['smoke'])?.toString().trim().toLowerCase();
+    return raw == 'none' || raw == '비흡연' || raw == '금연';
+  }
+
+  bool _isNonDrinking(Map<String, dynamic> profile) {
+    final user = profile['user'] as Map<String, dynamic>?;
+    final raw = (profile['drinking'] ?? profile['alcohol'] ?? user?['drinking'] ?? user?['alcohol'])?.toString().trim().toLowerCase();
+    return raw == 'none' || raw == '비음주' || raw == '금주';
+  }
+
+  List<Map<String, dynamic>> _filterProfiles(
+    List<Map<String, dynamic>> source, {
+    required bool nonSmokingOnly,
+    required bool nonDrinkingOnly,
+    required int minHeight,
+    required int maxHeight,
+  }) {
+    return source.where((profile) {
+      if (nonSmokingOnly && !_isNonSmoking(profile)) return false;
+      if (nonDrinkingOnly && !_isNonDrinking(profile)) return false;
+      final height = _extractHeightCm(profile);
+      if (height == null) return false;
+      return height >= minHeight && height <= maxHeight;
+    }).toList();
+  }
+
+  Future<void> _openFilterDialog(List<Map<String, dynamic>> baseProfiles) async {
+    if (!mounted) return;
+    bool nonSmokingOnly = _filterNonSmokingOnly;
+    bool nonDrinkingOnly = _filterNonDrinkingOnly;
+    final minController = TextEditingController(text: '$_filterMinHeight');
+    final maxController = TextEditingController(text: '$_filterMaxHeight');
+    String? errorText;
+
+    int? parseHeight(String value) => int.tryParse(value.trim());
+    int filteredCount() {
+      final minHeight = parseHeight(minController.text) ?? _filterMinHeight;
+      final maxHeight = parseHeight(maxController.text) ?? _filterMaxHeight;
+      if (minHeight > maxHeight) return 0;
+      return _filterProfiles(
+        baseProfiles,
+        nonSmokingOnly: nonSmokingOnly,
+        nonDrinkingOnly: nonDrinkingOnly,
+        minHeight: minHeight.clamp(_heightMinLimit, _heightMaxLimit),
+        maxHeight: maxHeight.clamp(_heightMinLimit, _heightMaxLimit),
+      ).length;
+    }
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black54,
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+          child: StatefulBuilder(
+            builder: (context, setModalState) {
+              final count = filteredCount();
+              final dark = Theme.of(context).brightness == Brightness.dark;
+              return Container(
+                constraints: const BoxConstraints(maxWidth: 440),
+                decoration: BoxDecoration(
+                  color: dark ? const Color(0xFF1F2937) : Colors.white,
+                  borderRadius: BorderRadius.circular(26),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(24, 20, 16, 20),
+                      decoration: const BoxDecoration(
+                        gradient: UniversityTheme.designPinkGradient,
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(LucideIcons.funnel, color: Colors.white, size: 22),
+                          const SizedBox(width: 10),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '필터링',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 33 / 2,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  '원하는 조건으로 프로필을 필터링하세요',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.of(dialogContext).pop(),
+                            icon: const Icon(LucideIcons.x, color: Colors.white, size: 24),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _FilterOptionTile(
+                            icon: Icons.smoke_free,
+                            title: '비흡연자만',
+                            subtitle: '담배를 피우지 않는 사람',
+                            selected: nonSmokingOnly,
+                            onTap: () => setModalState(() => nonSmokingOnly = !nonSmokingOnly),
+                          ),
+                          const SizedBox(height: 12),
+                          _FilterOptionTile(
+                            icon: Icons.no_drinks,
+                            title: '비음주자만',
+                            subtitle: '술을 마시지 않는 사람',
+                            selected: nonDrinkingOnly,
+                            onTap: () => setModalState(() => nonDrinkingOnly = !nonDrinkingOnly),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            '키 범위 (cm)',
+                            style: TextStyle(
+                              color: dark ? Colors.white : const Color(0xFF374151),
+                              fontSize: 28 / 2,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _HeightInputField(
+                                  controller: minController,
+                                  onChanged: (_) => setModalState(() => errorText = null),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                child: Text(
+                                  '~',
+                                  style: TextStyle(
+                                    color: dark ? Colors.white : const Color(0xFF6B7280),
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: _HeightInputField(
+                                  controller: maxController,
+                                  onChanged: (_) => setModalState(() => errorText = null),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: dark ? Colors.white10 : const Color(0xFFF3F4F6),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Center(
+                              child: Text(
+                                '필터 결과: $count명',
+                                style: TextStyle(
+                                  color: dark ? Colors.white : const Color(0xFF374151),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (errorText != null) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              errorText!,
+                              style: const TextStyle(
+                                color: Color(0xFFEF4444),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 14),
+                          SizedBox(
+                            height: 56,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: UniversityTheme.designPinkGradient,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: TextButton(
+                                onPressed: () {
+                                  final minHeight = parseHeight(minController.text);
+                                  final maxHeight = parseHeight(maxController.text);
+                                  if (minHeight == null || maxHeight == null) {
+                                    setModalState(() => errorText = '키는 숫자로 입력해 주세요.');
+                                    return;
+                                  }
+                                  if (minHeight < _heightMinLimit || maxHeight > _heightMaxLimit) {
+                                    setModalState(() => errorText = '키 범위는 $_heightMinLimit ~ $_heightMaxLimit cm 입니다.');
+                                    return;
+                                  }
+                                  if (minHeight > maxHeight) {
+                                    setModalState(() => errorText = '최소 키가 최대 키보다 클 수 없습니다.');
+                                    return;
+                                  }
+                                  setState(() {
+                                    _hasAppliedFilter = true;
+                                    _filterNonSmokingOnly = nonSmokingOnly;
+                                    _filterNonDrinkingOnly = nonDrinkingOnly;
+                                    _filterMinHeight = minHeight;
+                                    _filterMaxHeight = maxHeight;
+                                  });
+                                  Navigator.of(dialogContext).pop();
+                                },
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                ),
+                                child: const Text(
+                                  '필터 적용하기',
+                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+
+    minController.dispose();
+    maxController.dispose();
   }
 
   Future<void> _registerProfile() async {
@@ -510,6 +794,15 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                 return uid != myUserId;
               }).toList()
             : List<Map<String, dynamic>>.from(_profiles);
+        final filteredProfiles = _hasAppliedFilter
+            ? _filterProfiles(
+                displayProfiles,
+                nonSmokingOnly: _filterNonSmokingOnly,
+                nonDrinkingOnly: _filterNonDrinkingOnly,
+                minHeight: _filterMinHeight,
+                maxHeight: _filterMaxHeight,
+              )
+            : displayProfiles;
 
         return Scaffold(
           backgroundColor: Colors.transparent,
@@ -527,7 +820,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                 : null,
             matchingTicket: _myTickets?.matchingTicket ?? 0,
             receivedRequestCount: _receivedRequestCount,
-            profiles: displayProfiles.asMap().entries.map((e) {
+            profiles: filteredProfiles.asMap().entries.map((e) {
               final i = e.key;
               final p = e.value;
               final nickname = p['nickname']?.toString().trim();
@@ -542,7 +835,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                 isNew: i < 6,
               );
             }).toList(),
-            onProfileTap: (index, _) => _openNoteSheet(context, index, displayProfiles, myUserId),
+            onProfileTap: (index, _) => _openNoteSheet(context, index, filteredProfiles, myUserId),
             onRefresh: () async {
               await _fetchProfiles();
               await _fetchMySummary();
@@ -586,6 +879,8 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                 ),
               ).then((_) => _fetchReceivedRequestCount());
             },
+            onDeveloperMatchTap: _onDeveloperMatchTap,
+            onFilterTap: () => _openFilterDialog(displayProfiles),
             isLoading: _loading,
           ),
         );
@@ -724,6 +1019,135 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
       return false;
     }
+  }
+}
+
+class _FilterOptionTile extends StatelessWidget {
+  const _FilterOptionTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Ink(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: dark ? Colors.white10 : const Color(0xFFF3F4F6),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: dark ? Colors.white12 : Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: const Color(0xFFF43F5E), size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: dark ? Colors.white : const Color(0xFF111827),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: dark ? Colors.grey.shade300 : const Color(0xFF6B7280),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: selected
+                    ? const Color(0xFFF43F5E)
+                    : (dark ? Colors.white24 : const Color(0xFFD1D5DB)),
+              ),
+              child: selected
+                  ? const Icon(LucideIcons.check, size: 18, color: Colors.white)
+                  : null,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HeightInputField extends StatelessWidget {
+  const _HeightInputField({
+    required this.controller,
+    required this.onChanged,
+  });
+
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return TextField(
+      controller: controller,
+      keyboardType: TextInputType.number,
+      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+      onChanged: onChanged,
+      textAlign: TextAlign.center,
+      style: TextStyle(
+        color: dark ? Colors.white : const Color(0xFF111827),
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+      ),
+      decoration: InputDecoration(
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(vertical: 14),
+        filled: true,
+        fillColor: dark ? Colors.white10 : const Color(0xFFF9FAFB),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: dark ? Colors.white24 : const Color(0xFFD1D5DB)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: dark ? Colors.white24 : const Color(0xFFD1D5DB)),
+        ),
+        focusedBorder: const OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(14)),
+          borderSide: BorderSide(color: Color(0xFFF43F5E), width: 1.4),
+        ),
+      ),
+    );
   }
 }
 
