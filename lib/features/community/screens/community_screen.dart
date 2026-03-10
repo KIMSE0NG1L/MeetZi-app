@@ -285,7 +285,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                     : RefreshIndicator(
                         onRefresh: _load,
                         child: ListView(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                          padding: const EdgeInsets.fromLTRB(16, 10, 16, 92),
                           children: [
                             if (bestPosts.isNotEmpty) ...[
                               Row(
@@ -420,8 +420,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
 
     return Padding(
       padding: EdgeInsets.only(
-        bottom: 12,
-        top: (isBest && bestRank != null) ? 12 : 0,
+        bottom: 4,
+        top: (isBest && bestRank != null) ? 10 : 0,
         left: (isBest && bestRank != null) ? 12 : 0,
       ),
       child: Stack(
@@ -443,7 +443,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 onTap: () => _openPost(post),
                 borderRadius: BorderRadius.circular(16),
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -522,7 +522,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
                       Text(
                         content,
                         style: TextStyle(
@@ -530,62 +530,57 @@ class _CommunityScreenState extends State<CommunityScreen> {
                           color: dark ? Colors.grey.shade300 : Colors.grey.shade700,
                           height: 1.4,
                         ),
-                        maxLines: 4,
+                        maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                       ),
                       if (post['poll'] != null) ...[
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 8),
                         _buildPollChip(context, post['poll'] as Map<String, dynamic>, dark),
                       ],
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
                       Row(
                         children: [
-                          Material(
-                            color: liked
-                                ? primary.withOpacity(0.2)
-                                : (dark ? Colors.grey.shade700 : Colors.grey.shade100),
-                            borderRadius: BorderRadius.circular(12),
-                            child: InkWell(
-                              onTap: () => _toggleLike(post, index),
-                              borderRadius: BorderRadius.circular(12),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      LucideIcons.heart,
-                                      size: 16,
-                                      color: liked ? Colors.red : (dark ? Colors.grey.shade300 : Colors.grey.shade600),
-                                      fill: liked ? 1.0 : 0,
+                          const Spacer(),
+                          InkWell(
+                            onTap: () => _toggleLike(post, index),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    LucideIcons.heart,
+                                    size: 15,
+                                    color: liked ? Colors.red : Colors.grey.shade600,
+                                    fill: liked ? 1.0 : 0,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '$likeCount',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: liked ? Colors.red : Colors.grey.shade600,
                                     ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      '$likeCount',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: liked ? Colors.red : (dark ? Colors.grey.shade300 : Colors.grey.shade600),
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          Icon(LucideIcons.messageCircle, size: 16, color: Colors.grey.shade600),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 10),
+                          Icon(LucideIcons.messageCircle, size: 15, color: Colors.grey.shade600),
+                          const SizedBox(width: 4),
                           Text(
                             '$commentCount',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey.shade600),
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.grey.shade600),
                           ),
-                          const SizedBox(width: 12),
-                          Icon(LucideIcons.eye, size: 16, color: Colors.grey.shade600),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 10),
+                          Icon(LucideIcons.eye, size: 15, color: Colors.grey.shade600),
+                          const SizedBox(width: 4),
                           Text(
                             '$viewCount',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey.shade600),
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.grey.shade600),
                           ),
                         ],
                       ),
