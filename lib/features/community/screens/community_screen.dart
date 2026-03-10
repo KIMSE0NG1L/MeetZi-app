@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/community/data/community_repository.dart';
@@ -10,7 +10,7 @@ import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/shared/utils/post_time_format.dart';
 
-/// 학교별 커뮤니티 피드. 누구나 진입 가능.
+/// ?숆탳蹂?而ㅻ??덊떚 ?쇰뱶. ?꾧뎄??吏꾩엯 媛??
 class CommunityScreen extends StatefulWidget {
   final String environmentId;
   final String schoolName;
@@ -22,7 +22,7 @@ class CommunityScreen extends StatefulWidget {
     this.isRootTab = false,
   });
 
-  /// true면 탭 루트로 사용. 뒤로가기 대신 대학교 랭킹 버튼 표시.
+  /// true硫???猷⑦듃濡??ъ슜. ?ㅻ줈媛湲??????숆탳 ??궧 踰꾪듉 ?쒖떆.
   final bool isRootTab;
 
   @override
@@ -47,7 +47,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
   Future<void> _loadMyUserId() async {
     try {
       final res = await AuthRepository().getProfile();
-      // GET /users/me 는 user 객체 그대로 반환. GET /auth/profile 은 { user } 반환 가능.
+      // GET /users/me ??user 媛앹껜 洹몃?濡?諛섑솚. GET /auth/profile ? { user } 諛섑솚 媛??
       final id = (res['user'] as Map<String, dynamic>?)?['id']?.toString() ?? res['id']?.toString();
       if (mounted) setState(() => _myUserId = id);
     } catch (_) {
@@ -116,7 +116,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
       _load();
       if (deleted == true && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('글이 삭제되었어요.')),
+          const SnackBar(content: Text('湲????젣?섏뿀?댁슂.')),
         );
       }
     });
@@ -126,17 +126,17 @@ class _CommunityScreenState extends State<CommunityScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('글 삭제'),
-        content: const Text('이 글을 삭제할까요? 삭제된 글은 복구할 수 없어요.'),
+        title: const Text('湲 ??젣'),
+        content: const Text('??湲????젣?좉퉴?? ??젣??湲? 蹂듦뎄?????놁뼱??'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('취소'),
+            child: const Text('痍⑥냼'),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('삭제'),
+            child: const Text('??젣'),
           ),
         ],
       ),
@@ -147,7 +147,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
       if (!mounted) return;
       _load();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('글이 삭제되었어요.')),
+        const SnackBar(content: Text('湲????젣?섏뿀?댁슂.')),
       );
     } catch (e) {
       if (mounted) {
@@ -155,8 +155,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
           SnackBar(
             content: Text(
               e.toString().contains('403') || e.toString().contains('Forbidden')
-                  ? '본인 글만 삭제할 수 있어요.'
-                  : '삭제에 실패했어요. 잠시 후 다시 시도해 주세요.',
+                  ? '蹂몄씤 湲留???젣?????덉뼱??'
+                  : '??젣???ㅽ뙣?덉뼱?? ?좎떆 ???ㅼ떆 ?쒕룄??二쇱꽭??',
             ),
           ),
         );
@@ -214,7 +214,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
         ),
         child: Column(
           children: [
-          // Design: 그라데이션 앱바 + 뒤로가기 + "학교명 커뮤니티 🏫"
+          // Design: 洹몃씪?곗씠???깅컮 + ?ㅻ줈媛湲?+ "?숆탳紐?而ㅻ??덊떚 ?룶"
           Container(
             width: double.infinity,
             decoration: const BoxDecoration(
@@ -240,7 +240,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                             ),
                           );
                         },
-                        tooltip: '대학교 랭킹',
+                        tooltip: '??숆탳 ??궧',
                       )
                     else
                       IconButton(
@@ -249,7 +249,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                       ),
                     Expanded(
                       child: Text(
-                        '${widget.schoolName} 커뮤니티',
+                        '${widget.schoolName} 而ㅻ??덊떚',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 20,
@@ -275,7 +275,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                             Icon(LucideIcons.messageSquare, size: 48, color: Colors.grey.shade400),
                             const SizedBox(height: 16),
                             Text(
-                              '아직 글이 없어요.\n첫 글을 올려보세요!',
+                              '?꾩쭅 湲???놁뼱??\n泥?湲???щ젮蹂댁꽭??',
                               textAlign: TextAlign.center,
                               style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
                             ),
@@ -285,15 +285,15 @@ class _CommunityScreenState extends State<CommunityScreen> {
                     : RefreshIndicator(
                         onRefresh: _load,
                         child: ListView(
-                          padding: const EdgeInsets.fromLTRB(16, 10, 16, 92),
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 92),
                           children: [
                             if (bestPosts.isNotEmpty) ...[
                               Row(
                                 children: [
-                                  const Text('🔥', style: TextStyle(fontSize: 22)),
+                                  const Text('?뵦', style: TextStyle(fontSize: 22)),
                                   const SizedBox(width: 8),
                                   Text(
-                                    '베스트 글',
+                                    '踰좎뒪??湲',
                                     style: TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
@@ -321,7 +321,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                               const SizedBox(height: 24),
                             ],
                             Text(
-                              '전체 글',
+                              '?꾩껜 湲',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -351,7 +351,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                         )
                                       : TextButton(
                                           onPressed: _loadMore,
-                                          child: const Text('더 보기'),
+                                          child: const Text('??蹂닿린'),
                                         ),
                                 ),
                               ),
@@ -407,7 +407,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
     int? bestRank,
   }) {
     final author = post['author'] as Map<String, dynamic>? ?? {};
-    final nickname = author['nickname']?.toString() ?? '알 수 없음';
+    final nickname = author['nickname']?.toString() ?? '?????놁쓬';
     final authorId = author['id']?.toString();
     final isMe = _myUserId != null && authorId == _myUserId;
     final isDailyBest = post['isDailyBest'] == true;
@@ -420,8 +420,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
 
     return Padding(
       padding: EdgeInsets.only(
-        bottom: 4,
-        top: (isBest && bestRank != null) ? 10 : 0,
+        bottom: 2,
+        top: (isBest && bestRank != null) ? 8 : 0,
         left: (isBest && bestRank != null) ? 12 : 0,
       ),
       child: Stack(
@@ -442,8 +442,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
               child: InkWell(
                 onTap: () => _openPost(post),
                 borderRadius: BorderRadius.circular(16),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+                 child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 9, 12, 8),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -452,9 +452,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
                           DiceBearAvatar(
                             style: author['avatarStyle']?.toString() ?? 'lorelei',
                             seed: author['avatarSeed']?.toString() ?? nickname,
-                            size: 40,
+                            size: 34,
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -466,14 +466,14 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                         nickname,
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
-                                          fontSize: 14,
+                                          fontSize: 13,
                                           color: dark ? Colors.white : const Color(0xFF111827),
                                         ),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                     if (isBest) const SizedBox(width: 4),
-                                    if (isBest) const Text('⭐', style: TextStyle(fontSize: 12)),
+                                    if (isBest) const Text('狩?, style: TextStyle(fontSize: 12)),
                                     if (isMe) ...[
                                       const SizedBox(width: 6),
                                       Container(
@@ -483,7 +483,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                           borderRadius: BorderRadius.circular(4),
                                         ),
                                         child: Text(
-                                          '작성자',
+                                          '?묒꽦??,
                                           style: TextStyle(
                                             fontSize: 11,
                                             fontWeight: FontWeight.w600,
@@ -512,32 +512,32 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                     ],
                                   ],
                                 ),
-                                const SizedBox(height: 2),
+                                const SizedBox(height: 1),
                                 Text(
                                   formatPostTime(post['createdAt']),
-                                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                                 ),
                               ],
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 5),
                       Text(
                         content,
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 13,
                           color: dark ? Colors.grey.shade300 : Colors.grey.shade700,
-                          height: 1.4,
+                          height: 1.25,
                         ),
-                        maxLines: 3,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                       if (post['poll'] != null) ...[
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 5),
                         _buildPollChip(context, post['poll'] as Map<String, dynamic>, dark),
                       ],
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 5),
                       Row(
                         children: [
                           const Spacer(),
@@ -545,13 +545,13 @@ class _CommunityScreenState extends State<CommunityScreen> {
                             onTap: () => _toggleLike(post, index),
                             borderRadius: BorderRadius.circular(8),
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(
                                     LucideIcons.heart,
-                                    size: 15,
+                                    size: 14,
                                     color: liked ? Colors.red : Colors.grey.shade600,
                                     fill: liked ? 1.0 : 0,
                                   ),
@@ -559,7 +559,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                   Text(
                                     '$likeCount',
                                     style: TextStyle(
-                                      fontSize: 11,
+                                      fontSize: 10,
                                       fontWeight: FontWeight.w700,
                                       color: liked ? Colors.red : Colors.grey.shade600,
                                     ),
@@ -568,19 +568,19 @@ class _CommunityScreenState extends State<CommunityScreen> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 10),
-                          Icon(LucideIcons.messageCircle, size: 15, color: Colors.grey.shade600),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 8),
+                          Icon(LucideIcons.messageCircle, size: 14, color: Colors.grey.shade600),
+                          const SizedBox(width: 3),
                           Text(
                             '$commentCount',
-                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.grey.shade600),
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.grey.shade600),
                           ),
-                          const SizedBox(width: 10),
-                          Icon(LucideIcons.eye, size: 15, color: Colors.grey.shade600),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 8),
+                          Icon(LucideIcons.eye, size: 14, color: Colors.grey.shade600),
+                          const SizedBox(width: 3),
                           Text(
                             '$viewCount',
-                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.grey.shade600),
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.grey.shade600),
                           ),
                         ],
                       ),
@@ -633,7 +633,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
   }
 
   Widget _buildPollChip(BuildContext context, Map<String, dynamic> poll, bool dark) {
-    final question = poll['question']?.toString() ?? '투표';
+    final question = poll['question']?.toString() ?? '?ы몴';
     final voteCounts = (poll['voteCounts'] as List<dynamic>?)?.map((e) => (e as num).toInt()).toList() ?? [];
     final total = voteCounts.fold<int>(0, (a, b) => a + b);
     return Container(
@@ -655,7 +655,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
             ),
           ),
           Text(
-            '$total명 참여',
+            '$total紐?李몄뿬',
             style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
           ),
         ],
@@ -663,3 +663,4 @@ class _CommunityScreenState extends State<CommunityScreen> {
     );
   }
 }
+
