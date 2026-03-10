@@ -154,6 +154,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     }
     final seed = _profile?['avatarSeed']?.toString() ?? _profile?['id']?.toString();
     final options = _parseAvatarOptions(_profile?['avatarOptions']);
+    final style = _profile?['avatarStyle'] ?? (_profile?['user'] as Map?)?['avatarStyle'];
     if (seed != null && seed.isNotEmpty) {
       return CircleAvatar(
         radius: 48,
@@ -165,6 +166,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             child: SvgPicture.network(
               diceBearAvatarUrl(
                 seed,
+                style: style?.toString() ?? 'lorelei',
                 options: options.isNotEmpty ? options : null,
               ),
               fit: BoxFit.cover,
@@ -198,8 +200,9 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     }
     final seed = _profile?['avatarSeed']?.toString() ?? _profile?['id']?.toString();
     final options = _parseAvatarOptions(_profile?['avatarOptions']);
+    final style = _profile?['avatarStyle'] ?? (_profile?['user'] as Map?)?['avatarStyle'];
     final avatarUrl = seed != null && seed.isNotEmpty
-        ? diceBearAvatarUrl(seed, options: options.isNotEmpty ? options : null)
+        ? diceBearAvatarUrl(seed, style: style?.toString() ?? 'lorelei', options: options.isNotEmpty ? options : null)
         : null;
 
     if (photoUrl == null && avatarUrl == null) return;

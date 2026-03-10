@@ -18,6 +18,7 @@ void _enlargeUrlsFromProfile(Map<String, dynamic> profile, void Function(String?
     }
   }
   final seed = user?['avatarSeed']?.toString() ?? profile['avatarSeed']?.toString() ?? profile['userId']?.toString();
+  final style = (user?['avatarStyle'] ?? profile['avatarStyle'])?.toString() ?? 'lorelei';
   Map<String, String> opts = {};
   final raw = user?['avatarOptions'] ?? profile['avatarOptions'];
   if (raw is Map) {
@@ -29,7 +30,7 @@ void _enlargeUrlsFromProfile(Map<String, dynamic> profile, void Function(String?
     } catch (_) {}
   }
   final avatarUrl = seed != null && seed.isNotEmpty
-      ? diceBearAvatarUrl(seed, options: opts.isNotEmpty ? opts : null)
+      ? diceBearAvatarUrl(seed, style: style, options: opts.isNotEmpty ? opts : null)
       : null;
   setUrls(photoUrl, avatarUrl);
 }

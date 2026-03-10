@@ -351,7 +351,7 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
                   Row(
                     children: [
                       DiceBearAvatar(
-                        style: author['avatarStyle']?.toString() ?? 'notionists',
+                        style: author['avatarStyle']?.toString() ?? 'lorelei',
                         seed: author['avatarSeed']?.toString() ?? nickname,
                         size: 44,
                       ),
@@ -469,7 +469,7 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           DiceBearAvatar(
-                            style: ca['avatarStyle']?.toString() ?? 'notionists',
+                            style: ca['avatarStyle']?.toString() ?? 'lorelei',
                             seed: ca['avatarSeed']?.toString() ?? cn,
                             size: 36,
                           ),

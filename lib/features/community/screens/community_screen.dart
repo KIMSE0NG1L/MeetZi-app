@@ -450,7 +450,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                       Row(
                         children: [
                           DiceBearAvatar(
-                            style: author['avatarStyle']?.toString() ?? 'notionists',
+                            style: author['avatarStyle']?.toString() ?? 'lorelei',
                             seed: author['avatarSeed']?.toString() ?? nickname,
                             size: 40,
                           ),
