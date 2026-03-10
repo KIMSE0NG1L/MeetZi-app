@@ -480,8 +480,9 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
             builder: (context, setModalState) {
               final count = filteredCount();
               final dark = Theme.of(context).brightness == Brightness.dark;
+              final maxHeight = MediaQuery.of(context).size.height * 0.85;
               return Container(
-                constraints: const BoxConstraints(maxWidth: 440),
+                constraints: BoxConstraints(maxWidth: 440, maxHeight: maxHeight),
                 decoration: BoxDecoration(
                   color: dark ? const Color(0xFF1F2937) : Colors.white,
                   borderRadius: BorderRadius.circular(26),
@@ -531,11 +532,12 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                         ],
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
+                    Flexible(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
                           _FilterOptionTile(
                             icon: Icons.smoke_free,
                             title: '비흡연자만',
@@ -662,6 +664,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                           ),
                         ],
                       ),
+                    ),
                     ),
                   ],
                 ),

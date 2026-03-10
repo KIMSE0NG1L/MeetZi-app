@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/app/app.dart';
@@ -12,7 +13,9 @@ import 'package:nearo_app/features/matching_board/screens/take_note_request_resp
 import 'package:nearo_app/features/profile/screens/my_profile_screen.dart';
 import 'package:nearo_app/features/ratings/screens/ratings_screen.dart';
 import 'package:nearo_app/features/settings/screens/settings_screen.dart';
+import 'package:nearo_app/shared/api/api_client.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
+import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/features/auth/data/environment_status_repository.dart';
 import 'package:nearo_app/presentation/widgets/meetzy_coach_mark.dart';
@@ -54,8 +57,24 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
   void initState() {
     super.initState();
     _loadThemeAndProfile();
+    _registerPushTokenIfNeeded();
     PendingTakeNoteStore.instance.pending.addListener(_onPendingTakeNote);
     _checkCoachMark();
+  }
+
+  /// 로그인 후 홈 진입 시 FCM 토큰을 서버에 등록 (매칭 요청 등 알림 수신용)
+  Future<void> _registerPushTokenIfNeeded() async {
+    try {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token == null || token.isEmpty) return;
+      final client = ApiClient();
+      await client.dio.post(
+        '/users/push-token',
+        data: {'token': token, 'platform': 'android'},
+      );
+    } catch (_) {
+      // 로그인 전이거나 네트워크 오류 시 무시
+    }
   }
 
   Future<void> _checkCoachMark() async {
