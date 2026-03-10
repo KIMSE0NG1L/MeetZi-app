@@ -310,7 +310,7 @@ class MeetzyBoardPage extends StatelessWidget {
                     _navItem(context, 'ranking', LucideIcons.trophy, '대학교 랭킹', primary),
                     _navItem(context, 'messages', LucideIcons.messageCircle, '메시지함', primary),
                     _navItem(context, 'board', LucideIcons.house, '홈', primary),
-                    _navItem(context, 'profile', LucideIcons.user, '프로필', primary),
+                    _navItem(context, 'profile', LucideIcons.user, '마이프로필', primary),
                     _navItem(context, 'shop', LucideIcons.shoppingBag, '상점', primary),
                   ],
                 ),
