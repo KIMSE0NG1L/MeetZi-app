@@ -3,6 +3,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/community/data/community_repository.dart';
 import 'package:nearo_app/features/messages/data/report_repository.dart';
+import 'package:nearo_app/shared/theme/nearo_theme.dart';
+import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/shared/utils/post_time_format.dart';
 
@@ -280,28 +282,65 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
     final isPostAuthorMe = _myUserIdResolved != null && authorId != null && authorId == _myUserIdResolved;
     final content = post['content']?.toString() ?? '';
     final likeCount = (post['likeCount'] is int) ? post['likeCount'] as int : 0;
+    final viewCount = (post['viewCount'] is int) ? post['viewCount'] as int : 0;
     final liked = post['liked'] == true;
     final isDailyBest = post['isDailyBest'] == true;
     final comments = (post['comments'] as List<dynamic>?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? [];
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: const Text('글'),
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          '게시글',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        leading: IconButton(
+          icon: const Icon(LucideIcons.arrowLeft, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         actions: [
-          if (isPostAuthorMe)
-            IconButton(
-              icon: const Icon(LucideIcons.trash2),
-              onPressed: _deletePost,
-              tooltip: '삭제',
-            ),
-          IconButton(
-            icon: const Icon(LucideIcons.flag),
-            onPressed: () => _showReportSheet(context),
-            tooltip: '신고',
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, color: Colors.white),
+            onSelected: (value) {
+              if (value == 'delete') {
+                _deletePost();
+              } else if (value == 'report') {
+                _showReportSheet(context);
+              }
+            },
+            itemBuilder: (ctx) => [
+              if (isPostAuthorMe)
+                const PopupMenuItem<String>(
+                  value: 'delete',
+                  child: Text('삭제'),
+                ),
+              const PopupMenuItem<String>(
+                value: 'report',
+                child: Text('신고'),
+              ),
+            ],
           ),
         ],
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              colors: [Color(0xFFA855F7), Color(0xFF6366F1)],
+            ),
+          ),
+        ),
       ),
-      body: Column(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: dark ? null : ThemeController.getScreenBgGradient(),
+          color: dark ? NearoTheme.designScreenBgDark : null,
+        ),
+        child: Column(
         children: [
           Expanded(
             child: SingleChildScrollView(
@@ -312,7 +351,7 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
                   Row(
                     children: [
                       DiceBearAvatar(
-                        style: author['avatarStyle']?.toString() ?? 'notionists',
+                        style: author['avatarStyle']?.toString() ?? 'lorelei',
                         seed: author['avatarSeed']?.toString() ?? nickname,
                         size: 44,
                       ),
@@ -409,6 +448,10 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
                       Icon(LucideIcons.messageCircle, size: 22, color: Colors.grey.shade600),
                       const SizedBox(width: 6),
                       Text('${comments.length}', style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
+                      const SizedBox(width: 8),
+                      Icon(LucideIcons.eye, size: 22, color: Colors.grey.shade600),
+                      const SizedBox(width: 6),
+                      Text('$viewCount', style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
                     ],
                   ),
                   const Divider(height: 32),
@@ -426,7 +469,7 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           DiceBearAvatar(
-                            style: ca['avatarStyle']?.toString() ?? 'notionists',
+                            style: ca['avatarStyle']?.toString() ?? 'lorelei',
                             seed: ca['avatarSeed']?.toString() ?? cn,
                             size: 36,
                           ),
@@ -508,6 +551,7 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 

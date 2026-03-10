@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
-import 'package:nearo_app/shared/data/notionists_options.dart';
+import 'package:nearo_app/shared/data/lorelei_options.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/shared/widgets/primary_button.dart';
 
-/// DiceBear notionists: 탭 + 썸네일 그리드 선택 방식으로 전면 편집
+/// DiceBear lorelei: 탭 + 썸네일 그리드 선택 방식으로 전면 편집
 class AvatarSetupScreen extends StatefulWidget {
   const AvatarSetupScreen({super.key});
 
@@ -18,7 +18,7 @@ class AvatarSetupScreen extends StatefulWidget {
 
 class _AvatarSetupScreenState extends State<AvatarSetupScreen> {
   final AuthRepository _repository = AuthRepository();
-  static const String _avatarStyle = 'notionists';
+  static const String _avatarStyle = 'lorelei';
   String _avatarSeed = '';
   Map<String, String> _avatarOptions = {};
   Map<String, String> _initialOptions = {};
@@ -58,7 +58,7 @@ class _AvatarSetupScreenState extends State<AvatarSetupScreen> {
   @override
   void initState() {
     super.initState();
-    _categories = getNotionistsCategories();
+    _categories = getLoreleiCategories();
     _loadCurrent();
   }
 
@@ -74,8 +74,17 @@ class _AvatarSetupScreenState extends State<AvatarSetupScreen> {
         try {
           final decoded = jsonDecode(optionsRaw) as Map<dynamic, dynamic>?;
           if (decoded != null) {
+            final validKeys = getLoreleiCategories().map((c) => c.apiKey).toSet();
             for (final e in decoded.entries) {
-              if (e.value != null) options[e.key.toString()] = e.value.toString();
+              if (e.value == null) continue;
+              final key = e.key.toString();
+              if (key == 'freckles') continue; // 제거된 옵션
+              if (!validKeys.contains(key)) continue;
+              String v = e.value.toString();
+              if (e.value is List && (e.value as List).isNotEmpty) {
+                v = (e.value as List).first.toString();
+              }
+              if (v.isNotEmpty) options[key] = v;
             }
           }
         } catch (_) {}

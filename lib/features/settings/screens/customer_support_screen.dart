@@ -106,7 +106,7 @@ class _CustomerSupportScreenState extends State<CustomerSupportScreen> {
           Container(
             height: headerHeight,
             decoration: BoxDecoration(
-              gradient: ThemeController.gradientFromPrimary(primary),
+              gradient: ThemeController.getHeaderGradient(),
               boxShadow: const [
                 BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2)),
               ],

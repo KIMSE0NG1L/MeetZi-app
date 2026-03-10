@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/shared/utils/app_config.dart';
+import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -12,24 +12,24 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // Onboarding Flow Design - 기능 3종
+  // Onboarding Flow Design - 기능 3종 (MeetZy 디자인)
   static const List<Map<String, dynamic>> _features = [
     {
       'icon': LucideIcons.users,
       'title': '우리 학교만',
-      'description': '검증된 사람들과',
+      'description': '검증된 동기들과',
       'color': Color(0xFF3B82F6),
     },
     {
       'icon': LucideIcons.heart,
       'title': '실시간 매칭',
       'description': '즉시 대화 시작',
-      'color': Color(0xFFEC4899),
+      'color': NearoTheme.designPink500,
     },
     {
-      'icon': LucideIcons.shield,
+      'icon': LucideIcons.shieldCheck,
       'title': '안전한 만남',
-      'description': '익명 프로필',
+      'description': '신뢰할 수 있는',
       'color': Color(0xFF8B5CF6),
     },
   ];
@@ -45,19 +45,25 @@ class _LoginScreenState extends State<LoginScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFFEFF6FF), // blue-50
+              Color(0xFFEFF6FF),
               Colors.white,
-              Color(0xFFFDF2F8), // pink-50
+              Color(0xFFFDF2F8),
             ],
             stops: [0.0, 0.5, 1.0],
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).padding.bottom + 16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
               // 상단: 로고 및 캐치프레이즈
               Padding(
-                padding: const EdgeInsets.fromLTRB(32, 48, 32, 48),
+                padding: const EdgeInsets.fromLTRB(32, 32, 32, 32),
                 child: Column(
                   children: [
                     TweenAnimationBuilder<double>(
@@ -94,7 +100,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   child: const Icon(
                                     LucideIcons.heart,
                                     size: 56,
-                                    color: Color(0xFFEC4899),
+                                    color: NearoTheme.designPink500,
                                   ),
                                 ),
                               ),
@@ -116,7 +122,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: Column(
                               children: [
                                   const Text(
-                                    'Meetzi',
+                                    'MeetZy',
                                   style: TextStyle(
                                     fontSize: 30,
                                     fontWeight: FontWeight.bold,
@@ -140,11 +146,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
               ),
-              // 중간: 주요 기능 3개
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
-                  child: Column(
+              // 중간: 주요 기능 3개 (고정 높이 제거, 스크롤 대응)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                child: Column(
                     children: [
                       Row(
                         children: List.generate(
@@ -278,10 +283,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                 ),
-              ),
               // 하단: 카카오 로그인 버튼
               Padding(
-                padding: const EdgeInsets.fromLTRB(32, 0, 32, 48),
+                padding: const EdgeInsets.fromLTRB(32, 8, 32, 0),
                 child: Column(
                   children: [
                     TweenAnimationBuilder<double>(
@@ -352,10 +356,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
               ),
-            ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
-      ),
     );
   }
 

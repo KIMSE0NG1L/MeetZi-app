@@ -343,7 +343,7 @@ class _ModalCard extends StatelessWidget {
               height: 160,
               width: double.infinity,
               decoration: BoxDecoration(
-                gradient: ThemeController.gradientFromPrimaryDiagonal(Theme.of(context).colorScheme.primary),
+                gradient: ThemeController.getSheetGradient(),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(32),
                   topRight: Radius.circular(32),
@@ -457,7 +457,7 @@ class _ModalCard extends StatelessWidget {
                             _infoRow('MBTI', _str(p['mbti'] ?? u?['mbti']), onSurfaceVariant, onSurface, borderColor),
                             _infoRow('흡연', _toLabel('smoking', p['smoking'] ?? u?['smoking']), onSurfaceVariant, onSurface, borderColor),
                             _infoRow('음주', _toLabel('drinking', p['drinking'] ?? u?['drinking']), onSurfaceVariant, onSurface, borderColor),
-                            _infoRow('한 줄 소개', _str(p['introOneLine'] ?? u?['introOneLine']), onSurfaceVariant, onSurface, borderColor),
+                            _infoRow('자기 소개', _str(p['introOneLine'] ?? u?['introOneLine']), onSurfaceVariant, onSurface, borderColor),
                             _infoRow('요즘 빠진 것', _str(p['intoLately'] ?? u?['intoLately']), onSurfaceVariant, onSurface, borderColor),
                             _infoRow('이상형', _str(p['idealType'] ?? u?['idealType']), onSurfaceVariant, onSurface, borderColor),
                             _infoRow('패션 스타일', _toLabel('fashionStyle', p['fashionStyle'] ?? u?['fashionStyle']), onSurfaceVariant, onSurface, borderColor),

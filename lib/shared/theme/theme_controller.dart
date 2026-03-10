@@ -1,7 +1,50 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
 
 class ThemeController {
+  /// Design 폴더 pink 테마 메인 색상 (colorThemes.ts pink-500)
+  static Color get designPink => NearoTheme.designPink500;
+
+  static const _keyThemeColorMode = 'theme_color_mode';
+  static const _valuePink = 'pink';
+  static const _valueSchool = 'school';
+
+  /// 'pink' = 핑크색, 'school' = DB 교색(primaryColor)
+  static final ValueNotifier<String> themeColorMode = ValueNotifier<String>(_valuePink);
+
+  /// 저장된 테마 색상 모드 로드. 앱/홈 진입 시 한 번 호출.
+  static Future<void> loadThemeColorMode() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final mode = prefs.getString(_keyThemeColorMode) ?? _valuePink;
+      themeColorMode.value = mode;
+      if (mode == _valuePink) {
+        setSeedColor(designPink);
+      }
+    } catch (_) {}
+  }
+
+  /// 핑크색 선택 시: seedColor를 Design 핑크로 설정 후 저장.
+  static Future<void> setThemeColorModePink() async {
+    themeColorMode.value = _valuePink;
+    setSeedColor(designPink);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_keyThemeColorMode, _valuePink);
+    } catch (_) {}
+  }
+
+  /// 교색 선택 시: seedColor는 호출측에서 DB primary로 설정. 모드만 저장.
+  static Future<void> setThemeColorModeSchool(Color schoolPrimary) async {
+    themeColorMode.value = _valueSchool;
+    setSeedColor(schoolPrimary);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_keyThemeColorMode, _valueSchool);
+    } catch (_) {}
+  }
+
   /// DB primaryColor(hex, e.g. "#003380") → Color. null/empty면 null.
   static Color? parsePrimaryColor(String? hex) {
     if (hex == null || hex.isEmpty) return null;
@@ -21,6 +64,40 @@ class ThemeController {
       end: Alignment.centerRight,
       colors: [lighter, primary, darker],
     );
+  }
+
+  /// Design pink 모드일 때 헤더용 그라데이션 (from-rose-300 via-pink-300 to-rose-400). 아니면 seed 기반.
+  static LinearGradient getHeaderGradient() {
+    if (themeColorMode.value == _valuePink) return NearoTheme.designPinkGradient;
+    return gradientFromPrimary(seedColor.value);
+  }
+
+  /// Design pink 모드일 때 시트/모달 헤더용 그라데이션 (rose-400 → pink-400 → rose-500). 아니면 seed 기반 대각.
+  static LinearGradient getSheetGradient() {
+    if (themeColorMode.value == _valuePink) return NearoTheme.designPinkGradientSheet;
+    return gradientFromPrimaryDiagonal(seedColor.value);
+  }
+
+  /// 화면 배경 그라데이션. pink 모드: rose-50 계열, school 모드: 교색 기반 밝은 톤.
+  static LinearGradient getScreenBgGradient() {
+    if (themeColorMode.value == _valuePink) return NearoTheme.designScreenBgGradientLight;
+    final c = seedColor.value;
+    return LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        Color.lerp(c, Colors.white, 0.92)!,
+        Color.lerp(c, Colors.white, 0.94)!,
+        Color.lerp(c, Colors.white, 0.88)!,
+      ],
+    );
+  }
+
+  /// 하단바/선택 상태 등에 쓰는 강한 포인트 그라데이션.
+  /// pink 모드: 디자인 핑크, school 모드: 교색 기반.
+  static LinearGradient getActiveAccentGradient() {
+    if (themeColorMode.value == _valuePink) return NearoTheme.designPinkGradient;
+    return gradientFromPrimaryDiagonal(seedColor.value);
   }
 
   /// 위와 동일 3색, 방향만 topLeft → bottomRight (프로필 시트·모달 헤더용)
@@ -46,7 +123,7 @@ class ThemeController {
       secretMode.value = enabled;
     }
   static final ValueNotifier<Color> seedColor =
-      ValueNotifier<Color>(NearoTheme.primary);
+      ValueNotifier<Color>(designPink);
 
   static void setSeedColor(Color color) {
     if (seedColor.value == color) return;
