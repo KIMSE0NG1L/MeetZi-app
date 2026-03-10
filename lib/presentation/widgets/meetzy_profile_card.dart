@@ -70,7 +70,7 @@ class MeetzyProfileCard extends StatelessWidget {
                     final avatarSection = Container(
                       margin: const EdgeInsets.only(bottom: MeetzyDesignTokens.cardAvatarMarginBottom),
                       child: Stack(
-                        alignment: Alignment.center,
+                        alignment: Alignment.centerLeft,
                         children: [
                           Container(
                             width: MeetzyDesignTokens.cardAvatarSize + MeetzyDesignTokens.cardAvatarRingOffset * 2 + MeetzyDesignTokens.cardAvatarRingWidth * 2,
@@ -133,7 +133,7 @@ class MeetzyProfileCard extends StatelessWidget {
                     final maxTagWidth = (constraints.maxWidth - 16).clamp(60.0, 200.0);
                     final tagSection = Row(
                       mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.start,
                       children: [
                         ConstrainedBox(
                           constraints: BoxConstraints(maxWidth: maxTagWidth),
@@ -142,7 +142,7 @@ class MeetzyProfileCard extends StatelessWidget {
                             style: AppTextStyles.cardTag(onVariant),
                             maxLines: 4,
                             overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
+                            textAlign: TextAlign.left,
                           ),
                         ),
                       ],
@@ -151,19 +151,20 @@ class MeetzyProfileCard extends StatelessWidget {
                     return Column(
                       mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         SizedBox(
                           height: avatarHeight * scale,
                           child: FittedBox(
                             fit: BoxFit.scaleDown,
-                            alignment: Alignment.topCenter,
+                            alignment: Alignment.topLeft,
                             child: avatarSection,
                           ),
                         ),
                         Text(
                           nickname,
                           style: AppTextStyles.cardNickname(onSurface),
-                          textAlign: TextAlign.center,
+                          textAlign: TextAlign.left,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -172,7 +173,7 @@ class MeetzyProfileCard extends StatelessWidget {
                           height: tagHeightEstimate * scale,
                           child: FittedBox(
                             fit: BoxFit.scaleDown,
-                            alignment: Alignment.topCenter,
+                            alignment: Alignment.topLeft,
                             child: tagSection,
                           ),
                         ),
@@ -180,29 +181,6 @@ class MeetzyProfileCard extends StatelessWidget {
                     );
                   },
                 ),
-                if (isNew)
-                  Positioned(
-                    top: MeetzyDesignTokens.badgeTop,
-                    right: MeetzyDesignTokens.badgeRight,
-                    child: Container(
-                      padding: MeetzyDesignTokens.badgePadding,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF34D399), Color(0xFF10B981)],
-                        ),
-                        borderRadius: BorderRadius.circular(MeetzyDesignTokens.radiusFull),
-                        boxShadow: MeetzyDesignTokens.badgeShadow,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('✨', style: AppTextStyles.badge(Colors.white).copyWith(fontSize: 10)),
-                          const SizedBox(width: 4),
-                          Text('NEW', style: AppTextStyles.badge()),
-                        ],
-                      ),
-                    ),
-                  ),
               ],
             ),
           ),

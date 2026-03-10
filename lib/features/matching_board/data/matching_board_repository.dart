@@ -1,4 +1,4 @@
-﻿import 'package:dio/dio.dart';
+import 'package:dio/dio.dart';
 import 'package:nearo_app/shared/api/api_client.dart';
 
 /// 설명 주석
@@ -187,6 +187,13 @@ class MatchingBoardRepository {
   /// 설명 주석
   Future<void> buyMatchingTickets({int quantity = 1}) async {
     await _client.dio.post('/users/me/tickets/purchase', data: {'quantity': quantity});
+  }
+
+  /// 개발자 프로필(고정 1명) 조회: GET /matching-board/developer
+  Future<Map<String, dynamic>> fetchDeveloperProfile() async {
+    final response = await _client.dio.get('/matching-board/developer');
+    final data = Map<String, dynamic>.from(response.data as Map);
+    return _normalizeBoardProfile(data);
   }
 }
 

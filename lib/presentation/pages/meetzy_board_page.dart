@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/core/theme/meetzy_design_tokens.dart';
 import 'package:nearo_app/core/theme/university_theme.dart';
@@ -70,8 +70,7 @@ class MeetzyBoardContent extends StatelessWidget {
                         gradient: const LinearGradient(
                           colors: [Color(0xFF6366F1), Color(0xFFE879F9)],
                         ),
-                        icon: LucideIcons.sparkles,
-                        label: '무료 개발자와\n매칭 신청',
+                        label: '개발자와\n매칭 신청',
                         textColor: Colors.white,
                       ),
                     ),
@@ -172,7 +171,7 @@ class MeetzyBoardContent extends StatelessWidget {
 class _ActionButton extends StatelessWidget {
   const _ActionButton({
     required this.onTap,
-    required this.icon,
+    this.icon,
     required this.label,
     required this.textColor,
     this.gradient,
@@ -181,7 +180,7 @@ class _ActionButton extends StatelessWidget {
   });
 
   final VoidCallback? onTap;
-  final IconData icon;
+  final IconData? icon;
   final String label;
   final Color textColor;
   final Gradient? gradient;
@@ -208,8 +207,10 @@ class _ActionButton extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 18, color: textColor),
-              const SizedBox(width: 8),
+              if (icon != null) ...[
+                Icon(icon, size: 18, color: textColor),
+                const SizedBox(width: 8),
+              ],
               Text(
                 label,
                 textAlign: TextAlign.center,
@@ -400,7 +401,7 @@ class MeetzyBoardPage extends StatelessWidget {
                     _navItem(context, 'ranking', LucideIcons.trophy, '대학교 랭킹', primary),
                     _navItem(context, 'messages', LucideIcons.messageCircle, '메시지함', primary),
                     _navItem(context, 'board', LucideIcons.house, '홈', primary),
-                    _navItem(context, 'profile', LucideIcons.user, '마이프로필', primary),
+                    _navItem(context, 'profile', LucideIcons.user, 'My프로필', primary),
                     _navItem(context, 'shop', LucideIcons.shoppingBag, '상점', primary),
                   ],
                 ),
