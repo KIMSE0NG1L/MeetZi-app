@@ -116,21 +116,82 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     super.dispose();
   }
 
-  static const List<String> _idealKeywordOptions = [
-    // 원래 있던 태그
-    '귀여운', '다정한', '장난기 많은', '차분한', '지적인',
-    '운동 좋아하는', '패션 감각 있는', '집돌이/집순이', '외향적인', '내향적인', '솔직한',
-    // 추가 태그
-    '유머감각 있는', '책임감 있는', '리더십 있는', '배려심 있는', '감성적인',
-    '현실적인', '긍정적인', '낙천적인', '호기심 많은', '도전적인', '열정적인',
-    '계획적인', '즉흥적인', '자기관리 잘하는', '성실한', '논리적인', '철학적인',
-    '생각이 깊은', '대화 좋아하는', '경청 잘하는', '공감 잘하는', '장난 좋아하는',
-    '여유로운', '침착한', '신뢰감 있는', '듬직한', '귀여운 매력 있는', '반전 매력 있는',
-    '카리스마 있는', '따뜻한', '감정 표현 잘하는', '조용히 챙겨주는', '사람 좋아하는',
-    '친구 많은', '독립적인', '자기주도적인', '창의적인', '아이디어 많은',
-    '새로운 거 좋아하는', '여행 좋아하는', '맛집 탐방 좋아하는', '카페 좋아하는',
-    '영화 좋아하는', '음악 좋아하는', '산책 좋아하는', '드라이브 좋아하는',
-    '게임 좋아하는', '책 읽는 거 좋아하는', '자기계발 좋아하는', '미래지향적인',
+  static const List<MapEntry<String, List<String>>> _idealKeywordGroups = [
+    MapEntry('1. 성격 (Personality)', [
+      '귀여운',
+      '다정한',
+      '장난기 많은',
+      '차분한',
+      '긍정적인',
+      '낙천적인',
+      '여유로운',
+      '침착한',
+      '따뜻한',
+      '감성적인',
+      '현실적인',
+      '솔직한',
+    ]),
+    MapEntry('2. 사고방식 / 가치관 (Mindset)', [
+      '지적인',
+      '논리적인',
+      '철학적인',
+      '생각이 깊은',
+      '호기심 많은',
+      '도전적인',
+      '열정적인',
+      '계획적인',
+      '즉흥적인',
+      '미래지향적인',
+      '창의적인',
+      '아이디어 많은',
+      '새로운 거 좋아하는',
+    ]),
+    MapEntry('3. 인간관계 / 사회성 (Social)', [
+      '외향적인',
+      '내향적인',
+      '사람 좋아하는',
+      '친구 많은',
+      '대화 좋아하는',
+      '경청 잘하는',
+      '공감 잘하는',
+      '배려심 있는',
+    ]),
+    MapEntry('4. 신뢰 / 성숙함 (Reliability)', [
+      '책임감 있는',
+      '리더십 있는',
+      '자기관리 잘하는',
+      '성실한',
+      '독립적인',
+      '자기주도적인',
+      '신뢰감 있는',
+      '듬직한',
+    ]),
+    MapEntry('5. 매력 / 분위기 (Charm)', [
+      '유머감각 있는',
+      '장난 좋아하는',
+      '귀여운 매력 있는',
+      '반전 매력 있는',
+      '카리스마 있는',
+      '감정 표현 잘하는',
+      '조용히 챙겨주는',
+    ]),
+    MapEntry('6. 라이프스타일 (Lifestyle)', [
+      '운동 좋아하는',
+      '패션 감각 있는',
+      '집돌이/집순이',
+    ]),
+    MapEntry('7. 취미 / 활동 (Hobby)', [
+      '여행 좋아하는',
+      '맛집 탐방 좋아하는',
+      '카페 좋아하는',
+      '영화 좋아하는',
+      '음악 좋아하는',
+      '산책 좋아하는',
+      '드라이브 좋아하는',
+      '게임 좋아하는',
+      '책 읽는 거 좋아하는',
+      '자기계발 좋아하는',
+    ]),
   ];
   static const List<String> _gradeYearOptions = ['1', '2', '3', '4', '5', '졸업유예'];
   static const List<String> _gradeYearValues = ['one', 'two', 'three', 'four', 'five', 'graduation_deferred'];
@@ -156,6 +217,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     MapEntry('morning', '아침형'),
     MapEntry('night_owl', '야행성'),
   ];
+  String _keywordDisplayLabel(String label) {
+    if (label == '집돌이/집순이') return '집돌이 / 집순이';
+    return label;
+  }
 
   Future<void> _loadProfileIfExists() async {
     try {
@@ -1443,37 +1508,65 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                         children: [
                           Text('나를 잘 표현하는 태그를 선택해보세요 (최대 10개)', style: TextStyle(fontSize: 12, color: onSurfaceVariant)),
                           const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 4,
-                            runSpacing: 2,
-                            children: _idealKeywordOptions.map((label) {
-                              final selected = _idealTypeKeywords.contains(label);
-                              final primary = Theme.of(context).colorScheme.primary;
-                              return FilterChip(
-                                label: Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: selected ? Colors.white : onSurface)),
-                                selected: selected,
-                                selectedColor: primary,
-                                checkmarkColor: Colors.white,
-                                visualDensity: const VisualDensity(horizontal: -2, vertical: -3),
-                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
-                                labelPadding: const EdgeInsets.symmetric(horizontal: 2),
-                                side: BorderSide(color: selected ? primary : borderColor),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-                                onSelected: (v) {
-                                  setState(() {
-                                    if (v == true) {
-                                      if (_idealTypeKeywords.length < _maxTagCount) {
-                                        _idealTypeKeywords.add(label);
-                                      }
-                                    } else {
-                                      _idealTypeKeywords.remove(label);
-                                    }
-                                  });
-                                },
-                              );
-                            }).toList(),
-                          ),
+                          ..._idealKeywordGroups.map((group) {
+                            final sectionTitle = group.key;
+                            final labels = group.value;
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    sectionTitle,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: onSurfaceVariant,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Wrap(
+                                    spacing: 4,
+                                    runSpacing: 2,
+                                    children: labels.map((label) {
+                                      final selected = _idealTypeKeywords.contains(label);
+                                      final primary = Theme.of(context).colorScheme.primary;
+                                      return FilterChip(
+                                        label: Text(
+                                          _keywordDisplayLabel(label),
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w500,
+                                            color: selected ? Colors.white : onSurface,
+                                          ),
+                                        ),
+                                        selected: selected,
+                                        selectedColor: primary,
+                                        checkmarkColor: Colors.white,
+                                        visualDensity: const VisualDensity(horizontal: -2, vertical: -3),
+                                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
+                                        labelPadding: const EdgeInsets.symmetric(horizontal: 2),
+                                        side: BorderSide(color: selected ? primary : borderColor),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+                                        onSelected: (v) {
+                                          setState(() {
+                                            if (v == true) {
+                                              if (_idealTypeKeywords.length < _maxTagCount) {
+                                                _idealTypeKeywords.add(label);
+                                              }
+                                            } else {
+                                              _idealTypeKeywords.remove(label);
+                                            }
+                                          });
+                                        },
+                                      );
+                                    }).toList(),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
                         ],
                       ),
                     ),
