@@ -778,7 +778,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
                 child: Text(
-                  '매칭이 취소되어 메시지를 보낼 수 없습니다.',
+                  '매칭이 취소되어 비활성화되었습니다.',
                   style: TextStyle(color: dark ? Colors.grey.shade300 : Colors.grey.shade700),
                 ),
               ),
