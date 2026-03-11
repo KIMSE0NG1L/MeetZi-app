@@ -2,12 +2,12 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/shared/utils/photo_url.dart';
 
-/// AppDesign ProfileDetailModal 스타일: 3D 플립·스프링·스테거드 효과 + 그라데이션 헤더·InfoRow·태그·닫기만 (채팅용)
+/// AppDesign ProfileDetailModal ????? 3D ???逾꿨ㅇ???덈뒆嶺뚮씧猿ョ뙴諛몃츩????????節뗪땁 + ?잙갭梨???⑥щ턄?????녹맠鸚룸삁nfoRow鸚??蹂μ쟽鸚???뗢뵛嶺?(嶺?????
 class ChatPartnerProfileModal {
   static Future<void> show(
     BuildContext context, {
@@ -17,7 +17,7 @@ class ChatPartnerProfileModal {
     return showGeneralDialog<void>(
       context: context,
       barrierDismissible: true,
-      barrierLabel: '닫기',
+      barrierLabel: '???뗢뵛',
       barrierColor: Colors.black54,
       transitionDuration: const Duration(milliseconds: 450),
       pageBuilder: (_, __, ___) => const SizedBox.shrink(),
@@ -181,65 +181,104 @@ class _ModalCard extends StatelessWidget {
     switch (field) {
       case 'gender':
         switch (s.toLowerCase()) {
-          case 'male': return '남성';
-          case 'female': return '여성';
-          default: return s;
+          case 'male':
+            return '남성';
+          case 'female':
+            return '여성';
+          default:
+            return s;
         }
       case 'gradeYear':
         switch (s.toLowerCase()) {
-          case 'one': return '1';
-          case 'two': return '2';
-          case 'three': return '3';
-          case 'four': return '4';
-          case 'five': return '5';
-          case 'graduation_deferred': return '졸업유예';
-          default: return s;
+          case 'one':
+            return '1학년';
+          case 'two':
+            return '2학년';
+          case 'three':
+            return '3학년';
+          case 'four':
+            return '4학년';
+          case 'five':
+            return '5학년';
+          case 'graduation_deferred':
+            return '졸업유예';
+          default:
+            return s;
         }
       case 'smoking':
         if (v is bool) return v ? '흡연' : '비흡연';
         switch (s.toLowerCase()) {
-          case 'none': return '비흡연';
-          case 'sometimes': return '가끔';
-          case 'often': return '자주';
-          default: return s;
+          case 'none':
+            return '비흡연';
+          case 'sometimes':
+            return '가끔';
+          case 'often':
+            return '자주';
+          default:
+            return s;
         }
       case 'drinking':
         if (v is bool) return v ? '음주' : '비음주';
         switch (s.toLowerCase()) {
-          case 'none': return '안 함';
-          case 'sometimes': return '가끔';
-          case 'often': return '자주';
-          default: return s;
+          case 'none':
+            return '비음주';
+          case 'sometimes':
+            return '가끔';
+          case 'often':
+            return '자주';
+          default:
+            return s;
         }
       case 'fashionStyle':
         switch (s.toLowerCase()) {
-          case 'hood_casual': return '후드/캐주얼';
-          case 'shirt_neat': return '셔츠/단정';
-          case 'street': return '스트릿';
-          case 'knit': return '니트/감성';
-          case 'sporty': return '체육복/스포티';
-          case 'minimal': return '미니멀';
-          case 'hip': return '힙한';
-          default: return s;
+          case 'hood_casual':
+            return '후드/캐주얼';
+          case 'shirt_neat':
+            return '셔츠/단정';
+          case 'street':
+            return '스트릿';
+          case 'knit':
+            return '니트/감성';
+          case 'sporty':
+            return '스포티';
+          case 'minimal':
+            return '미니멀';
+          case 'hip':
+            return '힙한';
+          default:
+            return s;
         }
       case 'preferredDateType':
         switch (s.toLowerCase()) {
-          case 'cafe': return '카페 탐방';
-          case 'walk': return '산책';
-          case 'movie': return '영화';
-          case 'drink': return '술 한잔';
-          case 'exercise': return '운동';
-          case 'food_tour': return '맛집 투어';
-          case 'drive': return '드라이브';
-          default: return s;
+          case 'cafe':
+            return '카페';
+          case 'walk':
+            return '산책';
+          case 'movie':
+            return '영화';
+          case 'drink':
+            return '술자리';
+          case 'exercise':
+            return '운동';
+          case 'food_tour':
+            return '맛집 탐방';
+          case 'drive':
+            return '드라이브';
+          default:
+            return s;
         }
       case 'activityTime':
         switch (s.toLowerCase()) {
-          case 'morning': return '아침형';
-          case 'daytime': return '낮 활동형';
-          case 'evening': return '저녁형';
-          case 'night_owl': return '야행성';
-          default: return s;
+          case 'morning':
+            return '아침형';
+          case 'daytime':
+            return '주간형';
+          case 'evening':
+            return '저녁형';
+          case 'night_owl':
+            return '야행성';
+          default:
+            return s;
         }
       default:
         return s;
@@ -248,6 +287,32 @@ class _ModalCard extends StatelessWidget {
 
   Map<String, dynamic>? get _user =>
       profile['user'] is Map<String, dynamic> ? profile['user'] as Map<String, dynamic>? : null;
+
+  dynamic _pick(List<String> keys) {
+    final user = _user;
+    final partner = profile['partner'] is Map<String, dynamic> ? profile['partner'] as Map<String, dynamic> : null;
+    final requester = profile['requester'] is Map<String, dynamic> ? profile['requester'] as Map<String, dynamic> : null;
+    final recipient = profile['recipient'] is Map<String, dynamic> ? profile['recipient'] as Map<String, dynamic> : null;
+    final sources = <Map<String, dynamic>>[
+      profile,
+      if (user != null) user,
+      if (partner != null) partner,
+      if (requester != null) requester,
+      if (recipient != null) recipient,
+      if (partner?['user'] is Map<String, dynamic>) partner!['user'] as Map<String, dynamic>,
+      if (requester?['user'] is Map<String, dynamic>) requester!['user'] as Map<String, dynamic>,
+      if (recipient?['user'] is Map<String, dynamic>) recipient!['user'] as Map<String, dynamic>,
+    ];
+    for (final key in keys) {
+      for (final source in sources) {
+        final value = source[key];
+        if (value == null) continue;
+        if (value is String && value.trim().isEmpty) continue;
+        return value;
+      }
+    }
+    return null;
+  }
 
   Widget _buildAvatar(BuildContext context) {
     const double size = 96;
@@ -315,7 +380,6 @@ class _ModalCard extends StatelessWidget {
     final onSurfaceVariant = dark ? Colors.grey.shade400 : const Color(0xFF6B7280);
     final borderColor = dark ? Colors.grey.shade700 : const Color(0xFFF3F4F6);
     final p = profile;
-    final u = _user;
 
     final maxH = MediaQuery.of(context).size.height * 0.9;
     final cardHeight = (700.0).clamp(400.0, maxH);
@@ -451,20 +515,20 @@ class _ModalCard extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            _infoRow('학과', _str(p['department'] ?? u?['department']), onSurfaceVariant, onSurface, borderColor),
-                            _infoRow('성별', _toLabel('gender', p['gender'] ?? u?['gender']), onSurfaceVariant, onSurface, borderColor),
-                            _infoRow('소속', _str(p['affiliationText'] ?? u?['affiliationText'] ?? p['school']), onSurfaceVariant, onSurface, borderColor),
-                            _infoRow('키', p['heightCm'] != null ? '${p['heightCm']} cm' : (u?['heightCm'] != null ? '${u!['heightCm']} cm' : '-'), onSurfaceVariant, onSurface, borderColor),
-                            _infoRow('학번', _toLabel('gradeYear', p['gradeYear'] ?? u?['gradeYear']), onSurfaceVariant, onSurface, borderColor),
-                            _infoRow('MBTI', _str(p['mbti'] ?? u?['mbti']), onSurfaceVariant, onSurface, borderColor),
-                            _infoRow('흡연', _toLabel('smoking', p['isSmoking'] ?? u?['isSmoking'] ?? p['smoking'] ?? u?['smoking']), onSurfaceVariant, onSurface, borderColor),
-                            _infoRow('음주', _toLabel('drinking', p['isDrinking'] ?? u?['isDrinking'] ?? p['drinking'] ?? u?['drinking']), onSurfaceVariant, onSurface, borderColor),
-                            _infoRow('자기 소개', _str(p['introOneLine'] ?? u?['introOneLine']), onSurfaceVariant, onSurface, borderColor),
-                            _infoRow('요즘 빠진 것', _str(p['intoLately'] ?? u?['intoLately']), onSurfaceVariant, onSurface, borderColor),
-                            _infoRow('이상형', _str(p['idealType'] ?? u?['idealType']), onSurfaceVariant, onSurface, borderColor),
-                            _infoRow('패션 스타일', _toLabel('fashionStyle', p['fashionStyle'] ?? u?['fashionStyle']), onSurfaceVariant, onSurface, borderColor),
-                            _infoRow('선호 데이트', _toLabel('preferredDateType', p['preferredDateType'] ?? u?['preferredDateType']), onSurfaceVariant, onSurface, borderColor),
-                            _infoRow('활동 시간대', _toLabel('activityTime', p['activityTime'] ?? u?['activityTime']), onSurfaceVariant, onSurface, borderColor),
+                            _infoRow('Major', _str(_pick(['department', 'major', 'departmentName'])), onSurfaceVariant, onSurface, borderColor),
+                            _infoRow('Gender', _toLabel('gender', _pick(['gender', 'sex'])), onSurfaceVariant, onSurface, borderColor),
+                            _infoRow('School', _str(_pick(['affiliationText', 'affiliation', 'school', 'schoolName', 'organization'])), onSurfaceVariant, onSurface, borderColor),
+                            _infoRow('Height', _pick(['heightCm', 'height']) != null ? '${_pick(['heightCm', 'height'])} cm' : '-', onSurfaceVariant, onSurface, borderColor),
+                            _infoRow('Grade', _toLabel('gradeYear', _pick(['gradeYear', 'grade', 'year', 'schoolYear', 'class'])), onSurfaceVariant, onSurface, borderColor),
+                            _infoRow('MBTI', _str(_pick(['mbti', 'mbtiType'])), onSurfaceVariant, onSurface, borderColor),
+                            _infoRow('Smoking', _toLabel('smoking', _pick(['isSmoking', 'smoking', 'smoke'])), onSurfaceVariant, onSurface, borderColor),
+                            _infoRow('Drinking', _toLabel('drinking', _pick(['isDrinking', 'drinking', 'alcohol'])), onSurfaceVariant, onSurface, borderColor),
+                            _infoRow('Intro', _str(_pick(['introOneLine', 'oneLineIntroduce', 'bio', 'introduction', 'selfIntroduction'])), onSurfaceVariant, onSurface, borderColor),
+                            _infoRow('Interests', _str(_pick(['intoLately', 'hobby', 'recentInterest', 'interests'])), onSurfaceVariant, onSurface, borderColor),
+                            _infoRow('Ideal Type', _str(_pick(['idealType', 'ideal'])), onSurfaceVariant, onSurface, borderColor),
+                            _infoRow('Fashion', _toLabel('fashionStyle', _pick(['fashionStyle', 'style'])), onSurfaceVariant, onSurface, borderColor),
+                            _infoRow('Date Preference', _toLabel('preferredDateType', _pick(['preferredDateType', 'preferredDate'])), onSurfaceVariant, onSurface, borderColor),
+                            _infoRow('Active Time', _toLabel('activityTime', _pick(['activityTime', 'activeTime'])), onSurfaceVariant, onSurface, borderColor),
                             _tagsRow(borderColor, onSurfaceVariant, onSurface),
                           ],
                         ),
@@ -474,7 +538,7 @@ class _ModalCard extends StatelessWidget {
                 ),
               ),
             ),
-            // Bottom: 닫기만 (채팅용)
+            // Bottom: ???뗢뵛嶺?(嶺?????
             AnimatedBuilder(
               animation: contentController,
               builder: (context, _) {
@@ -498,7 +562,7 @@ class _ModalCard extends StatelessWidget {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             foregroundColor: onSurface,
                           ),
-                          child: const Text('닫기', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          child: const Text('???뗢뵛', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                         ),
                       ),
                     ),
@@ -527,7 +591,7 @@ class _ModalCard extends StatelessWidget {
   }
 
   Widget _tagsRow(Color borderColor, Color labelColor, Color tagColor) {
-    final list = profile['idealTypeKeywords'] ?? _user?['idealTypeKeywords'];
+    final list = _pick(['idealTypeKeywords', 'keywords', 'tags']);
     final tags = list is List
         ? (list as List).map((e) => e?.toString() ?? '').where((s) => s.isNotEmpty).toList()
         : <String>[];
@@ -538,7 +602,7 @@ class _ModalCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 112, child: Text('나를 소개하는...', style: TextStyle(fontSize: 14, color: labelColor))),
+          SizedBox(width: 112, child: Text('??? ???六??濡ル츎...', style: TextStyle(fontSize: 14, color: labelColor))),
           Expanded(
             child: Wrap(
               spacing: 8,
