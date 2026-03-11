@@ -163,6 +163,44 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
     return _buildRecipientAvatar(context, requester);
   }
 
+  Map<String, dynamic>? _mergeProfileMaps(List<Map<String, dynamic>?> maps) {
+    final merged = <String, dynamic>{};
+    bool hasAny = false;
+    for (final m in maps) {
+      if (m == null) continue;
+      hasAny = true;
+      m.forEach((key, value) {
+        if (value == null) return;
+        if (value is String && value.trim().isEmpty) return;
+        merged[key] = value;
+      });
+      final nestedUser = m['user'];
+      if (nestedUser is Map<String, dynamic>) {
+        final userOut = Map<String, dynamic>.from(
+          merged['user'] is Map<String, dynamic>
+              ? merged['user'] as Map<String, dynamic>
+              : const <String, dynamic>{},
+        );
+        nestedUser.forEach((key, value) {
+          if (value == null) return;
+          if (value is String && value.trim().isEmpty) return;
+          userOut[key] = value;
+        });
+        merged['user'] = userOut;
+      }
+    }
+    return hasAny ? merged : null;
+  }
+
+  Map<String, dynamic>? _resolveRequestProfile(Map<String, dynamic> req, {Map<String, dynamic>? primary}) {
+    final profile = req['profile'] as Map<String, dynamic>?;
+    final requesterProfile = req['requesterProfile'] as Map<String, dynamic>?;
+    final recipientProfile = req['recipientProfile'] as Map<String, dynamic>?;
+    final requester = req['requester'] as Map<String, dynamic>?;
+    final recipient = req['recipient'] as Map<String, dynamic>?;
+    return _mergeProfileMaps([primary, profile, requesterProfile, recipientProfile, requester, recipient]);
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
@@ -343,9 +381,10 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
           final onSurface = dark ? Colors.white : const Color(0xFF111827);
           final requestId = req['id']?.toString() ?? '';
           final requester = req['requester'] as Map<String, dynamic>?;
-          final nickname = requester?['nickname']?.toString() ?? '알 수 없음';
+          final detailProfile = _resolveRequestProfile(req, primary: requester);
+          final nickname = detailProfile?['nickname']?.toString() ?? requester?['nickname']?.toString() ?? '알 수 없음';
           final senderMessage = (req['senderMessage'] as String?)?.trim();
-          final subtitle = _buildProfileSubtitle(requester);
+          final subtitle = _buildProfileSubtitle(detailProfile ?? requester);
           final readAt = req['recipientReadAt']?.toString().trim();
           final isNew = readAt == null || readAt.isEmpty;
           final timeAgo = _formatTimeAgo(req);
@@ -355,17 +394,17 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
             dark: Theme.of(context).brightness == Brightness.dark,
             avatar: GestureDetector(
               onTap: () {
-                if (requester != null) {
+                if (detailProfile != null) {
                   showProfileDetailSheet(
                     context,
-                    profile: requester,
+                    profile: detailProfile,
                     buildAvatar: (ctx, p) => _buildRecipientAvatar(ctx, p),
                     hideMatchButton: true,
                   );
                 }
               },
               behavior: HitTestBehavior.opaque,
-              child: _buildRequesterAvatar(context, requester),
+              child: _buildRequesterAvatar(context, detailProfile ?? requester),
             ),
             title: nickname,
             subtitle: subtitle,
@@ -394,7 +433,7 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => _showRejectReasonModal(context, requestId, requester, nickname, subtitle),
+                    onPressed: () => _showRejectReasonModal(context, requestId, detailProfile ?? requester, nickname, subtitle),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: onSurface,
                       side: BorderSide(color: dark ? Colors.grey.shade500 : Colors.grey.shade300),
@@ -409,7 +448,7 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
                   child: Material(
                     borderRadius: BorderRadius.circular(12),
                     child: InkWell(
-                      onTap: () => _openRequestResponse(context, requestId, requester),
+                      onTap: () => _openRequestResponse(context, requestId, detailProfile ?? requester),
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 12),
@@ -435,7 +474,7 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
                 ),
               ],
             ),
-            onTap: () => _openRequestResponse(context, requestId, requester),
+            onTap: () => _openRequestResponse(context, requestId, detailProfile ?? requester),
           );
         },
       ),
@@ -518,7 +557,11 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
           final status = req['status']?.toString() ?? 'pending';
           final recipient = req['recipient'] as Map<String, dynamic>?;
           final profile = req['profile'] as Map<String, dynamic>?;
-          final nickname = recipient?['nickname']?.toString() ?? profile?['nickname']?.toString() ?? '알 수 없음';
+          final detailProfile = _resolveRequestProfile(req, primary: recipient ?? profile);
+          final nickname = detailProfile?['nickname']?.toString()
+              ?? recipient?['nickname']?.toString()
+              ?? profile?['nickname']?.toString()
+              ?? '알 수 없음';
           final read = _isRead(req);
           final rejectionMessage = req['rejectionMessage'] as String?;
           final isRejected = status == 'rejected';
@@ -528,7 +571,7 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
                   ? '거절됨'
                   : '대기 중';
           final senderMessage = (req['senderMessage'] as String?)?.trim();
-          final subtitle = _buildProfileSubtitle(recipient ?? profile);
+          final subtitle = _buildProfileSubtitle(detailProfile ?? recipient ?? profile);
           final timeAgo = _formatTimeAgo(req);
 
           return _adLikeRequestCard(
@@ -536,7 +579,7 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
             dark: dark,
             avatar: GestureDetector(
               onTap: () {
-                final p = recipient ?? profile;
+                final p = detailProfile ?? recipient ?? profile;
                 if (p != null) {
                   showProfileDetailSheet(
                     context,
@@ -547,7 +590,7 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
                 }
               },
               behavior: HitTestBehavior.opaque,
-              child: _buildRecipientAvatar(context, recipient),
+              child: _buildRecipientAvatar(context, detailProfile ?? recipient ?? profile),
             ),
             title: nickname,
             subtitle: subtitle,
@@ -566,8 +609,8 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
                   builder: (_) => TakeNoteSentDetailScreen(
                     requestId: requestId,
                     recipientNickname: nickname,
-                    recipient: recipient,
-                    profile: profile,
+                    recipient: detailProfile ?? recipient,
+                    profile: detailProfile ?? profile,
                     status: status,
                     senderMessage: req['senderMessage'] as String?,
                     rejectionMessage: rejectionMessage,
@@ -584,15 +627,23 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
 
   String _buildProfileSubtitle(Map<String, dynamic>? userOrProfile) {
     if (userOrProfile == null) return '';
+    final user = userOrProfile['user'] as Map<String, dynamic>?;
     final school = (userOrProfile['affiliationText'] ??
             userOrProfile['affiliation'] ??
             userOrProfile['school'] ??
-            userOrProfile['schoolName'])
+            userOrProfile['schoolName'] ??
+            user?['affiliationText'] ??
+            user?['affiliation'] ??
+            user?['school'] ??
+            user?['schoolName'])
         ?.toString()
         .trim();
     final major = (userOrProfile['department'] ??
             userOrProfile['major'] ??
-            userOrProfile['majorName'])
+            userOrProfile['majorName'] ??
+            user?['department'] ??
+            user?['major'] ??
+            user?['majorName'])
         ?.toString()
         .trim();
     final parts = <String>[];

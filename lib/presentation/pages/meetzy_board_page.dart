@@ -48,6 +48,7 @@ class MeetzyBoardContent extends StatelessWidget {
       builder: (context, constraints) {
         final contentWidth = constraints.maxWidth;
         return SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: MeetzyDesignTokens.contentPadding,
           child: SizedBox(
             width: contentWidth,

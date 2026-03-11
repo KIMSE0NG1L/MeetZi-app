@@ -510,7 +510,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     }
 
     final heightCm = _heightCm ?? int.tryParse(_heightController.text.trim());
-    if (heightCm != null && (heightCm < 120 || heightCm > 200)) {
+    if (heightCm == null) {
+      setState(() => _result = '키를 반드시 입력해 주세요.');
+      return;
+    }
+    if (heightCm < 120 || heightCm > 200) {
       setState(() => _result = '키는 120~200cm 범위로 입력해 주세요.');
       return;
     }
@@ -528,6 +532,18 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     }
     if (idealType.length < _textMinLength || idealType.length > _textMaxLength) {
       setState(() => _result = '이상형은 10자 이상 100자 이하로 입력해 주세요.');
+      return;
+    }
+    if (_gradeYear == null) {
+      setState(() => _result = '학년을 선택해 주세요.');
+      return;
+    }
+    if (_mbtiEI == null || _mbtiNS == null || _mbtiFT == null || _mbtiPJ == null) {
+      setState(() => _result = 'MBTI를 모두 선택해 주세요.');
+      return;
+    }
+    if (_idealTypeKeywords.isEmpty) {
+      setState(() => _result = '나를 소개하는 태그를 1개 이상 선택해 주세요.');
       return;
     }
     if (_fashionStyle == null || _preferredDateType == null || _activityTime == null || _isSmoking == null || _isDrinking == null) {
@@ -552,19 +568,18 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         'nickname': nickname,
         if (!_isEditing) 'gender': _gender,
         'affiliationText': _affiliation,
-        if (heightCm != null) 'heightCm': heightCm,
-        if (_isSmoking != null) 'isSmoking': _isSmoking,
-        if (_isDrinking != null) 'isDrinking': _isDrinking,
-        if (_mbtiEI != null && _mbtiNS != null && _mbtiFT != null && _mbtiPJ != null)
-          'mbti': '$_mbtiEI$_mbtiNS$_mbtiFT$_mbtiPJ',
+        'heightCm': heightCm,
+        'isSmoking': _isSmoking,
+        'isDrinking': _isDrinking,
+        'mbti': '$_mbtiEI$_mbtiNS$_mbtiFT$_mbtiPJ',
         'idealType': idealType,
         'preferredGenders': preferredGenders,
-        if (_gradeYear != null) 'gradeYear': _gradeYear,
+        'gradeYear': _gradeYear,
         'introOneLine': intro,
-        if (_idealTypeKeywords.isNotEmpty) 'idealTypeKeywords': _idealTypeKeywords,
-        if (_fashionStyle != null) 'fashionStyle': _fashionStyle,
-        if (_preferredDateType != null) 'preferredDateType': _preferredDateType,
-        if (_activityTime != null) 'activityTime': _activityTime,
+        'idealTypeKeywords': _idealTypeKeywords,
+        'fashionStyle': _fashionStyle,
+        'preferredDateType': _preferredDateType,
+        'activityTime': _activityTime,
         'intoLately': hobby,
       });
       _applyThemeForAffiliation();
