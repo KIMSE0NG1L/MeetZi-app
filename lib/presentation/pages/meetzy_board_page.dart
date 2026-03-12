@@ -22,6 +22,9 @@ class MeetzyBoardContent extends StatelessWidget {
     this.onMatchingInboxTap,
     this.onDeveloperMatchTap,
     this.onLoadAllUniversities,
+    this.onLoadMySchool,
+    this.isShowingAllUniversities = false,
+    this.mySchoolName,
     this.onFilterTap,
     this.isLoading = false,
   });
@@ -36,6 +39,9 @@ class MeetzyBoardContent extends StatelessWidget {
   final VoidCallback? onMatchingInboxTap;
   final VoidCallback? onDeveloperMatchTap;
   final VoidCallback? onLoadAllUniversities;
+  final VoidCallback? onLoadMySchool;
+  final bool isShowingAllUniversities;
+  final String? mySchoolName;
   final VoidCallback? onFilterTap;
   final bool isLoading;
 
@@ -64,6 +70,27 @@ class MeetzyBoardContent extends StatelessWidget {
                   receivedRequestCount: receivedRequestCount,
                   onMatchingInboxTap: onMatchingInboxTap,
                 ),
+                if (onLoadAllUniversities != null && onLoadMySchool != null) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(
+                        LucideIcons.school,
+                        size: 14,
+                        color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        isShowingAllUniversities ? '전체 대학' : (mySchoolName ?? '우리 학교'),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: MeetzyDesignTokens.space4),
                 Row(
                   children: [
@@ -78,14 +105,14 @@ class MeetzyBoardContent extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 10),
-                    if (onLoadAllUniversities != null) ...[
+                    if (onLoadAllUniversities != null && onLoadMySchool != null) ...[
                       Flexible(
                         child: _ActionButton(
-                          onTap: onLoadAllUniversities,
+                          onTap: isShowingAllUniversities ? onLoadMySchool : onLoadAllUniversities,
                           color: Colors.white,
                           borderColor: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
                           icon: LucideIcons.school,
-                          label: '전체 대학\n불러오기',
+                          label: isShowingAllUniversities ? '우리 대학\n불러오기' : '전체 대학\n불러오기',
                           textColor: const Color(0xFF111827),
                         ),
                       ),
