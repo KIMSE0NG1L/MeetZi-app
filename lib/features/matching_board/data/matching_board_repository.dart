@@ -46,11 +46,12 @@ class MatchingBoardRepository {
   }
 
   /// 설명 주석
-  Future<List<Map<String, dynamic>>> fetchProfiles({String? preferredGender}) async {
+  Future<List<Map<String, dynamic>>> fetchProfiles({String? preferredGender, bool allSchools = false}) async {
     final query = <String, dynamic>{};
     if (preferredGender != null && preferredGender.isNotEmpty) {
       query['gender'] = preferredGender;
     }
+    if (allSchools) query['allSchools'] = 'true';
     final response = await _client.dio.get('/matching-board', queryParameters: query);
     final rawList = response.data;
     if (rawList is! List) return [];

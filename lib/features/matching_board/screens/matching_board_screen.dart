@@ -355,6 +355,30 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   }
 
   /// 설명 주석
+  Future<void> _fetchProfilesAllUniversities() async {
+    setState(() => _loading = true);
+    try {
+      String? preferredGender = _preferredGender;
+      try {
+        final profile = await _myProfileFuture;
+        final raw = profile['user'] is Map ? profile['user'] as Map : profile;
+        final g = raw['gender']?.toString().trim().toLowerCase();
+        if (g == 'male' || g == '남성') {
+          preferredGender = 'female';
+        } else if (g == 'female' || g == '여성') {
+          preferredGender = 'male';
+        }
+      } catch (_) {}
+      final profiles = await _repository.fetchProfiles(preferredGender: preferredGender, allSchools: true);
+      setState(() => _profiles = profiles);
+    } catch (_) {
+      setState(() => _profiles = []);
+    } finally {
+      setState(() => _loading = false);
+    }
+  }
+
+  /// 설명 주석
   Future<void> _fetchProfiles() async {
     setState(() => _loading = true);
     try {
@@ -662,10 +686,35 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                               ),
                             ),
                           ),
+                          if (_hasAppliedFilter) ...[
+                            const SizedBox(height: 10),
+                            OutlinedButton(
+                              onPressed: () {
+                                setState(() {
+                                  _hasAppliedFilter = false;
+                                  _filterNonSmokingOnly = false;
+                                  _filterNonDrinkingOnly = false;
+                                  _filterMinHeight = _heightMinLimit;
+                                  _filterMaxHeight = _heightMaxLimit;
+                                });
+                                minController.text = '$_heightMinLimit';
+                                maxController.text = '$_heightMaxLimit';
+                                setModalState(() {});
+                                Navigator.of(dialogContext).pop();
+                              },
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: dark ? Colors.white70 : const Color(0xFF6B7280),
+                                side: BorderSide(color: dark ? Colors.white38 : const Color(0xFFD1D5DB)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                minimumSize: const Size(double.infinity, 48),
+                              ),
+                              child: const Text('필터 해제', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                            ),
+                          ],
                         ],
                       ),
                     ),
-                    ),
+                  ),
                   ],
                 ),
               );
@@ -907,6 +956,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
               ).then((_) => _fetchReceivedRequestCount());
             },
             onDeveloperMatchTap: _onDeveloperMatchTap,
+            onLoadAllUniversities: _fetchProfilesAllUniversities,
             onFilterTap: () => _openFilterDialog(displayProfiles),
             isLoading: _loading,
           ),
