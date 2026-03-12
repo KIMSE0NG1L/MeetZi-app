@@ -201,6 +201,40 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
     return _mergeProfileMaps([primary, profile, requesterProfile, recipientProfile, requester, recipient]);
   }
 
+  Future<Map<String, dynamic>?> _resolveRequestDetailProfile(
+    String requestId, {
+    Map<String, dynamic>? primary,
+  }) async {
+    Map<String, dynamic>? fetched;
+    try {
+      final detail = await _repository.fetchTakeNoteRequest(requestId);
+      final profile = detail['profile'] as Map<String, dynamic>?;
+      final requesterProfile = detail['requesterProfile'] as Map<String, dynamic>?;
+      final recipientProfile = detail['recipientProfile'] as Map<String, dynamic>?;
+      final requester = detail['requester'] as Map<String, dynamic>?;
+      final recipient = detail['recipient'] as Map<String, dynamic>?;
+      fetched = _mergeProfileMaps([profile, requesterProfile, recipientProfile, requester, recipient, detail]);
+    } catch (_) {
+      fetched = null;
+    }
+    return _mergeProfileMaps([primary, fetched]);
+  }
+
+  Future<void> _openRequestProfileDetail(
+    BuildContext context, {
+    required String requestId,
+    required Map<String, dynamic>? fallbackProfile,
+  }) async {
+    final profile = await _resolveRequestDetailProfile(requestId, primary: fallbackProfile);
+    if (!mounted || profile == null) return;
+    await showProfileDetailSheet(
+      context,
+      profile: profile,
+      buildAvatar: (ctx, p) => _buildRecipientAvatar(ctx, p),
+      hideMatchButton: true,
+    );
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
@@ -393,16 +427,11 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
             context: context,
             dark: Theme.of(context).brightness == Brightness.dark,
             avatar: GestureDetector(
-              onTap: () {
-                if (detailProfile != null) {
-                  showProfileDetailSheet(
-                    context,
-                    profile: detailProfile,
-                    buildAvatar: (ctx, p) => _buildRecipientAvatar(ctx, p),
-                    hideMatchButton: true,
-                  );
-                }
-              },
+              onTap: () => _openRequestProfileDetail(
+                context,
+                requestId: requestId,
+                fallbackProfile: detailProfile ?? requester,
+              ),
               behavior: HitTestBehavior.opaque,
               child: _buildRequesterAvatar(context, detailProfile ?? requester),
             ),
@@ -474,7 +503,7 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
                 ),
               ],
             ),
-            onTap: () => _openRequestResponse(context, requestId, detailProfile ?? requester),
+            onTap: null,
           );
         },
       ),
@@ -578,17 +607,11 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
             context: context,
             dark: dark,
             avatar: GestureDetector(
-              onTap: () {
-                final p = detailProfile ?? recipient ?? profile;
-                if (p != null) {
-                  showProfileDetailSheet(
-                    context,
-                    profile: p,
-                    buildAvatar: (ctx, prof) => _buildRecipientAvatar(ctx, prof),
-                    hideMatchButton: true,
-                  );
-                }
-              },
+              onTap: () => _openRequestProfileDetail(
+                context,
+                requestId: requestId,
+                fallbackProfile: detailProfile ?? recipient ?? profile,
+              ),
               behavior: HitTestBehavior.opaque,
               child: _buildRecipientAvatar(context, detailProfile ?? recipient ?? profile),
             ),
@@ -706,7 +729,7 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
     required String? message,
     required Widget footer,
     Widget? badge,
-    required VoidCallback onTap,
+    VoidCallback? onTap,
   }) {
     final outerBg = dark ? const Color(0xFF374151).withOpacity(0.55) : Colors.white;
     final innerBg = dark ? const Color(0xFF4B5563).withOpacity(0.50) : const Color(0xFFF9FAFB);
