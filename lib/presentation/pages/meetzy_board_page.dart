@@ -21,6 +21,7 @@ class MeetzyBoardContent extends StatelessWidget {
     this.onRefresh,
     this.onMatchingInboxTap,
     this.onDeveloperMatchTap,
+    this.onLoadAllUniversities,
     this.onFilterTap,
     this.isLoading = false,
   });
@@ -34,6 +35,7 @@ class MeetzyBoardContent extends StatelessWidget {
   final Future<void> Function()? onRefresh;
   final VoidCallback? onMatchingInboxTap;
   final VoidCallback? onDeveloperMatchTap;
+  final VoidCallback? onLoadAllUniversities;
   final VoidCallback? onFilterTap;
   final bool isLoading;
 
@@ -76,14 +78,44 @@ class MeetzyBoardContent extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 10),
-                    Expanded(
-                      child: _ActionButton(
+                    if (onLoadAllUniversities != null) ...[
+                      Flexible(
+                        child: _ActionButton(
+                          onTap: onLoadAllUniversities,
+                          color: Colors.white,
+                          borderColor: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
+                          icon: LucideIcons.school,
+                          label: '전체 대학\n불러오기',
+                          textColor: const Color(0xFF111827),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                    ],
+                    Material(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                      child: InkWell(
                         onTap: onFilterTap,
-                        color: isDark ? const Color(0xFF1F2937) : const Color(0xFFF3F4F6),
-                        borderColor: isDark ? const Color(0xFF374151) : const Color(0xFFD1D5DB),
-                        icon: LucideIcons.funnel,
-                        label: '필터링',
-                        textColor: isDark ? Colors.white : const Color(0xFF111827),
+                        borderRadius: BorderRadius.circular(18),
+                        child: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
+                            ),
+                            boxShadow: const [
+                              BoxShadow(color: Color(0x24000000), blurRadius: 8, offset: Offset(0, 2)),
+                            ],
+                          ),
+                          alignment: Alignment.center,
+                          child: Icon(
+                            LucideIcons.funnel,
+                            size: 20,
+                            color: const Color(0xFF111827),
+                          ),
+                        ),
                       ),
                     ),
                   ],

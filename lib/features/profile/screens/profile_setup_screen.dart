@@ -996,8 +996,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       borderRadius: BorderRadius.circular(12),
       borderSide: BorderSide(color: borderColor, width: 1),
     );
-    final labelStyle = TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: onSurface);
-    final sectionLabelStyle = TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: onSurface);
+    final labelStyle = TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: onSurfaceVariant);
+    final sectionLabelStyle = TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: onSurfaceVariant);
 
     final cardBg = dark ? Colors.white.withValues(alpha: 0.06) : Colors.white.withValues(alpha: 0.6);
     const bool useAdStyle = true; // ad 폴더 ProfileEditScreen 디자인 항상 사용
@@ -1492,7 +1492,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              Text('자기 소개 (20~100자)', style: labelStyle),
+              Text('자기 소개 (20자 이상)', style: labelStyle),
               const SizedBox(height: 8),
               TextField(
                 controller: _introOneLineController,
