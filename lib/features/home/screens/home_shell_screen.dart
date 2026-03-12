@@ -6,10 +6,10 @@ import 'package:nearo_app/app/app.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/community/screens/community_tab_screen.dart';
 import 'package:nearo_app/features/matching_board/screens/matching_board_screen.dart';
+import 'package:nearo_app/features/matching_board/screens/mailbox_screen.dart';
 import 'package:nearo_app/features/messages/screens/messages_screen.dart';
 import 'package:nearo_app/features/notifications/screens/notifications_screen.dart';
 import 'package:nearo_app/features/notifications/data/pending_take_note_store.dart';
-import 'package:nearo_app/features/matching_board/screens/take_note_request_response_screen.dart';
 import 'package:nearo_app/features/profile/screens/my_profile_screen.dart';
 import 'package:nearo_app/features/ratings/screens/ratings_screen.dart';
 import 'package:nearo_app/features/settings/screens/settings_screen.dart';
@@ -89,38 +89,71 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
     PendingTakeNoteStore.instance.clear();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _showTakeNoteDialog(requestId: req.requestId, requesterProfile: req.requesterProfile);
+      _showTakeNoteDialog();
     });
   }
 
-  void _showTakeNoteDialog({required String requestId, Map<String, dynamic>? requesterProfile}) {
+
+  Future<void> _openMatchingInboxModal() async {
+    final size = MediaQuery.of(context).size;
+    final padding = EdgeInsets.symmetric(
+      horizontal: size.width > 400 ? 24 : 16,
+      vertical: 48,
+    );
+    await showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black54,
+      barrierLabel: '닫기',
+      pageBuilder: (_, __, ___) => Padding(
+        padding: padding,
+        child: Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              constraints: BoxConstraints(
+                maxWidth: 420,
+                maxHeight: size.height * 0.75,
+              ),
+              decoration: BoxDecoration(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF1F2937)
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(32),
+                boxShadow: const [
+                  BoxShadow(color: Color(0x40000000), blurRadius: 24, offset: Offset(0, 8)),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: const MailboxScreen(isModal: true),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showTakeNoteDialog() {
     showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
         return AlertDialog(
           title: const Text('매칭 요청'),
-          content: const Text('누군가 당신의 프로필을 가져갔어요.\n매칭 대기함에서 확인해 보세요.'),
+          content: const Text('누군가 당신의 프로필을 가져가려 해요.\n매칭 대기함에서 확인해 보세요.'),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(ctx).pop();
                 _takeNoteDialogShown = false;
               },
-              child: const Text('나중에'),
+              child: const Text('취소'),
             ),
             FilledButton(
               onPressed: () {
                 Navigator.of(ctx).pop();
                 _takeNoteDialogShown = false;
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => TakeNoteRequestResponseScreen(
-                      requestId: requestId,
-                      requesterProfile: requesterProfile,
-                    ),
-                  ),
-                );
+                _openMatchingInboxModal();
               },
               child: const Text('확인'),
             ),
@@ -413,6 +446,5 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
     );
   }
 }
-
 
 
