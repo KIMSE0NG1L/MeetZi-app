@@ -358,6 +358,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Wrap(
+                                          alignment: WrapAlignment.start,
+                                          runAlignment: WrapAlignment.start,
                                           spacing: 8,
                                           runSpacing: 8,
                                           children: [
@@ -385,6 +387,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                           const SizedBox(height: 12),
                                         ],
                                         Wrap(
+                                          alignment: WrapAlignment.start,
+                                          runAlignment: WrapAlignment.start,
                                           spacing: 8,
                                           runSpacing: 8,
                                           children: [
@@ -404,6 +408,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                           ),
                                           const SizedBox(height: 8),
                                           Wrap(
+                                            alignment: WrapAlignment.start,
+                                            runAlignment: WrapAlignment.start,
                                             spacing: 8,
                                             runSpacing: 8,
                                             children: ((_profile!['idealTypeKeywords'] as List).map((e) => e?.toString() ?? '')).where((s) => s.isNotEmpty).map((tag) => Container(

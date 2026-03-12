@@ -1,10 +1,9 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/community/data/community_repository.dart';
 import 'package:nearo_app/features/community/screens/community_post_detail_screen.dart';
 import 'package:nearo_app/features/community/screens/community_post_write_screen.dart';
-import 'package:nearo_app/features/home/screens/university_ranking_screen.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
@@ -22,7 +21,7 @@ class CommunityScreen extends StatefulWidget {
     this.isRootTab = false,
   });
 
-  /// true면 루트 탭으로 사용. 학교 랭킹 버튼을 노출한다.
+  /// true면 루트 탭으로 사용(뒤로가기 대신 상단 왼쪽 여백).
   final bool isRootTab;
 
   @override
@@ -231,17 +230,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 child: Row(
                   children: [
                     if (widget.isRootTab)
-                      IconButton(
-                        icon: const Icon(LucideIcons.trophy, color: Colors.white),
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => const UniversityRankingScreen(),
-                            ),
-                          );
-                        },
-                        tooltip: '학교 랭킹',
-                      )
+                      const SizedBox(width: 48)
                     else
                       IconButton(
                         icon: const Icon(LucideIcons.arrowLeft, color: Colors.white),

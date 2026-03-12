@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
+import 'package:nearo_app/features/auth/data/environment_repository.dart';
 import 'package:nearo_app/features/auth/data/environment_status_repository.dart';
 import 'package:nearo_app/features/messages/data/chat_history_store.dart';
 import 'package:nearo_app/shared/utils/token_storage.dart';
@@ -28,6 +29,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadSchoolColor() async {
     try {
+      // 프로필 소속(affiliationText)과 일치하는 환경의 교색 사용. 없으면 /environments/me fallback.
+      String? schoolName;
+      try {
+        final profileRes = await AuthRepository().getProfile();
+        final user = profileRes['user'] as Map<String, dynamic>?;
+        if (user != null) {
+          schoolName = (user['affiliationText'] ?? user['school'])?.toString().trim();
+          if (schoolName != null && schoolName.isEmpty) schoolName = null;
+        }
+      } catch (_) {}
+      if (schoolName != null) {
+        final list = await EnvironmentRepository().getEnvironments();
+        for (final e in list) {
+          if (e is! Map) continue;
+          final name = (e['name'] as String?)?.trim();
+          if (name != null && name == schoolName) {
+            final primaryHex = e['primaryColor']?.toString();
+            final primary = ThemeController.parsePrimaryColor(primaryHex);
+            if (mounted && primary != null) setState(() => _schoolColor = primary);
+            return;
+          }
+        }
+      }
       final status = await EnvironmentStatusRepository().getMyEnvironmentStatus();
       final primaryHex = (status['environment'] as Map?)?['primaryColor']?.toString();
       final primary = ThemeController.parsePrimaryColor(primaryHex);
@@ -170,8 +194,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ValueListenableBuilder<String>(
                   valueListenable: ThemeController.themeColorMode,
                   builder: (context, colorMode, _) {
-                    // 교색 행의 원은 항상 DB 교색으로 표시 (핑크 선택 시에도 교색 유지)
-                    final schoolColorForDisplay = _schoolColor ?? UniversityTheme.sejongCrimson;
+                    // 교색 행의 원은 로딩 전에는 회색, 로드되면 해당 학교 교색 표시 (빨강 플래시 방지)
+                    final schoolColorForDisplay = _schoolColor ?? (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF6B7280) : const Color(0xFF9CA3AF));
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -204,6 +228,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           color: schoolColorForDisplay,
                           selected: colorMode == 'school',
                           onTap: () async {
+                            if (_schoolColor != null && context.mounted) {
+                              await ThemeController.setThemeColorModeSchool(_schoolColor!);
+                              return;
+                            }
                             try {
                               final status = await EnvironmentStatusRepository().getMyEnvironmentStatus();
                               final primaryHex = (status['environment'] as Map?)?['primaryColor']?.toString();

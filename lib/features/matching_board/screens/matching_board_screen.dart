@@ -281,6 +281,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   bool _filterNonDrinkingOnly = false;
   int _filterMinHeight = 150;
   int _filterMaxHeight = 190;
+  bool _isShowingAllUniversities = false;
 
   static const int _heightMinLimit = 120;
   static const int _heightMaxLimit = 230;
@@ -370,7 +371,10 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
         }
       } catch (_) {}
       final profiles = await _repository.fetchProfiles(preferredGender: preferredGender, allSchools: true);
-      setState(() => _profiles = profiles);
+      setState(() {
+        _profiles = profiles;
+        _isShowingAllUniversities = true;
+      });
     } catch (_) {
       setState(() => _profiles = []);
     } finally {
@@ -394,7 +398,10 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
         }
       } catch (_) {}
       final profiles = await _repository.fetchProfiles(preferredGender: preferredGender);
-      setState(() => _profiles = profiles);
+      setState(() {
+        _profiles = profiles;
+        _isShowingAllUniversities = false;
+      });
     } catch (_) {
       setState(() => _profiles = []);
     } finally {
@@ -697,9 +704,6 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                                   _filterMinHeight = _heightMinLimit;
                                   _filterMaxHeight = _heightMaxLimit;
                                 });
-                                minController.text = '$_heightMinLimit';
-                                maxController.text = '$_heightMaxLimit';
-                                setModalState(() {});
                                 Navigator.of(dialogContext).pop();
                               },
                               style: OutlinedButton.styleFrom(
@@ -860,6 +864,8 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
             : null;
         final myUserId = profileData?['id']?.toString() ?? raw?['id']?.toString();
         final myNickname = profileData?['nickname']?.toString() ?? raw?['nickname']?.toString() ?? '나';
+        final mySchoolName = (profileData?['affiliationText'] ?? profileData?['school'])?.toString().trim();
+        final mySchoolNameOrNull = (mySchoolName != null && mySchoolName.isNotEmpty) ? mySchoolName : null;
         final meProfile = profileData != null
             ? {'user': profileData, 'userId': myUserId, 'nickname': myNickname}
             : null;
@@ -957,6 +963,9 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
             },
             onDeveloperMatchTap: _onDeveloperMatchTap,
             onLoadAllUniversities: _fetchProfilesAllUniversities,
+            onLoadMySchool: _fetchProfiles,
+            isShowingAllUniversities: _isShowingAllUniversities,
+            mySchoolName: mySchoolNameOrNull,
             onFilterTap: () => _openFilterDialog(displayProfiles),
             isLoading: _loading,
           ),
