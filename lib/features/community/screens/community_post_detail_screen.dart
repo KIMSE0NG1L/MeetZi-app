@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/community/data/community_repository.dart';
+import 'package:nearo_app/features/matching_board/data/matching_board_repository.dart';
+import 'package:nearo_app/features/matching_board/screens/matching_board_screen.dart';
+import 'package:nearo_app/features/matching_board/widgets/match_card_avatar.dart';
 import 'package:nearo_app/features/messages/data/report_repository.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
@@ -30,6 +33,7 @@ class CommunityPostDetailScreen extends StatefulWidget {
 
 class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
   final CommunityRepository _repo = CommunityRepository();
+  final MatchingBoardRepository _matchingRepo = MatchingBoardRepository();
   Map<String, dynamic>? _post;
   String? _myUserIdResolved; // 목록에서 안 넘어오면 프로필에서 로드
   bool _loading = true;
@@ -248,6 +252,46 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
     }
   }
 
+  Future<void> _onAuthorTap(Map<String, dynamic> author) async {
+    final userId = author['id']?.toString();
+    if (userId == null || userId.isEmpty || !mounted) return;
+    final myId = _myUserIdResolved ?? widget.myUserId;
+    if (myId != null && myId == userId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('내 프로필입니다.')),
+      );
+      return;
+    }
+    try {
+      final profile = await _matchingRepo.fetchProfileByUserId(userId);
+      if (!mounted) return;
+      await showBoardNoteSheet(
+        context,
+        profiles: [profile],
+        startIndex: 0,
+        buildAvatar: (ctx, p) => buildMatchCardAvatar(p),
+        onTakeNote: (profileId, _) async {
+          try {
+            await _matchingRepo.takeNote(profileId);
+            return true;
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+              );
+            }
+            return false;
+          }
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
+  }
+
   Future<void> _voteOption(int optionIndex) async {
     final poll = _post?['poll'] as Map<String, dynamic>?;
     if (poll == null) return;
@@ -413,8 +457,11 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => _onAuthorTap(author),
+                    child: Row(
+                      children: [
                       DiceBearAvatar(
                         style: author['avatarStyle']?.toString() ?? 'lorelei',
                         seed: author['avatarSeed']?.toString() ?? nickname,
@@ -475,7 +522,8 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
                           ],
                         ),
                       ),
-                    ],
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -548,9 +596,12 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
                     final ct = c['content']?.toString() ?? '';
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 16),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => _onAuthorTap(ca),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                           DiceBearAvatar(
                             style: ca['avatarStyle']?.toString() ?? 'lorelei',
                             seed: ca['avatarSeed']?.toString() ?? cn,
@@ -591,7 +642,8 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
                               ],
                             ),
                           ),
-                        ],
+                          ],
+                        ),
                       ),
                     );
                   }),

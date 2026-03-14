@@ -196,6 +196,22 @@ class MatchingBoardRepository {
     final data = Map<String, dynamic>.from(response.data as Map);
     return _normalizeBoardProfile(data);
   }
+
+  Future<Map<String, dynamic>> fetchProfileByUserId(String userId) async {
+    final response = await _client.dio.get('/matching-board/user/$userId');
+    final data = Map<String, dynamic>.from(response.data as Map);
+    return _normalizeBoardProfile(data);
+  }
+
+  Future<Map<String, dynamic>> fetchRandomProfile({List<String> excludeUserIds = const []}) async {
+    final query = <String, dynamic>{};
+    if (excludeUserIds.isNotEmpty) {
+      query['excludeUserIds'] = excludeUserIds.join(',');
+    }
+    final response = await _client.dio.get('/matching-board/random-profile', queryParameters: query);
+    final data = Map<String, dynamic>.from(response.data as Map);
+    return _normalizeBoardProfile(data);
+  }
 }
 
 
