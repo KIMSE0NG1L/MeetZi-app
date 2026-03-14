@@ -442,6 +442,19 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
         profiles: [profile],
         startIndex: 0,
         buildAvatar: (ctx, p) => buildMatchCardAvatar(p),
+        showTertiaryCloseButton: true,
+        onRequestNextProfile: (excludeUserIds) async {
+          try {
+            final mergedExclude = <String>{..._recentRandomUserIds, ...excludeUserIds}.toList();
+            final next = await _matchingBoardRepository.fetchRandomProfile(
+              excludeUserIds: mergedExclude,
+            );
+            _rememberRandomUser(next);
+            return next;
+          } catch (_) {
+            return null;
+          }
+        },
         onTakeNote: (profileId, _) async {
           try {
             await _matchingBoardRepository.takeNote(profileId);

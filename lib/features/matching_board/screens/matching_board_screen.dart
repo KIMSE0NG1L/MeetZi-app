@@ -182,6 +182,8 @@ Future<void> showBoardNoteSheet(
   Future<bool> Function(String profileId, Map<String, dynamic> profile)? onTakeNote,
   /// 설명 주석
   bool hideActionButtons = false,
+  bool showTertiaryCloseButton = false,
+  Future<Map<String, dynamic>?> Function(List<String> excludeUserIds)? onRequestNextProfile,
 }) async {
   final sheetContent = _BoardNoteSheetContent(
     profiles: profiles,
@@ -192,6 +194,8 @@ Future<void> showBoardNoteSheet(
     myMatchingTicket: myMatchingTicket,
     onRefreshTickets: onRefreshTickets,
     hideActionButtons: hideActionButtons,
+    showTertiaryCloseButton: showTertiaryCloseButton,
+    onRequestNextProfile: onRequestNextProfile,
   );
   if (!context.mounted) return;
   showGeneralDialog<void>(
@@ -1752,6 +1756,8 @@ class _BoardNoteSheetContent extends StatefulWidget {
     required this.myMatchingTicket,
     this.onRefreshTickets,
     this.hideActionButtons = false,
+    this.showTertiaryCloseButton = false,
+    this.onRequestNextProfile,
   });
 
   final List<Map<String, dynamic>> profiles;
@@ -1762,30 +1768,69 @@ class _BoardNoteSheetContent extends StatefulWidget {
   final int myMatchingTicket;
   final Future<void> Function()? onRefreshTickets;
   final bool hideActionButtons;
+  final bool showTertiaryCloseButton;
+  final Future<Map<String, dynamic>?> Function(List<String> excludeUserIds)? onRequestNextProfile;
 
   @override
   State<_BoardNoteSheetContent> createState() => _BoardNoteSheetContentState();
 }
 
 class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
+  late List<Map<String, dynamic>> _profiles;
   late int _currentIndex;
   bool _taking = false;
+  bool _loadingNext = false;
+  final List<String> _seenUserIds = <String>[];
 
   @override
   void initState() {
     super.initState();
+    _profiles = List<Map<String, dynamic>>.from(widget.profiles);
     _currentIndex = widget.startIndex;
+    for (final profile in _profiles) {
+      final user = profile['user'] as Map<String, dynamic>?;
+      final userId = profile['userId']?.toString() ?? user?['id']?.toString();
+      if (userId != null && userId.isNotEmpty && !_seenUserIds.contains(userId)) {
+        _seenUserIds.add(userId);
+      }
+    }
   }
 
-  Map<String, dynamic> get _profile => widget.profiles[_currentIndex];
+  Map<String, dynamic> get _profile => _profiles[_currentIndex];
   Map<String, dynamic>? get _user => _profile['user'] as Map<String, dynamic>?;
 
-  void _skip() {
-    if (_currentIndex + 1 < widget.profiles.length) {
+  Future<void> _skip() async {
+    if (_taking || _loadingNext) return;
+    if (_currentIndex + 1 < _profiles.length) {
       setState(() => _currentIndex++);
-    } else {
+      return;
+    }
+    if (widget.onRequestNextProfile == null) {
       Navigator.of(context).pop();
       widget.onPop();
+      return;
+    }
+
+    setState(() => _loadingNext = true);
+    try {
+      final nextProfile = await widget.onRequestNextProfile!(List<String>.from(_seenUserIds));
+      if (!mounted) return;
+      if (nextProfile == null) {
+        Navigator.of(context).pop();
+        widget.onPop();
+        return;
+      }
+      final user = nextProfile['user'] as Map<String, dynamic>?;
+      final userId = nextProfile['userId']?.toString() ?? user?['id']?.toString();
+      if (userId != null && userId.isNotEmpty && !_seenUserIds.contains(userId)) {
+        _seenUserIds.add(userId);
+      }
+      setState(() {
+        _profiles.add(nextProfile);
+        _currentIndex = _profiles.length - 1;
+      });
+    } finally {
+      if (mounted) setState(() => _loadingNext = false);
     }
   }
 
@@ -2200,9 +2245,34 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                     )
                   : Row(
                       children: [
+                        if (widget.showTertiaryCloseButton) ...[
+                          SizedBox(
+                            width: 52,
+                            height: 52,
+                            child: OutlinedButton(
+                              onPressed: (_taking || _loadingNext)
+                                  ? null
+                                  : () {
+                                      Navigator.of(context).pop();
+                                      widget.onPop();
+                                    },
+                              style: OutlinedButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                side: BorderSide(color: dark ? Colors.grey.shade600 : Colors.grey.shade300),
+                              ),
+                              child: Icon(
+                                LucideIcons.x,
+                                size: 18,
+                                color: dark ? Colors.grey.shade200 : Colors.grey.shade700,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
                         Expanded(
                           child: OutlinedButton(
-                            onPressed: _taking ? null : _skip,
+                            onPressed: (_taking || _loadingNext) ? null : _skip,
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -2217,7 +2287,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: Container(
                             decoration: BoxDecoration(
@@ -2230,7 +2300,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                             child: Material(
                               color: Colors.transparent,
                               child: InkWell(
-                                onTap: _taking ? null : _take,
+                                onTap: (_taking || _loadingNext) ? null : _take,
                                 borderRadius: BorderRadius.circular(12),
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(vertical: 16),
