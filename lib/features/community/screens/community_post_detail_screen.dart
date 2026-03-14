@@ -35,6 +35,11 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
   bool _loading = true;
   final TextEditingController _commentController = TextEditingController();
   bool _sendingComment = false;
+  String _commentSort = 'latest';
+
+  void _onCommentChanged() {
+    if (mounted) setState(() {});
+  }
 
   @override
   void initState() {
@@ -45,6 +50,7 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
       _post = Map<String, dynamic>.from(widget.initialPost!);
       _loading = false;
     }
+    _commentController.addListener(_onCommentChanged);
     _load();
   }
 
@@ -61,6 +67,7 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
 
   @override
   void dispose() {
+    _commentController.removeListener(_onCommentChanged);
     _commentController.dispose();
     super.dispose();
   }
@@ -263,6 +270,38 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
     }
   }
 
+  String? _extractMentionQuery(String text) {
+    final match = RegExp(r'(?:^|\s)@([^\s@]{0,20})$').firstMatch(text);
+    if (match == null) return null;
+    return match.group(1) ?? '';
+  }
+
+  List<String> _collectMentionCandidates(
+    Map<String, dynamic> post,
+    List<Map<String, dynamic>> comments,
+  ) {
+    final set = <String>{};
+    final postAuthor = post['author'] as Map<String, dynamic>?;
+    final postNickname = postAuthor?['nickname']?.toString().trim();
+    if (postNickname != null && postNickname.isNotEmpty) set.add(postNickname);
+    for (final c in comments) {
+      final ca = c['author'] as Map<String, dynamic>?;
+      final nickname = ca?['nickname']?.toString().trim();
+      if (nickname != null && nickname.isNotEmpty) set.add(nickname);
+    }
+    return set.toList()..sort();
+  }
+
+  void _insertMention(String nickname) {
+    final text = _commentController.text;
+    final replaced = text.replaceFirst(RegExp(r'@([^\s@]{0,20})$'), '@$nickname ');
+    _commentController.value = TextEditingValue(
+      text: replaced,
+      selection: TextSelection.collapsed(offset: replaced.length),
+    );
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
@@ -286,6 +325,32 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
     final liked = post['liked'] == true;
     final isDailyBest = post['isDailyBest'] == true;
     final comments = (post['comments'] as List<dynamic>?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? [];
+    final mentionCandidates = _collectMentionCandidates(post, comments);
+    final mentionQuery = _extractMentionQuery(_commentController.text);
+    final filteredMentions = (mentionQuery == null)
+        ? const <String>[]
+        : mentionCandidates
+            .where((n) => mentionQuery.isEmpty || n.toLowerCase().startsWith(mentionQuery.toLowerCase()))
+            .take(6)
+            .toList();
+    final sortedComments = List<Map<String, dynamic>>.from(comments);
+    sortedComments.sort((a, b) {
+      final aTime = DateTime.tryParse(a['createdAt']?.toString() ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final bTime = DateTime.tryParse(b['createdAt']?.toString() ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final aLike = (a['likeCount'] as int?) ?? 0;
+      final bLike = (b['likeCount'] as int?) ?? 0;
+      final aReply = (a['replyCount'] as int?) ?? 0;
+      final bReply = (b['replyCount'] as int?) ?? 0;
+      if (_commentSort == 'likes') {
+        if (aLike != bLike) return bLike - aLike;
+        return bTime.compareTo(aTime);
+      }
+      if (_commentSort == 'replies') {
+        if (aReply != bReply) return bReply - aReply;
+        return bTime.compareTo(aTime);
+      }
+      return bTime.compareTo(aTime);
+    });
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -455,9 +520,27 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
                     ],
                   ),
                   const Divider(height: 32),
+                  Row(
+                    children: [
+                      const Spacer(),
+                      DropdownButton<String>(
+                        value: _commentSort,
+                        isDense: true,
+                        items: const [
+                          DropdownMenuItem(value: 'latest', child: Text('\uCD5C\uC2E0\uC21C')),
+                          DropdownMenuItem(value: 'likes', child: Text('\uC88B\uC544\uC694\uC21C')),
+                          DropdownMenuItem(value: 'replies', child: Text('\uB2F5\uAE00\uB9CE\uC740\uC21C')),
+                        ],
+                        onChanged: (v) {
+                          if (v == null) return;
+                          setState(() => _commentSort = v);
+                        },
+                      ),
+                    ],
+                  ),
                   Text('댓글 ${comments.length}', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
                   const SizedBox(height: 12),
-                  ...comments.map((c) {
+                  ...sortedComments.map((c) {
                     final ca = c['author'] as Map<String, dynamic>? ?? {};
                     final cn = ca['nickname']?.toString() ?? '알 수 없음';
                     final cAuthorId = ca['id']?.toString();
@@ -516,6 +599,25 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
               ),
             ),
           ),
+          if (filteredMentions.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+              child: SizedBox(
+                height: 36,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: filteredMentions.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 6),
+                  itemBuilder: (context, index) {
+                    final nickname = filteredMentions[index];
+                    return ActionChip(
+                      label: Text('@$nickname'),
+                      onPressed: () => _insertMention(nickname),
+                    );
+                  },
+                ),
+              ),
+            ),
           SafeArea(
             child: Container(
               padding: const EdgeInsets.all(12),

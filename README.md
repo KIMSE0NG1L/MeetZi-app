@@ -1,28 +1,25 @@
 ﻿# NEARO App
 
-NEARO 모바일 앱(Flutter) 저장소입니다.  
-대학/소속 인증 기반 커뮤니티, 매칭 보드, 채팅, 알림, 프로필 기능을 제공합니다.
+Flutter 기반 NEARO 모바일 앱 저장소입니다.
 
-## Tech Stack
-- Flutter 3.x / Dart 3.5+
-- Dio (REST API)
-- Firebase Messaging (푸시)
-- flutter_local_notifications (로컬 알림)
-- socket_io_client (실시간 채팅 이벤트)
+## 핵심 기능
+- 학교/소속 기반 인증 및 커뮤니티
+- 매칭 보드, 채팅, 알림, 프로필 관리
+- 커뮤니티 글/댓글/좋아요/투표
+- 커뮤니티 태그 필터
+  - `전체`
+  - `자유`
+  - `연애·썸`
+  - `소개팅·매칭후기`
+  - `고민상담`
+  - `유머·밈`
 
-## 주요 기능
-- 카카오/네이버 로그인 및 딥링크 세션 복구
-- 학교(환경) 선택 + 이메일 도메인 인증
-- 매칭 보드(호감 요청/수락/거절)
-- 1:1 채팅(읽음, 뮤트, 신고/차단)
-- 학교별 커뮤니티(글/댓글/좋아요/투표)
-- 알림함, 고객센터 문의, 프로필/아바타 설정, 티켓 구매
-
-## 사전 준비
-- Flutter SDK 설치
-- Android Studio 또는 Xcode
-- Firebase 프로젝트(Android: `google-services.json`)
-- 실행 가능한 `nearo-server` 백엔드
+## 기술 스택
+- Flutter (Dart)
+- Dio
+- Firebase Messaging
+- flutter_local_notifications
+- socket_io_client
 
 ## 실행 방법
 ```bash
@@ -30,37 +27,26 @@ flutter pub get
 flutter run
 ```
 
-Android APK 빌드:
+릴리즈 APK:
 ```bash
 flutter build apk --release
 ```
 
 ## 필수 설정
+1. API 서버 주소 설정
+- 파일: `lib/shared/utils/app_config.dart`
+- `AppConfig.baseUrl` 값을 서버 주소로 설정
 
-### 1) API 서버 주소
-현재 앱은 `lib/shared/utils/app_config.dart`의 `AppConfig.baseUrl`을 사용합니다.
-
-```dart
-class AppConfig {
-  static const String baseUrl = 'https://YOUR_SERVER_URL';
-}
-```
-
-- 로컬 서버 예시: `http://<PC_IP>:3000`
-- 터널 사용 예시: `https://xxxx.ngrok-free.dev`
-
-### 2) Firebase 설정
+2. Firebase 설정
 - Android: `android/app/google-services.json` 배치
-- Firebase Cloud Messaging 활성화
-- 필요 시 `docs/firebase_messaging_android_guide.md` 참고
+- FCM 활성화
 
-## 프로젝트 구조(핵심)
-- `lib/app/`: 앱 라우팅/앱 엔트리
-- `lib/features/`: 도메인별 기능(auth, matching, community, messages, profile...)
-- `lib/shared/`: 공통 API 클라이언트, 유틸, 테마
-- `assets/`: 이미지/애니메이션/아이콘
+## 커뮤니티 태그 동작
+- 글 작성 화면에서 태그를 선택해 업로드
+- 커뮤니티 목록 카드에서 태그 뱃지 표시
+- 하단 태그 바를 눌러 태그별 글만 필터링
 
-## 참고
-- `ApiClient`는 ngrok 개발 환경에서 연결 이슈를 피하기 위한 헤더/설정이 포함되어 있습니다.
-- 앱 버전은 `pubspec.yaml`의 `version`을 기준으로 관리합니다.
-
+## 디렉터리 개요
+- `lib/features/`: 도메인별 기능
+- `lib/shared/`: 공통 API/테마/유틸
+- `assets/`: 이미지/아이콘/애니메이션
