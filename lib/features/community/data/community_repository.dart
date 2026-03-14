@@ -16,10 +16,14 @@ class CommunityRepository {
   Future<Map<String, dynamic>> getPosts(
     String environmentId, {
     String? cursor,
+    String? tag,
+    String? scope,
     int limit = 20,
   }) async {
     final query = <String, dynamic>{'limit': limit};
     if (cursor != null && cursor.isNotEmpty) query['cursor'] = cursor;
+    if (tag != null && tag.isNotEmpty) query['tag'] = tag;
+    if (scope != null && scope.isNotEmpty) query['scope'] = scope;
     final response = await _client.dio.get(
       ApiEndpoints.communityPosts(environmentId),
       queryParameters: query,
@@ -39,9 +43,11 @@ class CommunityRepository {
   Future<Map<String, dynamic>> createPost(
     String environmentId,
     String content, {
+    String? tag,
     Map<String, dynamic>? poll,
   }) async {
     final data = <String, dynamic>{'content': content};
+    if (tag != null && tag.isNotEmpty) data['tag'] = tag;
     if (poll != null) {
       final q = poll['question']?.toString()?.trim();
       final opts = poll['options'];
@@ -63,11 +69,17 @@ class CommunityRepository {
   Future<Map<String, dynamic>> createComment(
     String environmentId,
     String postId,
-    String content,
+    String content, {
+    String? parentCommentId,
+  }
   ) async {
+    final data = <String, dynamic>{'content': content};
+    if (parentCommentId != null && parentCommentId.isNotEmpty) {
+      data['parentCommentId'] = parentCommentId;
+    }
     final response = await _client.dio.post(
       ApiEndpoints.communityPostComments(environmentId, postId),
-      data: {'content': content},
+      data: data,
     );
     return Map<String, dynamic>.from(response.data as Map);
   }
@@ -76,6 +88,17 @@ class CommunityRepository {
   Future<Map<String, dynamic>> toggleLike(String environmentId, String postId) async {
     final response = await _client.dio.post(
       ApiEndpoints.communityPostLike(environmentId, postId),
+    );
+    return Map<String, dynamic>.from(response.data as Map);
+  }
+
+  Future<Map<String, dynamic>> toggleCommentLike(
+    String environmentId,
+    String postId,
+    String commentId,
+  ) async {
+    final response = await _client.dio.post(
+      ApiEndpoints.communityPostCommentLike(environmentId, postId, commentId),
     );
     return Map<String, dynamic>.from(response.data as Map);
   }

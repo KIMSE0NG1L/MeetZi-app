@@ -29,12 +29,23 @@ class CommunityScreen extends StatefulWidget {
 }
 
 class _CommunityScreenState extends State<CommunityScreen> {
+  static const List<MapEntry<String, String>> _tabs = [
+    MapEntry('all', '\uC804\uCCB4'),
+    MapEntry('free', '\uC790\uC720'),
+    MapEntry('love', '\uC5F0\uC560\u00B7\uC36C'),
+    MapEntry('matching_review', '\uC18C\uAC1C\uD305\u00B7\uB9E4\uCE6D\uD6C4\uAE30'),
+    MapEntry('counsel', '\uACE0\uBBFC\uC0C1\uB2F4'),
+    MapEntry('meme', '\uC720\uBA38\u00B7\uBC08'),
+  ];
+
   final CommunityRepository _repo = CommunityRepository();
   List<Map<String, dynamic>> _posts = [];
   String? _nextCursor;
   String? _myUserId;
   bool _loading = true;
   bool _loadingMore = false;
+  String _selectedTag = 'all';
+  String _selectedScope = 'all';
 
   @override
   void initState() {
@@ -57,7 +68,12 @@ class _CommunityScreenState extends State<CommunityScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      final data = await _repo.getPosts(widget.environmentId, limit: 20);
+      final data = await _repo.getPosts(
+        widget.environmentId,
+        tag: _selectedTag,
+        scope: _selectedScope,
+        limit: 20,
+      );
       if (mounted) {
         setState(() {
           _posts = (data['posts'] as List<dynamic>?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? [];
@@ -74,7 +90,13 @@ class _CommunityScreenState extends State<CommunityScreen> {
     if (_loadingMore || _nextCursor == null) return;
     setState(() => _loadingMore = true);
     try {
-      final data = await _repo.getPosts(widget.environmentId, cursor: _nextCursor, limit: 20);
+      final data = await _repo.getPosts(
+        widget.environmentId,
+        cursor: _nextCursor,
+        tag: _selectedTag,
+        scope: _selectedScope,
+        limit: 20,
+      );
       if (mounted) {
         final more = (data['posts'] as List<dynamic>?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? [];
         setState(() {
@@ -94,6 +116,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
         builder: (_) => CommunityPostWriteScreen(
           environmentId: widget.environmentId,
           schoolName: widget.schoolName,
+          initialTag: _selectedTag == 'all' ? 'free' : _selectedTag,
         ),
       ),
     );
@@ -194,12 +217,152 @@ class _CommunityScreenState extends State<CommunityScreen> {
     }
   }
 
+  String _tagLabel(String? tag) {
+    switch (tag) {
+      case 'free':
+        return '\uC790\uC720';
+      case 'love':
+        return '\uC5F0\uC560\u00B7\uC36C';
+      case 'matching_review':
+        return '\uC18C\uAC1C\uD305\u00B7\uB9E4\uCE6D\uD6C4\uAE30';
+      case 'counsel':
+        return '\uACE0\uBBFC\uC0C1\uB2F4';
+      case 'meme':
+        return '\uC720\uBA38\u00B7\uBC08';
+      default:
+        return '\uC790\uC720';
+    }
+  }
+
+  IconData _tabIcon(String tag) {
+    switch (tag) {
+      case 'all':
+        return LucideIcons.layoutGrid;
+      case 'free':
+        return LucideIcons.messageSquare;
+      case 'love':
+        return LucideIcons.heart;
+      case 'matching_review':
+        return LucideIcons.sparkles;
+      case 'counsel':
+        return LucideIcons.handHeart;
+      case 'meme':
+        return LucideIcons.laugh;
+      default:
+        return LucideIcons.messageSquare;
+    }
+  }
+
+  Widget _buildBottomTagBar(bool dark) {
+    final bgColor = dark ? const Color(0xFF111827) : Colors.white;
+    final borderColor = dark ? Colors.grey.shade800 : Colors.grey.shade200;
+    final activeColor = Theme.of(context).colorScheme.primary;
+
+    return SafeArea(
+      top: false,
+      child: Container(
+        decoration: BoxDecoration(
+          color: bgColor,
+          border: Border(top: BorderSide(color: borderColor)),
+        ),
+        padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: _tabs.map((tab) {
+              final selected = _selectedTag == tab.key;
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: () {
+                    if (_selectedTag == tab.key) return;
+                    setState(() => _selectedTag = tab.key);
+                    _load();
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeOut,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: selected ? activeColor.withOpacity(0.14) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: selected ? activeColor : (dark ? Colors.grey.shade700 : Colors.grey.shade300),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _tabIcon(tab.key),
+                          size: 14,
+                          color: selected ? activeColor : (dark ? Colors.grey.shade300 : Colors.grey.shade700),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          tab.value,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: selected ? activeColor : (dark ? Colors.grey.shade300 : Colors.grey.shade700),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildScopeBar(bool dark) {
+    const scopes = <MapEntry<String, String>>[
+      MapEntry('all', '\uC804\uCCB4'),
+      MapEntry('my_posts', '\uB0B4 \uAE00'),
+      MapEntry('my_comments', '\uB0B4 \uB313\uAE00'),
+    ];
+    final activeColor = Theme.of(context).colorScheme.primary;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      child: Wrap(
+        spacing: 8,
+        children: scopes.map((scope) {
+          final selected = _selectedScope == scope.key;
+          return ChoiceChip(
+            label: Text(scope.value),
+            selected: selected,
+            onSelected: (_) {
+              if (_selectedScope == scope.key) return;
+              setState(() => _selectedScope = scope.key);
+              _load();
+            },
+            selectedColor: activeColor.withOpacity(0.2),
+            backgroundColor: dark ? Colors.grey.shade800 : Colors.grey.shade100,
+            side: BorderSide(
+              color: selected ? activeColor : (dark ? Colors.grey.shade700 : Colors.grey.shade300),
+            ),
+            labelStyle: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: selected ? activeColor : (dark ? Colors.grey.shade300 : Colors.grey.shade700),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
+    final showBest = _selectedTag == 'all' && _selectedScope == 'all';
     final sortedByLikes = List<Map<String, dynamic>>.from(_posts)
       ..sort((a, b) => ((b['likeCount'] as int?) ?? 0).compareTo((a['likeCount'] as int?) ?? 0));
-    final bestPosts = sortedByLikes.take(3).toList();
+    final bestPosts = showBest ? sortedByLikes.take(3).toList() : <Map<String, dynamic>>[];
     final bestIds = bestPosts.map((e) => e['id']).toSet();
     final regularPosts = _posts.where((p) => !bestIds.contains(p['id'])).toList();
 
@@ -276,6 +439,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         child: ListView(
                           padding: const EdgeInsets.fromLTRB(16, 8, 16, 92),
                           children: [
+                            _buildScopeBar(dark),
                             if (bestPosts.isNotEmpty) ...[
                               Row(
                                 children: [
@@ -351,7 +515,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
         ],
       ),
     ),  // body Container
-    floatingActionButton: Container(
+      floatingActionButton: Container(
         width: 56,
         height: 56,
           decoration: BoxDecoration(
@@ -384,6 +548,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
           ),
         ),
       ),
+      bottomNavigationBar: _buildBottomTagBar(dark),
     );
   }
 
@@ -400,6 +565,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
     final authorId = author['id']?.toString();
     final isMe = _myUserId != null && authorId == _myUserId;
     final isDailyBest = post['isDailyBest'] == true;
+    final tagLabel = _tagLabel(post['tag']?.toString());
     final content = post['content']?.toString() ?? ' 참여';
     final likeCount = (post['likeCount'] is int) ? post['likeCount'] as int : 0;
     final commentCount = (post['commentCount'] is int) ? post['commentCount'] as int : 0;
@@ -505,6 +671,25 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                 Text(
                                   formatPostTime(post['createdAt']),
                                   style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                                ),
+                                const SizedBox(height: 3),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: dark ? Colors.grey.shade700 : Colors.grey.shade100,
+                                    borderRadius: BorderRadius.circular(999),
+                                    border: Border.all(
+                                      color: dark ? Colors.grey.shade600 : Colors.grey.shade300,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    tagLabel,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: dark ? Colors.grey.shade200 : Colors.grey.shade700,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),

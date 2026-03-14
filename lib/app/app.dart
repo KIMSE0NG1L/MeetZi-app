@@ -25,6 +25,7 @@ import 'package:nearo_app/features/auth/data/environment_status_repository.dart'
 import 'package:nearo_app/features/home/screens/home_shell_screen.dart';
 import 'package:nearo_app/features/home/screens/splash_screen.dart';
 import 'package:nearo_app/features/matching_board/screens/take_note_request_response_screen.dart';
+import 'package:nearo_app/features/community/screens/community_post_detail_screen.dart';
 import 'dart:async';
 import 'package:nearo_app/features/profile/screens/avatar_setup_screen.dart';
 import 'package:nearo_app/features/settings/screens/customer_support_screen.dart';
@@ -143,6 +144,23 @@ class _NearoAppState extends State<NearoApp> {
     final type = data['type']?.toString();
     if (type == 'support_reply' || type == 'support_submitted') {
       _navigatorKey.currentState?.pushNamed(AppRoutes.customerSupport);
+      return;
+    }
+    if (type == 'community_comment_reply' || type == 'community_mention') {
+      final environmentId = data['environmentId']?.toString();
+      final postId = data['postId']?.toString();
+      final schoolName = data['schoolName']?.toString() ?? '커뮤니티';
+      if (environmentId != null && environmentId.isNotEmpty && postId != null && postId.isNotEmpty) {
+        _navigatorKey.currentState?.push(
+          MaterialPageRoute<void>(
+            builder: (_) => CommunityPostDetailScreen(
+              environmentId: environmentId,
+              schoolName: schoolName,
+              postId: postId,
+            ),
+          ),
+        );
+      }
       return;
     }
     if (type == 'take_note_request') {
