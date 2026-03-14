@@ -39,7 +39,6 @@ class _CommunityPostWriteScreenState extends State<CommunityPostWriteScreen> {
   ];
   bool _sending = false;
   bool _addPoll = false;
-  bool _isAnonymous = true;
   String _selectedTag = 'free';
 
   static const _maxLength = 1000;
@@ -168,7 +167,7 @@ class _CommunityPostWriteScreenState extends State<CommunityPostWriteScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-            // Author Info (Design: 익명 아바타 + 이름 + 학교 + 익명/실명 토글)
+            // Author Info
             Row(
               children: [
                 Container(
@@ -176,7 +175,7 @@ class _CommunityPostWriteScreenState extends State<CommunityPostWriteScreen> {
                   height: 48,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: _isAnonymous ? const Color(0xFFE5E5E5) : const Color(0xFFFFE5E5),
+                    color: const Color(0xFFE5E7EB),
                     border: Border.all(
                       color: dark ? Colors.grey.shade600 : Colors.grey.shade300,
                       width: 2,
@@ -190,16 +189,7 @@ class _CommunityPostWriteScreenState extends State<CommunityPostWriteScreen> {
                     ],
                   ),
                   alignment: Alignment.center,
-                  child: _isAnonymous
-                      ? Text(
-                          '?',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey.shade600,
-                          ),
-                        )
-                      : Icon(LucideIcons.user, size: 24, color: Colors.grey.shade600),
+                  child: Icon(LucideIcons.user, size: 24, color: Colors.grey.shade600),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -207,7 +197,7 @@ class _CommunityPostWriteScreenState extends State<CommunityPostWriteScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _isAnonymous ? '익명' : '내 이름',
+                        '작성자',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
@@ -223,27 +213,6 @@ class _CommunityPostWriteScreenState extends State<CommunityPostWriteScreen> {
                         ),
                       ),
                     ],
-                  ),
-                ),
-                Material(
-                  color: _isAnonymous
-                      ? NearoTheme.designPink500
-                      : (dark ? Colors.grey.shade700 : Colors.grey.shade200),
-                  borderRadius: BorderRadius.circular(12),
-                  child: InkWell(
-                    onTap: () => setState(() => _isAnonymous = !_isAnonymous),
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      child: Text(
-                        _isAnonymous ? '익명' : '실명',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: _isAnonymous ? Colors.white : (dark ? Colors.grey.shade300 : Colors.grey.shade700),
-                        ),
-                      ),
-                    ),
                   ),
                 ),
               ],

@@ -5,8 +5,10 @@ import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/app/app.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/community/screens/community_tab_screen.dart';
+import 'package:nearo_app/features/matching_board/data/matching_board_repository.dart';
 import 'package:nearo_app/features/matching_board/screens/matching_board_screen.dart';
 import 'package:nearo_app/features/matching_board/screens/mailbox_screen.dart';
+import 'package:nearo_app/features/matching_board/widgets/match_card_avatar.dart';
 import 'package:nearo_app/features/messages/screens/messages_screen.dart';
 import 'package:nearo_app/features/notifications/screens/notifications_screen.dart';
 import 'package:nearo_app/features/notifications/data/pending_take_note_store.dart';
@@ -32,12 +34,15 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
   int _currentIndex = 2;
   final PageController _pageController = PageController(initialPage: 2);
   final _authRepository = AuthRepository();
+  final MatchingBoardRepository _matchingBoardRepository = MatchingBoardRepository();
   Map<String, dynamic>? _profile;
   bool _profileLoading = true;
   final ValueNotifier<int> _boardRefreshTrigger = ValueNotifier<int>(0);
   bool _routeObserverSubscribed = false;
   bool _takeNoteDialogShown = false;
   bool _showCoachMark = false;
+  bool _randomMatchLoading = false;
+  final List<String> _recentRandomUserIds = <String>[];
 
   List<Widget> get _pages => [
     const CommunityTabScreen(),
@@ -412,6 +417,115 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
     );
   }
 
+  void _rememberRandomUser(Map<String, dynamic> profile) {
+    final user = profile['user'] as Map<String, dynamic>?;
+    final userId = profile['userId']?.toString() ?? user?['id']?.toString();
+    if (userId == null || userId.isEmpty) return;
+    _recentRandomUserIds.remove(userId);
+    _recentRandomUserIds.add(userId);
+    if (_recentRandomUserIds.length > 30) {
+      _recentRandomUserIds.removeAt(0);
+    }
+  }
+
+  Future<void> _onTapRandomMatch() async {
+    if (_randomMatchLoading || !mounted) return;
+    setState(() => _randomMatchLoading = true);
+    try {
+      final profile = await _matchingBoardRepository.fetchRandomProfile(
+        excludeUserIds: _recentRandomUserIds,
+      );
+      _rememberRandomUser(profile);
+      if (!mounted) return;
+      await showBoardNoteSheet(
+        context,
+        profiles: [profile],
+        startIndex: 0,
+        buildAvatar: (ctx, p) => buildMatchCardAvatar(p),
+        onTakeNote: (profileId, _) async {
+          try {
+            await _matchingBoardRepository.takeNote(profileId);
+            return true;
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+              );
+            }
+            return false;
+          }
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) setState(() => _randomMatchLoading = false);
+    }
+  }
+
+  Widget _buildRandomMatchButton() {
+    return SafeArea(
+      top: false,
+      bottom: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+        child: SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: ThemeController.getActiveAccentGradient(),
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.16),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: _randomMatchLoading ? null : _onTapRandomMatch,
+                child: Center(
+                  child: _randomMatchLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(LucideIcons.shuffle, color: Colors.white, size: 18),
+                            SizedBox(width: 8),
+                            Text(
+                              '\uB79C\uB364 \uB9E4\uCE6D',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final hideTopBarForCommunity = _currentIndex == 0;
@@ -433,6 +547,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
                   itemBuilder: (_, index) => _pages[index],
                 ),
               ),
+              if (_currentIndex == 2) _buildRandomMatchButton(),
               _buildBottomNav(),
             ],
           ),

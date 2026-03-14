@@ -4,6 +4,9 @@ import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/community/data/community_repository.dart';
 import 'package:nearo_app/features/community/screens/community_post_detail_screen.dart';
 import 'package:nearo_app/features/community/screens/community_post_write_screen.dart';
+import 'package:nearo_app/features/matching_board/data/matching_board_repository.dart';
+import 'package:nearo_app/features/matching_board/screens/matching_board_screen.dart';
+import 'package:nearo_app/features/matching_board/widgets/match_card_avatar.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
@@ -39,6 +42,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
   ];
 
   final CommunityRepository _repo = CommunityRepository();
+  final MatchingBoardRepository _matchingRepo = MatchingBoardRepository();
   List<Map<String, dynamic>> _posts = [];
   String? _nextCursor;
   String? _myUserId;
@@ -142,6 +146,45 @@ class _CommunityScreenState extends State<CommunityScreen> {
         );
       }
     });
+  }
+
+  Future<void> _onAuthorTap(Map<String, dynamic> author) async {
+    final userId = author['id']?.toString();
+    if (userId == null || userId.isEmpty || !mounted) return;
+    if (_myUserId != null && _myUserId == userId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('내 프로필입니다.')),
+      );
+      return;
+    }
+    try {
+      final profile = await _matchingRepo.fetchProfileByUserId(userId);
+      if (!mounted) return;
+      await showBoardNoteSheet(
+        context,
+        profiles: [profile],
+        startIndex: 0,
+        buildAvatar: (ctx, p) => buildMatchCardAvatar(p),
+        onTakeNote: (profileId, _) async {
+          try {
+            await _matchingRepo.takeNote(profileId);
+            return true;
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+              );
+            }
+            return false;
+          }
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
   }
 
   Future<void> _showDeleteConfirm(BuildContext context, Map<String, dynamic> post) async {
@@ -602,8 +645,11 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => _onAuthorTap(author),
+                        child: Row(
+                          children: [
                           DiceBearAvatar(
                             style: author['avatarStyle']?.toString() ?? 'lorelei',
                             seed: author['avatarSeed']?.toString() ?? nickname,
@@ -694,7 +740,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
                               ],
                             ),
                           ),
-                        ],
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 3),
                       Text(
