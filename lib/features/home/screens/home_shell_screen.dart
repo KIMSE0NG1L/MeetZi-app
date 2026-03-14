@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -369,11 +370,15 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
                     onTap: () {
                       if (i == _currentIndex) return;
                       setState(() => _currentIndex = i);
-                      _pageController.animateToPage(
-                        i,
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
-                      );
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (_pageController.hasClients && _currentIndex == i) {
+                          _pageController.animateToPage(
+                            i,
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                          );
+                        }
+                      });
                     },
                     borderRadius: BorderRadius.circular(16),
                     child: Container(
@@ -435,19 +440,28 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
       final profile = await _matchingBoardRepository.fetchRandomProfile(
         excludeUserIds: _recentRandomUserIds,
       );
-      _rememberRandomUser(profile);
+      if (!mounted) return;
+      final tickets = await _matchingBoardRepository.fetchMyTickets();
       if (!mounted) return;
       await showBoardNoteSheet(
         context,
         profiles: [profile],
         startIndex: 0,
         buildAvatar: (ctx, p) => buildMatchCardAvatar(p),
+        myMatchingTicket: tickets.matchingTicket,
+        onRefreshTickets: () async {
+          if (!mounted) return;
+          setState(() {});
+        },
         showTertiaryCloseButton: true,
+        onPop: () {
+          if (mounted) setState(() {});
+        },
         onRequestNextProfile: (excludeUserIds) async {
           try {
-            final mergedExclude = <String>{..._recentRandomUserIds, ...excludeUserIds}.toList();
+            // 이번 시트에서 이미 본 사람만 제외. _recentRandomUserIds 넣으면 게시판에 4명 있어도 전부 제외돼서 다음 프로필 없음 뜸
             final next = await _matchingBoardRepository.fetchRandomProfile(
-              excludeUserIds: mergedExclude,
+              excludeUserIds: excludeUserIds,
             );
             _rememberRandomUser(next);
             return next;
@@ -455,9 +469,9 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
             return null;
           }
         },
-        onTakeNote: (profileId, _) async {
+        onTakeNote: (profileId, _, {String? message}) async {
           try {
-            await _matchingBoardRepository.takeNote(profileId);
+            await _matchingBoardRepository.takeNote(profileId, message: message);
             return true;
           } catch (e) {
             if (mounted) {
@@ -471,8 +485,22 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
       );
     } catch (e) {
       if (!mounted) return;
+      String message = '랜덤 매칭 대상을 불러오지 못했어요.';
+      if (e is DioException && e.response?.statusCode == 404) {
+        final msg = (e.response?.data is Map)
+            ? (e.response!.data as Map)['message'] as String?
+            : null;
+        message = (msg != null && msg.trim().isNotEmpty)
+            ? msg.trim()
+            : '같은 학교에 매칭 상대가 없습니다.';
+        // 게시판은 '전체 대학'이면 다른 학교도 보이지만, 랜덤 매칭은 같은 학교만 대상
+        message = '$message 지금 카드는 전체 대학이라 다른 학교일 수 있어요. 랜덤 매칭은 같은 학교만 됩니다.';
+      } else if (e is DioException && e.response?.data is Map) {
+        final msg = (e.response!.data as Map)['message'];
+        if (msg is String && msg.trim().isNotEmpty) message = msg.trim();
+      }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        SnackBar(content: Text(message), duration: const Duration(seconds: 5)),
       );
     } finally {
       if (mounted) setState(() => _randomMatchLoading = false);
@@ -480,12 +508,13 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
   }
 
   Widget _buildRandomMatchButton() {
-    return SafeArea(
-      top: false,
-      bottom: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-        child: SizedBox(
+    final bgColor = Theme.of(context).brightness == Brightness.dark
+        ? const Color(0xFF111827)
+        : const Color(0xFFF9FAFB);
+    return Container(
+      color: bgColor,
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      child: SizedBox(
           width: double.infinity,
           height: 48,
           child: DecoratedBox(
@@ -535,7 +564,6 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
             ),
           ),
         ),
-      ),
     );
   }
 

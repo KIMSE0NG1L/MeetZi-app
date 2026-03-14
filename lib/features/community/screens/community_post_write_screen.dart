@@ -24,7 +24,7 @@ class CommunityPostWriteScreen extends StatefulWidget {
 class _CommunityPostWriteScreenState extends State<CommunityPostWriteScreen> {
   static const List<MapEntry<String, String>> _postTags = [
     MapEntry('free', '\uC790\uC720'),
-    MapEntry('love', '\uC5F0\uC560\u00B7\uC36C'),
+    MapEntry('love', '\uC5F0\uC560\u00B7\uC378'),
     MapEntry('matching_review', '\uC18C\uAC1C\uD305\u00B7\uB9E4\uCE6D\uD6C4\uAE30'),
     MapEntry('counsel', '\uACE0\uBBFC\uC0C1\uB2F4'),
     MapEntry('meme', '\uC720\uBA38\u00B7\uBC08'),

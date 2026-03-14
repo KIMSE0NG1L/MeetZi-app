@@ -11,6 +11,7 @@ import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/shared/utils/post_time_format.dart';
+import 'package:nearo_app/shared/utils/mention_text_span.dart';
 
 /// 학교별 커뮤니티 피드 화면
 class CommunityScreen extends StatefulWidget {
@@ -35,7 +36,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
   static const List<MapEntry<String, String>> _tabs = [
     MapEntry('all', '\uC804\uCCB4'),
     MapEntry('free', '\uC790\uC720'),
-    MapEntry('love', '\uC5F0\uC560\u00B7\uC36C'),
+    MapEntry('love', '\uC5F0\uC560\u00B7\uC378'),
     MapEntry('matching_review', '\uC18C\uAC1C\uD305\u00B7\uB9E4\uCE6D\uD6C4\uAE30'),
     MapEntry('counsel', '\uACE0\uBBFC\uC0C1\uB2F4'),
     MapEntry('meme', '\uC720\uBA38\u00B7\uBC08'),
@@ -49,7 +50,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
   bool _loading = true;
   bool _loadingMore = false;
   String _selectedTag = 'all';
-  String _selectedScope = 'all';
+  String _selectedScope = ''; // 기본: 체크 안 된 전체(태그) 피드
 
   @override
   void initState() {
@@ -128,12 +129,14 @@ class _CommunityScreenState extends State<CommunityScreen> {
   }
 
   void _openPost(Map<String, dynamic> post) {
+    final postId = post['id']?.toString();
+    if (postId == null || postId.isEmpty) return;
     Navigator.of(context).push<bool?>(
       MaterialPageRoute<bool?>(
         builder: (_) => CommunityPostDetailScreen(
           environmentId: widget.environmentId,
           schoolName: widget.schoolName,
-          postId: post['id'] as String,
+          postId: postId,
           initialPost: post,
           myUserId: _myUserId,
         ),
@@ -160,14 +163,20 @@ class _CommunityScreenState extends State<CommunityScreen> {
     try {
       final profile = await _matchingRepo.fetchProfileByUserId(userId);
       if (!mounted) return;
+      final tickets = await _matchingRepo.fetchMyTickets();
+      if (!mounted) return;
       await showBoardNoteSheet(
         context,
         profiles: [profile],
         startIndex: 0,
         buildAvatar: (ctx, p) => buildMatchCardAvatar(p),
-        onTakeNote: (profileId, _) async {
+        myMatchingTicket: tickets.matchingTicket,
+        onRefreshTickets: () async {
+          if (mounted) setState(() {});
+        },
+        onTakeNote: (profileId, _, {String? message}) async {
           try {
-            await _matchingRepo.takeNote(profileId);
+            await _matchingRepo.takeNote(profileId, message: message);
             return true;
           } catch (e) {
             if (mounted) {
@@ -196,7 +205,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('痍⑥냼'),
+            child: const Text('취소'),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
@@ -265,7 +274,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
       case 'free':
         return '\uC790\uC720';
       case 'love':
-        return '\uC5F0\uC560\u00B7\uC36C';
+        return '\uC5F0\uC560\u00B7\uC378';
       case 'matching_review':
         return '\uC18C\uAC1C\uD305\u00B7\uB9E4\uCE6D\uD6C4\uAE30';
       case 'counsel':
@@ -364,7 +373,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
 
   Widget _buildScopeBar(bool dark) {
     const scopes = <MapEntry<String, String>>[
-      MapEntry('all', '\uC804\uCCB4'),
       MapEntry('my_posts', '\uB0B4 \uAE00'),
       MapEntry('my_comments', '\uB0B4 \uB313\uAE00'),
     ];
@@ -379,7 +387,12 @@ class _CommunityScreenState extends State<CommunityScreen> {
             label: Text(scope.value),
             selected: selected,
             onSelected: (_) {
-              if (_selectedScope == scope.key) return;
+              if (_selectedScope == scope.key) {
+                // 같은 칩 다시 탭 → 내글/내댓글 필터 해제 후 하단 탭(태그) 기준 피드로
+                setState(() => _selectedScope = '');
+                _load();
+                return;
+              }
               setState(() => _selectedScope = scope.key);
               _load();
             },
@@ -402,7 +415,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final showBest = _selectedTag == 'all' && _selectedScope == 'all';
+    // 전체(태그) 피드일 때만 베스트/HOT 상단 노출 (내 글·내 댓글 필터 중에는 미노출)
+    final showBest = _selectedScope.isEmpty;
     final sortedByLikes = List<Map<String, dynamic>>.from(_posts)
       ..sort((a, b) => ((b['likeCount'] as int?) ?? 0).compareTo((a['likeCount'] as int?) ?? 0));
     final bestPosts = showBest ? sortedByLikes.take(3).toList() : <Map<String, dynamic>>[];
@@ -517,7 +531,11 @@ class _CommunityScreenState extends State<CommunityScreen> {
                               const SizedBox(height: 24),
                             ],
                             Text(
-                              '전체 글',
+                              _selectedScope == 'my_posts'
+                                  ? '내 글'
+                                  : _selectedScope == 'my_comments'
+                                      ? '내 댓글'
+                                      : _tabs.firstWhere((t) => t.key == _selectedTag, orElse: () => _tabs.first).value,
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -609,7 +627,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
     final isMe = _myUserId != null && authorId == _myUserId;
     final isDailyBest = post['isDailyBest'] == true;
     final tagLabel = _tagLabel(post['tag']?.toString());
-    final content = post['content']?.toString() ?? ' 참여';
+    final content = post['content']?.toString() ?? '';
     final likeCount = (post['likeCount'] is int) ? post['likeCount'] as int : 0;
     final commentCount = (post['commentCount'] is int) ? post['commentCount'] as int : 0;
     final viewCount = (post['viewCount'] is int) ? post['viewCount'] as int : 0;
@@ -618,7 +636,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
 
     return Padding(
       padding: EdgeInsets.only(
-        bottom: 1,
+        bottom: 8,
         top: (isBest && bestRank != null) ? 4 : 0,
         left: (isBest && bestRank != null) ? 12 : 0,
       ),
@@ -627,21 +645,21 @@ class _CommunityScreenState extends State<CommunityScreen> {
         children: [
           Material(
             color: dark ? const Color(0xFF1F2937) : Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(20),
             elevation: isBest ? 2 : 1,
-            shadowColor: isBest ? primary.withOpacity(0.3) : Colors.black26,
+            shadowColor: isBest ? primary.withOpacity(0.3) : Colors.black.withOpacity(0.06),
             child: Container(
               decoration: isBest
                   ? BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: primary.withOpacity(0.5), width: 2),
                     )
                   : null,
               child: InkWell(
                 onTap: () => _openPost(post),
-                borderRadius: BorderRadius.circular(16),
-                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 6, 10, 5),
+                borderRadius: BorderRadius.circular(20),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -650,158 +668,216 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         onTap: () => _onAuthorTap(author),
                         child: Row(
                           children: [
-                          DiceBearAvatar(
-                            style: author['avatarStyle']?.toString() ?? 'lorelei',
-                            seed: author['avatarSeed']?.toString() ?? nickname,
-                            size: 28,
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Flexible(
-                                      child: Text(
-                                        nickname,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12,
-                                          color: dark ? Colors.white : const Color(0xFF111827),
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    if (isBest) const SizedBox(width: 3),
-                                    if (isBest) const Text('🏆', style: TextStyle(fontSize: 10)),
-                                    if (isMe) ...[
-                                      const SizedBox(width: 4),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                        decoration: BoxDecoration(
-                                          color: primary.withOpacity(0.2),
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          '작성자',
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w600,
-                                            color: primary,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                    if (isDailyBest) ...[
-                                      const SizedBox(width: 4),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                        decoration: BoxDecoration(
-                                          color: Colors.amber.withOpacity(0.3),
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: const Text(
-                                          'HOT',
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w600,
-                                            color: Color(0xFFB45309),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                                const SizedBox(height: 1),
-                                Text(
-                                  formatPostTime(post['createdAt']),
-                                  style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
-                                ),
-                                const SizedBox(height: 3),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: dark ? Colors.grey.shade700 : Colors.grey.shade100,
-                                    borderRadius: BorderRadius.circular(999),
-                                    border: Border.all(
-                                      color: dark ? Colors.grey.shade600 : Colors.grey.shade300,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    tagLabel,
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                      color: dark ? Colors.grey.shade200 : Colors.grey.shade700,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                            DiceBearAvatar(
+                              style: author['avatarStyle']?.toString() ?? 'lorelei',
+                              seed: author['avatarSeed']?.toString() ?? nickname,
+                              options: parseAvatarOptions(author['avatarOptions']),
+                              size: 34,
                             ),
-                          ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        content,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: dark ? Colors.grey.shade300 : Colors.grey.shade700,
-                          height: 1.15,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (post['poll'] != null) ...[
-                        const SizedBox(height: 3),
-                        _buildPollChip(context, post['poll'] as Map<String, dynamic>, dark),
-                      ],
-                      const SizedBox(height: 3),
-                      Row(
-                        children: [
-                          const Spacer(),
-                          InkWell(
-                            onTap: () => _toggleLike(post, index),
-                            borderRadius: BorderRadius.circular(8),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Icon(
-                                    LucideIcons.heart,
-                                    size: 14,
-                                    color: liked ? Colors.red : Colors.grey.shade600,
-                                    fill: liked ? 1.0 : 0,
+                                  Row(
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          nickname,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                            color: dark ? Colors.white : const Color(0xFF111827),
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      if (isBest) const SizedBox(width: 4),
+                                      if (isBest) const Text('⭐', style: TextStyle(fontSize: 12)),
+                                      if (isMe) ...[
+                                        const SizedBox(width: 4),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                          decoration: BoxDecoration(
+                                            color: primary.withOpacity(0.2),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            '작성자',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
+                                              color: primary,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                      if (isDailyBest) ...[
+                                        const SizedBox(width: 4),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                          decoration: BoxDecoration(
+                                            color: Colors.amber.withOpacity(0.3),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: const Text(
+                                            'HOT',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFFB45309),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
                                   ),
-                                  const SizedBox(width: 4),
+                                  const SizedBox(height: 1),
                                   Text(
-                                    '$likeCount',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                      color: liked ? Colors.red : Colors.grey.shade600,
+                                    formatPostTime(post['createdAt']),
+                                    style: TextStyle(fontSize: 11, color: dark ? Colors.grey.shade500 : Colors.grey.shade400),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: dark ? Colors.grey.shade700 : Colors.grey.shade100,
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                    child: Text(
+                                      tagLabel,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        color: dark ? Colors.grey.shade200 : Colors.grey.shade600,
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
                             ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      RichText(
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        text: TextSpan(
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: dark ? Colors.grey.shade300 : Colors.grey.shade700,
+                            height: 1.25,
+                          ),
+                          children: buildMentionSpans(
+                            content,
+                            baseStyle: TextStyle(
+                              fontSize: 13,
+                              color: dark ? Colors.grey.shade300 : Colors.grey.shade700,
+                              height: 1.25,
+                            ),
+                            mentionColor: const Color(0xFF2563EB),
+                          ),
+                        ),
+                      ),
+                      if (post['poll'] != null) ...[
+                        const SizedBox(height: 6),
+                        _buildPollChip(context, post['poll'] as Map<String, dynamic>, dark),
+                      ],
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Material(
+                            color: liked
+                                ? null
+                                : (dark ? Colors.grey.shade700 : Colors.grey.shade100),
+                            borderRadius: BorderRadius.circular(10),
+                            child: InkWell(
+                              onTap: () => _toggleLike(post, index),
+                              borderRadius: BorderRadius.circular(10),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                                decoration: liked
+                                    ? BoxDecoration(
+                                        gradient: ThemeController.getActiveAccentGradient(),
+                                        borderRadius: BorderRadius.circular(10),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.12),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 1),
+                                          ),
+                                        ],
+                                      )
+                                    : null,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      LucideIcons.heart,
+                                      size: 14,
+                                      color: liked ? Colors.white : (dark ? Colors.grey.shade300 : Colors.grey.shade600),
+                                      fill: liked ? 1.0 : 0,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '$likeCount',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: liked ? Colors.white : (dark ? Colors.grey.shade300 : Colors.grey.shade600),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ),
                           const SizedBox(width: 8),
-                          Icon(LucideIcons.messageCircle, size: 14, color: Colors.grey.shade600),
-                          const SizedBox(width: 3),
-                          Text(
-                            '$commentCount',
-                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.grey.shade600),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: dark ? Colors.grey.shade700 : Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(LucideIcons.messageCircle, size: 14, color: dark ? Colors.grey.shade300 : Colors.grey.shade600),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '$commentCount',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: dark ? Colors.grey.shade300 : Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                           const SizedBox(width: 8),
-                          Icon(LucideIcons.eye, size: 14, color: Colors.grey.shade600),
-                          const SizedBox(width: 3),
-                          Text(
-                            '$viewCount',
-                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.grey.shade600),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: dark ? Colors.grey.shade700 : Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(LucideIcons.eye, size: 14, color: dark ? Colors.grey.shade300 : Colors.grey.shade600),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '$viewCount',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: dark ? Colors.grey.shade300 : Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),

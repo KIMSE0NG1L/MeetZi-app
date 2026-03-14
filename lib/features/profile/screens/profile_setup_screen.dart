@@ -583,21 +583,17 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         'intoLately': hobby,
       });
       _applyThemeForAffiliation();
+      if (!mounted) return;
+      if (_isInitialSetup || _isEditing) {
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          AppRoutes.home,
+          (route) => false,
+        );
+        return;
+      }
       setState(() => _result = response.toString());
       if (!mounted) return;
-      if (_isInitialSetup) {
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          AppRoutes.home,
-          (route) => false,
-        );
-      } else if (_isEditing) {
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          AppRoutes.home,
-          (route) => false,
-        );
-      } else {
-        Navigator.of(context).pushNamed(AppRoutes.environment);
-      }
+      Navigator.of(context).pushNamed(AppRoutes.environment);
     } on DioException catch (error) {
       String msg = '요청 실패';
       final data = error.response?.data;
@@ -608,7 +604,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       }
       setState(() => _result = msg);
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
