@@ -17,7 +17,7 @@ class ChatPartnerProfileModal {
     return showGeneralDialog<void>(
       context: context,
       barrierDismissible: true,
-      barrierLabel: '???뗢뵛',
+      barrierLabel: '닫기',
       barrierColor: Colors.black54,
       transitionDuration: const Duration(milliseconds: 450),
       pageBuilder: (_, __, ___) => const SizedBox.shrink(),
@@ -562,7 +562,7 @@ class _ModalCard extends StatelessWidget {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             foregroundColor: onSurface,
                           ),
-                          child: const Text('???뗢뵛', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          child: const Text('닫기', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                         ),
                       ),
                     ),

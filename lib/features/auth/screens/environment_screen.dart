@@ -495,11 +495,13 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
                       keyboardType: TextInputType.number,
                       maxLength: 6,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 8,
+                        color: dark ? Colors.white : const Color(0xFF111827),
                       ),
+                      cursorColor: dark ? Colors.white : const Color(0xFF111827),
                       decoration: InputDecoration(
                         hintText: '',
                         counterText: '',
@@ -821,3 +823,4 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
     );
   }
 }
+ 

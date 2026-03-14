@@ -41,6 +41,8 @@ class ApiEndpoints {
       '/communities/$environmentId/posts/$postId/like';
   static String communityPostCommentLike(String environmentId, String postId, String commentId) =>
       '/communities/$environmentId/posts/$postId/comments/$commentId/like';
+  static String communityPostCommentDelete(String environmentId, String postId, String commentId) =>
+      '/communities/$environmentId/posts/$postId/comments/$commentId';
   static String communityPostVote(String environmentId, String postId) =>
       '/communities/$environmentId/posts/$postId/vote';
 

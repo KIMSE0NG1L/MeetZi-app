@@ -108,6 +108,13 @@ class CommunityRepository {
     await _client.dio.delete(ApiEndpoints.communityPostDelete(environmentId, postId));
   }
 
+  /// 댓글 삭제 (본인 댓글만, 로그인 필요)
+  Future<void> deleteComment(String environmentId, String postId, String commentId) async {
+    await _client.dio.delete(
+      ApiEndpoints.communityPostCommentDelete(environmentId, postId, commentId),
+    );
+  }
+
   /// 투표하기 (로그인 필요). optionIndex: 0부터 시작
   Future<Map<String, dynamic>> votePost(
     String environmentId,

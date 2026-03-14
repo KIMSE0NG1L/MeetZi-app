@@ -61,10 +61,10 @@ class _CommunityTabScreenState extends State<CommunityTabScreen> {
         child: const Center(child: CircularProgressIndicator()),
       );
     }
-    if (_environmentId != null && _environmentId!.isNotEmpty && _schoolName != null && _schoolName!.isNotEmpty) {
+    if (_environmentId != null && _environmentId!.isNotEmpty) {
       return CommunityScreen(
         environmentId: _environmentId!,
-        schoolName: _schoolName!,
+        schoolName: _schoolName?.trim().isNotEmpty == true ? _schoolName!.trim() : '커뮤니티',
         isRootTab: true,
       );
     }
