@@ -143,6 +143,25 @@ void main() async {
         );
       } else {
         _saveNotificationToHistory(message);
+        // 포그라운드에서도 알림 표시
+        final title = message.notification?.title ?? '알림';
+        final body = message.notification?.body ?? '';
+        flutterLocalNotificationsPlugin.show(
+          id: (message.messageId ?? DateTime.now().millisecondsSinceEpoch).hashCode.abs(),
+          title: title,
+          body: body,
+          notificationDetails: NotificationDetails(
+            android: AndroidNotificationDetails(
+              channel.id,
+              channel.name,
+              channelDescription: channel.description,
+              importance: Importance.max,
+              priority: Priority.high,
+              icon: '@mipmap/ic_launcher',
+            ),
+          ),
+          payload: message.data.toString(),
+        );
       }
     }
   });
