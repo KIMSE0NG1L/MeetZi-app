@@ -337,7 +337,11 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     try {
       final list = await _repository.fetchMyTakeNoteRequests();
       if (!mounted) return;
-      setState(() => _receivedRequestCount = list.length);
+      final pendingCount = list.where((req) {
+        final status = req['status']?.toString() ?? 'pending';
+        return status == 'pending';
+      }).length;
+      setState(() => _receivedRequestCount = pendingCount);
     } catch (_) {
       if (mounted) setState(() => _receivedRequestCount = 0);
     }

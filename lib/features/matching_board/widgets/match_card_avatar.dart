@@ -2,34 +2,56 @@ import 'package:flutter/material.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/shared/utils/photo_url.dart';
 
+String? _resolvePhotoUrl(Map<String, dynamic> profile) {
+  final user = profile['user'] as Map<String, dynamic>? ?? const {};
+  final directKey = profile['photoStorageKey'] ??
+      profile['primaryPhotoStorageKey'] ??
+      user['photoStorageKey'] ??
+      user['primaryPhotoStorageKey'];
+  final directKeyString = directKey?.toString().trim();
+  if (directKeyString != null && directKeyString.isNotEmpty) {
+    return photoUrlFromStorageKey(directKeyString);
+  }
+
+  final photos = user['photos'] ?? profile['photos'];
+  if (photos is List && photos.isNotEmpty) {
+    final first = photos.first;
+    if (first is Map) {
+      final rawKey = first['storageKey'] ?? first['storage_key'] ?? first['key'];
+      final key = rawKey?.toString().trim();
+      if (key != null && key.isNotEmpty) {
+        return photoUrlFromStorageKey(key);
+      }
+    }
+    if (first is String && first.trim().isNotEmpty) {
+      return photoUrlFromStorageKey(first.trim());
+    }
+  }
+
+  final rawUrl = profile['photoUrl'] ?? user['photoUrl'];
+  final photoUrl = rawUrl?.toString().trim();
+  if (photoUrl != null && photoUrl.isNotEmpty) {
+    return photoUrlFromStorageKey(photoUrl);
+  }
+
+  return null;
+}
+
 Widget buildMatchCardAvatar(
   Map<String, dynamic> profile, {
   double size = 96,
 }) {
   final user = profile['user'] as Map<String, dynamic>? ?? const {};
-  final displayType = (profile['boardDisplayType'] ?? user['boardDisplayType'])
-      ?.toString()
-      .trim()
-      .toLowerCase();
-
-  if (displayType == 'photo') {
-    final photos = user['photos'] ?? profile['photos'];
-    if (photos is List && photos.isNotEmpty && photos.first is Map) {
-      final key = (photos.first as Map)['storageKey']?.toString();
-      if (key != null && key.isNotEmpty) {
-        final url = photoUrlFromStorageKey(key);
-        if (url != null && url.isNotEmpty) {
-          return ClipOval(
-            child: Image.network(
-              url,
-              width: size,
-              height: size,
-              fit: BoxFit.cover,
-            ),
-          );
-        }
-      }
-    }
+  final photoUrl = _resolvePhotoUrl(profile);
+  if (photoUrl != null && photoUrl.isNotEmpty) {
+    return ClipOval(
+      child: Image.network(
+        photoUrl,
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+      ),
+    );
   }
 
   final rawOptions = user['avatarOptions'] ?? profile['avatarOptions'];
