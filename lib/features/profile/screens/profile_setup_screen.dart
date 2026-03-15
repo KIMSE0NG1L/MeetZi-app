@@ -72,6 +72,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   String? _mbtiFT; // F / T
   String? _mbtiPJ; // P / J
 
+  bool get _hasAvatarConfigured =>
+      _avatarSeed != null && _avatarSeed!.trim().isNotEmpty;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -552,6 +555,18 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     }
     if (_idealTypeKeywords.length > _maxTagCount) {
       setState(() => _result = '나를 소개하는 태그는 최대 10개까지 선택할 수 있어요.');
+      return;
+    }
+
+    if (!_hasAvatarConfigured) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('\uC544\uBC14\uD0C0\uB97C \uBA3C\uC800 \uC124\uC815\uD574\uC8FC\uC138\uC694.'),
+        ),
+      );
+      await Navigator.of(context).pushNamed(AppRoutes.avatarSetup);
+      if (!mounted) return;
+      await _loadProfileIfExists();
       return;
     }
 

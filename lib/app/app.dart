@@ -52,6 +52,11 @@ class _NearoAppState extends State<NearoApp> {
   /// 설명 주석
   String? _initialRoute;
 
+  bool _hasAvatarConfigured(Map user) {
+    final avatarSeed = user['avatarSeed']?.toString().trim();
+    return avatarSeed != null && avatarSeed.isNotEmpty;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -94,6 +99,8 @@ class _NearoAppState extends State<NearoApp> {
             (user['affiliationText'] as String?)?.trim().isNotEmpty ?? false;
         if (!hasProfile || !hasAffiliation) {
           route = AppRoutes.universitySelect;
+        } else if (!_hasAvatarConfigured(user)) {
+          route = AppRoutes.avatarSetup;
         } else {
           try {
             final status =
@@ -199,7 +206,8 @@ class _NearoAppState extends State<NearoApp> {
                 ?.trim()
                 .isNotEmpty ??
             false;
-        if (hasProfile && hasAffiliation) {
+        final hasAvatar = _hasAvatarConfigured(user);
+        if (hasProfile && hasAffiliation && hasAvatar) {
           try {
             // 설명 주석
             final status =
@@ -231,6 +239,11 @@ class _NearoAppState extends State<NearoApp> {
               (route) => false,
             );
           }
+        } else if (hasProfile && hasAffiliation) {
+          _navigatorKey.currentState?.pushNamedAndRemoveUntil(
+            AppRoutes.avatarSetup,
+            (route) => false,
+          );
         } else {
           _navigatorKey.currentState?.pushNamedAndRemoveUntil(
             AppRoutes.universitySelect,
@@ -358,5 +371,3 @@ class _NearoAppState extends State<NearoApp> {
     );
   }
 }
-
-
