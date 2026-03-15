@@ -37,4 +37,19 @@ class ReportRepository {
       },
     );
   }
+
+  Future<void> reportCommunityComment({
+    required String commentId,
+    required String reason,
+    String? detail,
+  }) async {
+    await _client.dio.post(
+      ApiEndpoints.reportCommunityComment,
+      data: {
+        'commentId': commentId,
+        'reason': reason,
+        if (detail != null && detail.isNotEmpty) 'detail': detail,
+      },
+    );
+  }
 }

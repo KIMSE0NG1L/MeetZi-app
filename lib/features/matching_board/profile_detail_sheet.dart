@@ -49,12 +49,27 @@ void _enlargeUrlsFromProfile(Map<String, dynamic> profile, void Function(String?
 
 MeetzyProfileDetailData profileMapToDetailData(Map<String, dynamic> profile) {
   final user = profile['user'] as Map<String, dynamic>?;
+  final partner = profile['partner'] as Map<String, dynamic>?;
+  final requester = profile['requester'] as Map<String, dynamic>?;
+  final recipient = profile['recipient'] as Map<String, dynamic>?;
+  final sources = <Map<String, dynamic>>[
+    profile,
+    if (user != null) user,
+    if (partner != null) partner,
+    if (requester != null) requester,
+    if (recipient != null) recipient,
+    if (partner?['user'] is Map<String, dynamic>) partner!['user'] as Map<String, dynamic>,
+    if (requester?['user'] is Map<String, dynamic>) requester!['user'] as Map<String, dynamic>,
+    if (recipient?['user'] is Map<String, dynamic>) recipient!['user'] as Map<String, dynamic>,
+  ];
   dynamic pluck(List<String> keys) {
     for (final k in keys) {
-      final v1 = profile[k];
-      if (v1 != null && v1.toString().trim().isNotEmpty) return v1;
-      final v2 = user?[k];
-      if (v2 != null && v2.toString().trim().isNotEmpty) return v2;
+      for (final source in sources) {
+        final v = source[k];
+        if (v == null) continue;
+        if (v is String && v.trim().isEmpty) continue;
+        return v;
+      }
     }
     return null;
   }
@@ -80,6 +95,7 @@ MeetzyProfileDetailData profileMapToDetailData(Map<String, dynamic> profile) {
           default: return s;
         }
       case 'smoking':
+        if (v is bool) return v ? '흡연' : '비흡연';
         switch (s.toLowerCase()) {
           case 'none': return '비흡연';
           case 'sometimes': return '가끔';
@@ -87,6 +103,7 @@ MeetzyProfileDetailData profileMapToDetailData(Map<String, dynamic> profile) {
           default: return s;
         }
       case 'drinking':
+        if (v is bool) return v ? '음주' : '비음주';
         switch (s.toLowerCase()) {
           case 'none': return '안 함';
           case 'sometimes': return '가끔';
@@ -130,7 +147,20 @@ MeetzyProfileDetailData profileMapToDetailData(Map<String, dynamic> profile) {
   final heightVal = pluck(['heightCm', 'height']);
   final heightStr = heightVal != null ? '${heightVal} cm' : '';
   final listTags = <String>[];
-  final kw = pluck(['idealTypeKeywords']) ?? user?['idealTypeKeywords'];
+  final kw = pluck(['idealTypeKeywords', 'keywords', 'tags']);
+  final envs = pluck(['userEnvironments', 'environments']);
+  String schoolFromEnv = '';
+  if (envs is List && envs.isNotEmpty) {
+    for (final env in envs) {
+      if (env is Map) {
+        final name = (env['environment'] is Map ? (env['environment'] as Map)['name'] : env['name'])?.toString().trim();
+        if (name != null && name.isNotEmpty) {
+          schoolFromEnv = name;
+          break;
+        }
+      }
+    }
+  }
   if (kw is List) {
     for (final e in kw) {
       final s = e?.toString().trim();
@@ -141,14 +171,16 @@ MeetzyProfileDetailData profileMapToDetailData(Map<String, dynamic> profile) {
     nickname: str(pluck(['nickname']) ?? user?['nickname']).isEmpty ? '-' : str(pluck(['nickname']) ?? user?['nickname']),
     major: str(pluck(['department', 'major', 'departmentName'])),
     gender: toLabel('gender', pluck(['gender', 'sex'])),
-    school: str(pluck(['affiliation', 'school', 'affiliationText', 'organization'])),
+    school: str(pluck(['affiliation', 'school', 'affiliationText', 'organization', 'schoolName', 'campusName'])).isNotEmpty
+        ? str(pluck(['affiliation', 'school', 'affiliationText', 'organization', 'schoolName', 'campusName']))
+        : schoolFromEnv,
     height: heightStr,
-    grade: toLabel('gradeYear', pluck(['grade', 'year', 'schoolYear', 'class'])),
+    grade: toLabel('gradeYear', pluck(['gradeYear', 'grade', 'year', 'schoolYear', 'class'])),
     mbti: str(pluck(['mbti', 'mbtiType'])),
-    smoking: toLabel('smoking', pluck(['smoking', 'smoke'])),
-    drinking: toLabel('drinking', pluck(['drinking', 'alcohol'])),
-    intro: str(pluck(['oneLineIntroduce', 'introOneLine', 'bio', 'introduction'])),
-    interest: str(pluck(['intoLately', 'hobby', 'recentInterest'])),
+    smoking: toLabel('smoking', pluck(['isSmoking', 'smoking', 'smoke', 'smokeType'])),
+    drinking: toLabel('drinking', pluck(['isDrinking', 'drinking', 'alcohol', 'drinkType'])),
+    intro: str(pluck(['oneLineIntroduce', 'introOneLine', 'bio', 'introduction', 'selfIntroduction'])),
+    interest: str(pluck(['intoLately', 'hobby', 'recentInterest', 'interests'])),
     idealType: str(pluck(['idealType', 'ideal'])),
     fashionStyle: toLabel('fashionStyle', pluck(['fashionStyle', 'style'])),
     datePreference: toLabel('preferredDateType', pluck(['preferredDateType', 'preferredDate'])),

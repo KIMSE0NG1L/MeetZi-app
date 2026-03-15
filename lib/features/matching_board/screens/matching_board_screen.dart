@@ -1,6 +1,7 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:math' as math;
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -17,6 +18,7 @@ import 'package:nearo_app/core/theme/meetzy_design_tokens.dart';
 import 'package:nearo_app/shared/utils/photo_url.dart';
 import 'package:nearo_app/presentation/pages/meetzy_board_page.dart';
 import 'package:nearo_app/presentation/widgets/meetzy_profile_detail_modal.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// 설명 주석
 MeetzyProfileDetailData _profileMapToDetailData(Map<String, dynamic> profile) {
@@ -31,6 +33,15 @@ MeetzyProfileDetailData _profileMapToDetailData(Map<String, dynamic> profile) {
     return null;
   }
   String str(dynamic v) => v?.toString().trim() ?? '';
+
+  /// 아바타 시드 등으로 잘못 들어온 값(한글 없이 영소문자+숫자만 긴 문자열)은 빈 문자열로 취급
+  String strContent(dynamic v) {
+    final s = v?.toString().trim() ?? '';
+    if (s.isEmpty) return '';
+    if (s.length > 10 && RegExp(r'^[a-z0-9]+$').hasMatch(s)) return '';
+    if (s.length > 8 && !RegExp(r'[가-힣\s]').hasMatch(s)) return '';
+    return s;
+  }
   String toLabel(String? field, dynamic v) {
     final s = v?.toString().trim();
     if (s == null || s.isEmpty) return '';
@@ -62,6 +73,7 @@ MeetzyProfileDetailData _profileMapToDetailData(Map<String, dynamic> profile) {
             return s;
         }
       case 'smoking':
+        if (v is bool) return v ? '흡연' : '비흡연';
         switch (s.toLowerCase()) {
           case 'none':
             return '비흡연';
@@ -73,6 +85,7 @@ MeetzyProfileDetailData _profileMapToDetailData(Map<String, dynamic> profile) {
             return s;
         }
       case 'drinking':
+        if (v is bool) return v ? '음주' : '비음주';
         switch (s.toLowerCase()) {
           case 'none':
             return '비음주';
@@ -156,11 +169,11 @@ MeetzyProfileDetailData _profileMapToDetailData(Map<String, dynamic> profile) {
     height: heightStr,
     grade: toLabel('gradeYear', pluck(['grade', 'year', 'schoolYear', 'class'])),
     mbti: str(pluck(['mbti', 'mbtiType'])),
-    smoking: toLabel('smoking', pluck(['smoking', 'smoke'])),
-    drinking: toLabel('drinking', pluck(['drinking', 'alcohol'])),
-    intro: str(pluck(['oneLineIntroduce', 'introOneLine', 'bio', 'introduction'])),
-    interest: str(pluck(['intoLately', 'hobby', 'recentInterest'])),
-    idealType: str(pluck(['idealType', 'ideal'])),
+    smoking: toLabel('smoking', pluck(['isSmoking', 'smoking', 'smoke'])),
+    drinking: toLabel('drinking', pluck(['isDrinking', 'drinking', 'alcohol'])),
+    intro: strContent(user?['introOneLine'] ?? pluck(['oneLineIntroduce', 'introOneLine', 'bio', 'introduction'])),
+    interest: strContent(user?['intoLately'] ?? pluck(['intoLately', 'hobby', 'recentInterest'])),
+    idealType: strContent(user?['idealType'] ?? pluck(['idealType', 'ideal'])),
     fashionStyle: toLabel('fashionStyle', pluck(['fashionStyle', 'style'])),
     datePreference: toLabel('preferredDateType', pluck(['preferredDateType', 'preferredDate'])),
     activeTime: toLabel('activityTime', pluck(['activityTime', 'activeTime'])),
@@ -177,19 +190,23 @@ Future<void> showBoardNoteSheet(
   VoidCallback? onPop,
   int myMatchingTicket = 0,
   Future<void> Function()? onRefreshTickets,
-  Future<bool> Function(String profileId, Map<String, dynamic> profile)? onTakeNote,
+  Future<bool> Function(String profileId, Map<String, dynamic> profile, {String? message})? onTakeNote,
   /// 설명 주석
   bool hideActionButtons = false,
+  bool showTertiaryCloseButton = false,
+  Future<Map<String, dynamic>?> Function(List<String> excludeUserIds)? onRequestNextProfile,
 }) async {
   final sheetContent = _BoardNoteSheetContent(
     profiles: profiles,
     startIndex: startIndex,
     buildAvatar: buildAvatar,
-    onTakeNote: onTakeNote ?? (_, __) async => false,
+    onTakeNote: onTakeNote ?? (_, __, {String? message}) async => false,
     onPop: onPop ?? () {},
     myMatchingTicket: myMatchingTicket,
     onRefreshTickets: onRefreshTickets,
     hideActionButtons: hideActionButtons,
+    showTertiaryCloseButton: showTertiaryCloseButton,
+    onRequestNextProfile: onRequestNextProfile,
   );
   if (!context.mounted) return;
   showGeneralDialog<void>(
@@ -197,40 +214,31 @@ Future<void> showBoardNoteSheet(
     barrierDismissible: true,
     barrierLabel: '닫기',
     barrierColor: Colors.transparent,
-    transitionDuration: const Duration(milliseconds: 600),
+    transitionDuration: const Duration(milliseconds: 350),
     pageBuilder: (_, __, ___) => const SizedBox.shrink(),
     transitionBuilder: (ctx, animation, secondaryAnimation, child) {
+      final curve = Curves.easeOutCubic;
+      final t = curve.transform(animation.value);
+      final barrierOpacity = 0.6 * t;
+      final slideY = 700.0 * (1.0 - t);
       return AnimatedBuilder(
         animation: animation,
         builder: (context, _) {
-          final t = Curves.easeOutBack.transform(animation.value);
-          final barrierOpacity = 0.6 * t;
-          final opacity = t;
-          final scale = 0.5 + 0.5 * t;
-          final isReverse = animation.status == AnimationStatus.reverse;
-          final rotateYDeg = isReverse ? 180.0 - 180.0 * t : -180.0 + 180.0 * t;
-          final rotateYRad = rotateYDeg * (3.14159265359 / 180.0);
           return Stack(
             children: [
               GestureDetector(
                 onTap: () => Navigator.of(ctx).pop(),
                 child: Container(color: Colors.black.withOpacity(barrierOpacity)),
               ),
-              Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 390),
-                  child: Transform(
-                    alignment: Alignment.center,
-                    transform: Matrix4.identity()
-                      ..setEntry(3, 2, 0.001)
-                      ..rotateY(rotateYRad),
-                    child: Transform.scale(
-                      scale: scale,
-                      alignment: Alignment.center,
-                      child: Opacity(
-                        opacity: opacity.clamp(0.0, 1.0),
-                        child: sheetContent,
-                      ),
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: Transform.translate(
+                  offset: Offset(0, slideY),
+                  child: Center(
+                    child: SizedBox(
+                      width: 390,
+                      height: 700,
+                      child: sheetContent,
                     ),
                   ),
                 ),
@@ -274,16 +282,39 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   int _receivedRequestCount = 0;
   late Future<Map<String, dynamic>> _myProfileFuture;
   String? _preferredGender;
+  bool _hasAppliedFilter = false;
+  bool _filterNonSmokingOnly = false;
+  bool _filterNonDrinkingOnly = false;
+  int _filterMinHeight = 150;
+  int _filterMaxHeight = 190;
+  bool _isShowingAllUniversities = false;
+
+  static const String _keyScopeAllUniversities = 'meetzy_board_scope_all_universities';
+  static const int _heightMinLimit = 120;
+  static const int _heightMaxLimit = 230;
 
   @override
   void initState() {
     super.initState();
     _myProfileFuture = _authRepository.getProfile();
     _primePreferredGender();
-    _fetchProfiles();
+    _loadScopeAndFetch();
     _fetchMySummary();
     _fetchReceivedRequestCount();
     widget.refreshTrigger?.addListener(_onRefreshTriggered);
+  }
+
+  /// 저장된 전체/우리대학 선택을 읽어서 해당 목록을 불러옴. 기본은 우리 학교.
+  Future<void> _loadScopeAndFetch() async {
+    final prefs = await SharedPreferences.getInstance();
+    final scopeAll = prefs.getBool(_keyScopeAllUniversities) ?? false;
+    if (!mounted) return;
+    setState(() => _isShowingAllUniversities = scopeAll);
+    if (scopeAll) {
+      await _fetchProfilesAllUniversities();
+    } else {
+      await _fetchProfiles();
+    }
   }
 
   @override
@@ -293,7 +324,11 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   }
 
   void _onRefreshTriggered() {
-    _fetchProfiles();
+    if (_isShowingAllUniversities) {
+      _fetchProfilesAllUniversities();
+    } else {
+      _fetchProfiles();
+    }
     _fetchMySummary();
     _fetchReceivedRequestCount();
   }
@@ -302,7 +337,11 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     try {
       final list = await _repository.fetchMyTakeNoteRequests();
       if (!mounted) return;
-      setState(() => _receivedRequestCount = list.length);
+      final pendingCount = list.where((req) {
+        final status = req['status']?.toString() ?? 'pending';
+        return status == 'pending';
+      }).length;
+      setState(() => _receivedRequestCount = pendingCount);
     } catch (_) {
       if (mounted) setState(() => _receivedRequestCount = 0);
     }
@@ -345,6 +384,36 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   }
 
   /// 설명 주석
+  Future<void> _fetchProfilesAllUniversities() async {
+    setState(() => _loading = true);
+    try {
+      String? preferredGender = _preferredGender;
+      try {
+        final profile = await _myProfileFuture;
+        final raw = profile['user'] is Map ? profile['user'] as Map : profile;
+        final g = raw['gender']?.toString().trim().toLowerCase();
+        if (g == 'male' || g == '남성') {
+          preferredGender = 'female';
+        } else if (g == 'female' || g == '여성') {
+          preferredGender = 'male';
+        }
+      } catch (_) {}
+      final profiles = await _repository.fetchProfiles(preferredGender: preferredGender, allSchools: true);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_keyScopeAllUniversities, true);
+      if (!mounted) return;
+      setState(() {
+        _profiles = profiles;
+        _isShowingAllUniversities = true;
+      });
+    } catch (_) {
+      setState(() => _profiles = []);
+    } finally {
+      setState(() => _loading = false);
+    }
+  }
+
+  /// 설명 주석
   Future<void> _fetchProfiles() async {
     setState(() => _loading = true);
     try {
@@ -360,11 +429,357 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
         }
       } catch (_) {}
       final profiles = await _repository.fetchProfiles(preferredGender: preferredGender);
-      setState(() => _profiles = profiles);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_keyScopeAllUniversities, false);
+      if (!mounted) return;
+      setState(() {
+        _profiles = profiles;
+        _isShowingAllUniversities = false;
+      });
     } catch (_) {
       setState(() => _profiles = []);
     } finally {
       setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _onDeveloperMatchTap() async {
+    if (!mounted) return;
+    try {
+      final myProfile = await _myProfileFuture;
+      final user = myProfile['user'] is Map ? myProfile['user'] as Map<String, dynamic> : myProfile;
+      final myGender = (user['gender'] ?? myProfile['gender'])?.toString().trim().toLowerCase();
+      if (myGender == 'male') {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('개발자는 남자라서 신청할 수 없어요.')),
+        );
+        return;
+      }
+      final developerProfile = await _repository.fetchDeveloperProfile();
+      if (!mounted) return;
+      // 일반 카드와 동일한 상세 모달 + 매칭 로직 사용
+      await _openNoteSheet(context, 0, [developerProfile], null);
+    } catch (e) {
+      if (!mounted) return;
+      final String message = e is DioException && e.response?.statusCode == 404
+          ? '개발자 프로필을 찾을 수 없어요. (서버 설정을 확인해 주세요.)'
+          : '개발자 프로필을 불러오지 못했습니다.';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
+  int? _extractHeightCm(Map<String, dynamic> profile) {
+    final user = profile['user'] as Map<String, dynamic>?;
+    final raw = profile['heightCm'] ?? profile['height'] ?? user?['heightCm'] ?? user?['height'];
+    if (raw is num) return raw.toInt();
+    if (raw is String) {
+      final digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
+      return int.tryParse(digits);
+    }
+    return null;
+  }
+
+  bool _isNonSmoking(Map<String, dynamic> profile) {
+    final user = profile['user'] as Map<String, dynamic>?;
+    final v = profile['isSmoking'] ?? user?['isSmoking'] ?? profile['smoking'] ?? profile['smoke'] ?? user?['smoking'] ?? user?['smoke'];
+    if (v is bool) return v == false;
+    final raw = v?.toString().trim().toLowerCase();
+    return raw == 'none' || raw == '비흡연' || raw == '금연';
+  }
+
+  bool _isNonDrinking(Map<String, dynamic> profile) {
+    final user = profile['user'] as Map<String, dynamic>?;
+    final v = profile['isDrinking'] ?? user?['isDrinking'] ?? profile['drinking'] ?? profile['alcohol'] ?? user?['drinking'] ?? user?['alcohol'];
+    if (v is bool) return v == false;
+    final raw = v?.toString().trim().toLowerCase();
+    return raw == 'none' || raw == '비음주' || raw == '금주';
+  }
+
+  List<Map<String, dynamic>> _filterProfiles(
+    List<Map<String, dynamic>> source, {
+    required bool nonSmokingOnly,
+    required bool nonDrinkingOnly,
+    required int minHeight,
+    required int maxHeight,
+  }) {
+    return source.where((profile) {
+      if (nonSmokingOnly && !_isNonSmoking(profile)) return false;
+      if (nonDrinkingOnly && !_isNonDrinking(profile)) return false;
+      final height = _extractHeightCm(profile);
+      if (height == null) return false;
+      return height >= minHeight && height <= maxHeight;
+    }).toList();
+  }
+
+  /// 다이얼로그에서만 사용. 필터 적용 시 true + 값, 해제 시 false + 기본값, 취소 시 null.
+  static _FilterDialogResult? _openFilterDialogResult;
+
+  Future<void> _openFilterDialog(List<Map<String, dynamic>> baseProfiles) async {
+    if (!mounted) return;
+    bool nonSmokingOnly = _filterNonSmokingOnly;
+    bool nonDrinkingOnly = _filterNonDrinkingOnly;
+    final minController = TextEditingController(text: '$_filterMinHeight');
+    final maxController = TextEditingController(text: '$_filterMaxHeight');
+    String? errorText;
+
+    int? parseHeight(String value) => int.tryParse(value.trim());
+    int filteredCount() {
+      final minH = parseHeight(minController.text) ?? _filterMinHeight;
+      final maxH = parseHeight(maxController.text) ?? _filterMaxHeight;
+      if (minH > maxH) return 0;
+      return _filterProfiles(
+        baseProfiles,
+        nonSmokingOnly: nonSmokingOnly,
+        nonDrinkingOnly: nonDrinkingOnly,
+        minHeight: minH.clamp(_heightMinLimit, _heightMaxLimit),
+        maxHeight: maxH.clamp(_heightMinLimit, _heightMaxLimit),
+      ).length;
+    }
+
+    _openFilterDialogResult = null;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black54,
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+          child: StatefulBuilder(
+            builder: (context, setModalState) {
+              final count = filteredCount();
+              final dark = Theme.of(context).brightness == Brightness.dark;
+              final maxHeight = MediaQuery.of(context).size.height * 0.85;
+              return Container(
+                constraints: BoxConstraints(maxWidth: 440, maxHeight: maxHeight),
+                decoration: BoxDecoration(
+                  color: dark ? const Color(0xFF1F2937) : Colors.white,
+                  borderRadius: BorderRadius.circular(26),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(24, 20, 16, 20),
+                      decoration: const BoxDecoration(
+                        gradient: UniversityTheme.designPinkGradient,
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(LucideIcons.funnel, color: Colors.white, size: 22),
+                          const SizedBox(width: 10),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '필터링',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 33 / 2,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  '원하는 조건으로 프로필을 필터링하세요',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.of(dialogContext).pop(),
+                            icon: const Icon(LucideIcons.x, color: Colors.white, size: 24),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Flexible(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                          _FilterOptionTile(
+                            icon: Icons.smoke_free,
+                            title: '비흡연자만',
+                            subtitle: '담배를 피우지 않는 사람',
+                            selected: nonSmokingOnly,
+                            onTap: () => setModalState(() => nonSmokingOnly = !nonSmokingOnly),
+                          ),
+                          const SizedBox(height: 12),
+                          _FilterOptionTile(
+                            icon: Icons.no_drinks,
+                            title: '비음주자만',
+                            subtitle: '술을 마시지 않는 사람',
+                            selected: nonDrinkingOnly,
+                            onTap: () => setModalState(() => nonDrinkingOnly = !nonDrinkingOnly),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            '키 범위 (cm)',
+                            style: TextStyle(
+                              color: dark ? Colors.white : const Color(0xFF374151),
+                              fontSize: 28 / 2,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _HeightInputField(
+                                  controller: minController,
+                                  onChanged: (_) => setModalState(() => errorText = null),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                child: Text(
+                                  '~',
+                                  style: TextStyle(
+                                    color: dark ? Colors.white : const Color(0xFF6B7280),
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: _HeightInputField(
+                                  controller: maxController,
+                                  onChanged: (_) => setModalState(() => errorText = null),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: dark ? Colors.white10 : const Color(0xFFF3F4F6),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Center(
+                              child: Text(
+                                '필터 결과: $count명',
+                                style: TextStyle(
+                                  color: dark ? Colors.white : const Color(0xFF374151),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (errorText != null) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              errorText!,
+                              style: const TextStyle(
+                                color: Color(0xFFEF4444),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 14),
+                          SizedBox(
+                            height: 56,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: UniversityTheme.designPinkGradient,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: TextButton(
+                                onPressed: () {
+                                  final minHeight = parseHeight(minController.text);
+                                  final maxHeight = parseHeight(maxController.text);
+                                  if (minHeight == null || maxHeight == null) {
+                                    setModalState(() => errorText = '키는 숫자로 입력해 주세요.');
+                                    return;
+                                  }
+                                  if (minHeight < _heightMinLimit || maxHeight > _heightMaxLimit) {
+                                    setModalState(() => errorText = '키 범위는 $_heightMinLimit ~ $_heightMaxLimit cm 입니다.');
+                                    return;
+                                  }
+                                  if (minHeight > maxHeight) {
+                                    setModalState(() => errorText = '최소 키가 최대 키보다 클 수 없습니다.');
+                                    return;
+                                  }
+                                  _openFilterDialogResult = _FilterDialogResult(
+                                    applied: true,
+                                    nonSmokingOnly: nonSmokingOnly,
+                                    nonDrinkingOnly: nonDrinkingOnly,
+                                    minHeight: minHeight,
+                                    maxHeight: maxHeight,
+                                  );
+                                  Navigator.of(dialogContext).pop();
+                                },
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                ),
+                                child: const Text(
+                                  '필터 적용하기',
+                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (_hasAppliedFilter) ...[
+                            const SizedBox(height: 10),
+                            OutlinedButton(
+                              onPressed: () {
+                                _openFilterDialogResult = _FilterDialogResult(
+                                  applied: false,
+                                  nonSmokingOnly: false,
+                                  nonDrinkingOnly: false,
+                                  minHeight: _heightMinLimit,
+                                  maxHeight: _heightMaxLimit,
+                                );
+                                Navigator.of(dialogContext).pop();
+                              },
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: dark ? Colors.white70 : const Color(0xFF6B7280),
+                                side: BorderSide(color: dark ? Colors.white38 : const Color(0xFFD1D5DB)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                minimumSize: const Size(double.infinity, 48),
+                              ),
+                              child: const Text('필터 해제', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+
+    minController.dispose();
+    maxController.dispose();
+
+    final result = _openFilterDialogResult;
+    _openFilterDialogResult = null;
+    if (result != null && mounted) {
+      setState(() {
+        _hasAppliedFilter = result.applied;
+        _filterNonSmokingOnly = result.nonSmokingOnly;
+        _filterNonDrinkingOnly = result.nonDrinkingOnly;
+        _filterMinHeight = result.minHeight;
+        _filterMaxHeight = result.maxHeight;
+      });
     }
   }
 
@@ -408,7 +823,11 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       };
       if (department != null && department.isNotEmpty) payload['department'] = department;
       await _repository.registerProfile(payload);
-      await _fetchProfiles();
+      if (_isShowingAllUniversities) {
+        await _fetchProfilesAllUniversities();
+      } else {
+        await _fetchProfiles();
+      }
       await _fetchMySummary();
       _myProfileFuture = _authRepository.getProfile(forceRefresh: true);
       await _primePreferredGender();
@@ -500,6 +919,8 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
             : null;
         final myUserId = profileData?['id']?.toString() ?? raw?['id']?.toString();
         final myNickname = profileData?['nickname']?.toString() ?? raw?['nickname']?.toString() ?? '나';
+        final mySchoolName = (profileData?['affiliationText'] ?? profileData?['school'])?.toString().trim();
+        final mySchoolNameOrNull = (mySchoolName != null && mySchoolName.isNotEmpty) ? mySchoolName : null;
         final meProfile = profileData != null
             ? {'user': profileData, 'userId': myUserId, 'nickname': myNickname}
             : null;
@@ -510,6 +931,15 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                 return uid != myUserId;
               }).toList()
             : List<Map<String, dynamic>>.from(_profiles);
+        final filteredProfiles = _hasAppliedFilter
+            ? _filterProfiles(
+                displayProfiles,
+                nonSmokingOnly: _filterNonSmokingOnly,
+                nonDrinkingOnly: _filterNonDrinkingOnly,
+                minHeight: _filterMinHeight,
+                maxHeight: _filterMaxHeight,
+              )
+            : displayProfiles;
 
         return Scaffold(
           backgroundColor: Colors.transparent,
@@ -527,7 +957,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                 : null,
             matchingTicket: _myTickets?.matchingTicket ?? 0,
             receivedRequestCount: _receivedRequestCount,
-            profiles: displayProfiles.asMap().entries.map((e) {
+            profiles: filteredProfiles.asMap().entries.map((e) {
               final i = e.key;
               final p = e.value;
               final nickname = p['nickname']?.toString().trim();
@@ -542,9 +972,13 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                 isNew: i < 6,
               );
             }).toList(),
-            onProfileTap: (index, _) => _openNoteSheet(context, index, displayProfiles, myUserId),
+            onProfileTap: (index, _) => _openNoteSheet(context, index, filteredProfiles, myUserId),
             onRefresh: () async {
-              await _fetchProfiles();
+              if (_isShowingAllUniversities) {
+                await _fetchProfilesAllUniversities();
+              } else {
+                await _fetchProfiles();
+              }
               await _fetchMySummary();
               await _fetchReceivedRequestCount();
             },
@@ -586,6 +1020,12 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                 ),
               ).then((_) => _fetchReceivedRequestCount());
             },
+            onDeveloperMatchTap: _onDeveloperMatchTap,
+            onLoadAllUniversities: _fetchProfilesAllUniversities,
+            onLoadMySchool: _fetchProfiles,
+            isShowingAllUniversities: _isShowingAllUniversities,
+            mySchoolName: mySchoolNameOrNull,
+            onFilterTap: () => _openFilterDialog(displayProfiles),
             isLoading: _loading,
           ),
         );
@@ -673,7 +1113,11 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                                 ),
                               );
                               if (!mounted) return;
-                              _fetchProfiles();
+                              if (_isShowingAllUniversities) {
+                                _fetchProfilesAllUniversities();
+                              } else {
+                                _fetchProfiles();
+                              }
                               _fetchMySummary();
                             }
                           },
@@ -689,7 +1133,11 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
           );
         },
       );
-      _fetchProfiles();
+      if (_isShowingAllUniversities) {
+        _fetchProfilesAllUniversities();
+      } else {
+        _fetchProfiles();
+      }
       _fetchMySummary();
     } finally {
       if (mounted) setState(() => _isOpeningSheet = false);
@@ -715,8 +1163,11 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       await _repository.takeNote(profileId, message: trimmed);
       if (!mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('요청을 보냈어요. 상대가 수락하면 매칭돼요.')));
-      // Avoid keeping the match action blocked while refresh APIs are in flight.
-      _fetchProfiles();
+      if (_isShowingAllUniversities) {
+        _fetchProfilesAllUniversities();
+      } else {
+        _fetchProfiles();
+      }
       _fetchMySummary();
       return true;
     } catch (e) {
@@ -724,6 +1175,150 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
       return false;
     }
+  }
+}
+
+class _FilterDialogResult {
+  final bool applied;
+  final bool nonSmokingOnly;
+  final bool nonDrinkingOnly;
+  final int minHeight;
+  final int maxHeight;
+  const _FilterDialogResult({
+    required this.applied,
+    required this.nonSmokingOnly,
+    required this.nonDrinkingOnly,
+    required this.minHeight,
+    required this.maxHeight,
+  });
+}
+
+class _FilterOptionTile extends StatelessWidget {
+  const _FilterOptionTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Ink(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: dark ? Colors.white10 : const Color(0xFFF3F4F6),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: dark ? Colors.white12 : Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: const Color(0xFFF43F5E), size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: dark ? Colors.white : const Color(0xFF111827),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: dark ? Colors.grey.shade300 : const Color(0xFF6B7280),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: selected
+                    ? const Color(0xFFF43F5E)
+                    : (dark ? Colors.white24 : const Color(0xFFD1D5DB)),
+              ),
+              child: selected
+                  ? const Icon(LucideIcons.check, size: 18, color: Colors.white)
+                  : null,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HeightInputField extends StatelessWidget {
+  const _HeightInputField({
+    required this.controller,
+    required this.onChanged,
+  });
+
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return TextField(
+      controller: controller,
+      keyboardType: TextInputType.number,
+      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+      onChanged: onChanged,
+      textAlign: TextAlign.center,
+      style: TextStyle(
+        color: dark ? Colors.white : const Color(0xFF111827),
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+      ),
+      decoration: InputDecoration(
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(vertical: 14),
+        filled: true,
+        fillColor: dark ? Colors.white10 : const Color(0xFFF9FAFB),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: dark ? Colors.white24 : const Color(0xFFD1D5DB)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: dark ? Colors.white24 : const Color(0xFFD1D5DB)),
+        ),
+        focusedBorder: const OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(14)),
+          borderSide: BorderSide(color: Color(0xFFF43F5E), width: 1.4),
+        ),
+      ),
+    );
   }
 }
 
@@ -1050,8 +1645,20 @@ class _TakeNoteMessageSheetState extends State<_TakeNoteMessageSheet> {
     }
     String? seed = profile['avatarSeed']?.toString() ?? (profile['user'] as Map?)?['avatarSeed']?.toString();
     if (seed != null && seed.isNotEmpty) {
-      final opts = profile['avatarOptions'] as Map<String, String>? ?? (profile['user'] as Map?)?['avatarOptions'] as Map<String, String>?;
-      final options = opts != null && opts.isNotEmpty ? opts : null;
+      // avatarOptions는 Map 또는 JSON String일 수 있으므로 안전하게 파싱
+      final rawOptions = profile['avatarOptions'] ?? (profile['user'] as Map?)?['avatarOptions'];
+      Map<String, String> opts = {};
+      if (rawOptions is Map) {
+        opts = rawOptions.map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
+      } else if (rawOptions != null && rawOptions.toString().trim().isNotEmpty) {
+        try {
+          final decoded = jsonDecode(rawOptions.toString());
+          if (decoded is Map) {
+            opts = decoded.map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
+          }
+        } catch (_) {}
+      }
+      final options = opts.isNotEmpty ? opts : null;
       return SizedBox(
         width: size,
         height: size,
@@ -1230,40 +1837,86 @@ class _BoardNoteSheetContent extends StatefulWidget {
     required this.myMatchingTicket,
     this.onRefreshTickets,
     this.hideActionButtons = false,
+    this.showTertiaryCloseButton = false,
+    this.onRequestNextProfile,
   });
 
   final List<Map<String, dynamic>> profiles;
   final int startIndex;
   final Widget Function(BuildContext context, Map<String, dynamic> profile) buildAvatar;
-  final Future<bool> Function(String profileId, Map<String, dynamic> profile) onTakeNote;
+  final Future<bool> Function(String profileId, Map<String, dynamic> profile, {String? message}) onTakeNote;
   final VoidCallback onPop;
   final int myMatchingTicket;
   final Future<void> Function()? onRefreshTickets;
   final bool hideActionButtons;
+  final bool showTertiaryCloseButton;
+  final Future<Map<String, dynamic>?> Function(List<String> excludeUserIds)? onRequestNextProfile;
 
   @override
   State<_BoardNoteSheetContent> createState() => _BoardNoteSheetContentState();
 }
 
 class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
+  late List<Map<String, dynamic>> _profiles;
   late int _currentIndex;
   bool _taking = false;
+  bool _loadingNext = false;
+  final List<String> _seenUserIds = <String>[];
 
   @override
   void initState() {
     super.initState();
+    _profiles = List<Map<String, dynamic>>.from(widget.profiles);
     _currentIndex = widget.startIndex;
+    for (final profile in _profiles) {
+      final user = profile['user'] as Map<String, dynamic>?;
+      final userId = profile['userId']?.toString() ?? user?['id']?.toString();
+      if (userId != null && userId.isNotEmpty && !_seenUserIds.contains(userId)) {
+        _seenUserIds.add(userId);
+      }
+    }
   }
 
-  Map<String, dynamic> get _profile => widget.profiles[_currentIndex];
+  Map<String, dynamic> get _profile => _profiles[_currentIndex];
   Map<String, dynamic>? get _user => _profile['user'] as Map<String, dynamic>?;
 
-  void _skip() {
-    if (_currentIndex + 1 < widget.profiles.length) {
+  Future<void> _skip() async {
+    if (_taking || _loadingNext) return;
+    if (_currentIndex + 1 < _profiles.length) {
       setState(() => _currentIndex++);
-    } else {
+      return;
+    }
+    if (widget.onRequestNextProfile == null) {
       Navigator.of(context).pop();
       widget.onPop();
+      return;
+    }
+
+    setState(() => _loadingNext = true);
+    try {
+      final nextProfile = await widget.onRequestNextProfile!(List<String>.from(_seenUserIds));
+      if (!mounted) return;
+      if (nextProfile == null) {
+        // 다음 프로필 없음 → 시트 닫지 않고 안내만
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('다음에 볼 수 있는 프로필이 없어요. 같은 학교에 더 많은 친구가 올라오면 볼 수 있어요.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+      final user = nextProfile['user'] as Map<String, dynamic>?;
+      final userId = nextProfile['userId']?.toString() ?? user?['id']?.toString();
+      if (userId != null && userId.isNotEmpty && !_seenUserIds.contains(userId)) {
+        _seenUserIds.add(userId);
+      }
+      setState(() {
+        _profiles.add(nextProfile);
+        _currentIndex = _profiles.length - 1;
+      });
+    } finally {
+      if (mounted) setState(() => _loadingNext = false);
     }
   }
 
@@ -1290,7 +1943,18 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
       if (profileId == null || profileId.isEmpty) {
         throw Exception('프로필 ID를 찾을 수 없습니다.');
       }
-      final sent = await widget.onTakeNote(profileId, _profile);
+      // 문자 입력 시트 띄우기 (게시판 카드와 동일)
+      final message = await showModalBottomSheet<String?>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (sheetCtx) => _TakeNoteMessageSheet(profile: _profile),
+      );
+      if (!mounted) return;
+      setState(() => _taking = false);
+      if (message == null) return; // 사용자가 취소
+      setState(() => _taking = true);
+      final sent = await widget.onTakeNote(profileId, _profile, message: message);
       if (widget.onRefreshTickets != null) await widget.onRefreshTickets!();
       if (!mounted) return;
       setState(() => _taking = false);
@@ -1444,210 +2108,39 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
       return null;
     }
 
-    // 설명 주석
     final primaryGradient = ThemeController.getSheetGradient();
     final dark = theme.brightness == Brightness.dark;
-    final listTags = <String>[];
-    final kw = pluck(['idealTypeKeywords']) ?? user?['idealTypeKeywords'];
-    if (kw is List) {
-      for (final e in kw) {
-        final s = e?.toString().trim();
-        if (s != null && s.isNotEmpty) listTags.add(s);
-      }
-    }
+    final detailData = _profileMapToDetailData(profile);
+    final (photoUrlForEnlarge, avatarUrlForEnlarge) = getEnlargeUrlsFromProfile(profile);
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.88,
       decoration: BoxDecoration(
         color: dark ? const Color(0xFF1F2937) : Colors.white,
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 24, offset: const Offset(0, 8)),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: BorderRadius.circular(20),
         child: Column(
           children: [
-            // 설명 주석
-            Container(
-              height: 200,
-              decoration: BoxDecoration(gradient: primaryGradient),
-              child: Stack(
-                children: [
-                  Center(
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final content = Padding(
-                          padding: const EdgeInsets.only(top: 28),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 40,
-                                height: 4,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.3),
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              Builder(
-                                builder: (context) {
-                                  final (photoUrl, avatarUrl) = getEnlargeUrlsFromProfile(profile);
-                                  final hasEnlarge = (photoUrl != null && photoUrl.isNotEmpty) ||
-                                      (avatarUrl != null && avatarUrl.isNotEmpty);
-                                  Widget avatarChild = widget.buildAvatar(context, profile);
-                                  if (hasEnlarge) {
-                                    avatarChild = GestureDetector(
-                                      onTap: () => MeetzyProfileDetailModal.showPhotoEnlarge(
-                                        context,
-                                        photoUrl: photoUrl,
-                                        avatarUrl: avatarUrl,
-                                      ),
-                                      child: avatarChild,
-                                    );
-                                  }
-                                  return Container(
-                                    width: 96,
-                                    height: 96,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(color: Colors.white, width: 4),
-                                      boxShadow: [
-                                        BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 2)),
-                                      ],
-                                    ),
-                                    child: ClipOval(child: avatarChild),
-                                  );
-                                },
-                              ),
-                              const SizedBox(height: 12),
-                              ConstrainedBox(
-                                constraints: BoxConstraints(maxWidth: 280),
-                                child: Text(
-                                  _str(profile['nickname']),
-                                  style: const TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    decoration: TextDecoration.none,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                        return FittedBox(
-                          alignment: Alignment.topCenter,
-                          fit: BoxFit.scaleDown,
-                          child: content,
-                        );
-                      },
-                    ),
-                  ),
-                  Positioned(
-                    top: MediaQuery.of(context).padding.top + 8,
-                    right: 12,
-                    child: Material(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(20),
-                      child: InkWell(
-                        onTap: _taking ? null : () {
-                          Navigator.of(context).pop();
-                          widget.onPop();
-                        },
-                        borderRadius: BorderRadius.circular(20),
-                        child: const Padding(
-                          padding: EdgeInsets.all(10),
-                          child: Icon(LucideIcons.x, color: Colors.white, size: 20),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // 설명 주석
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 280),
-                  switchInCurve: Curves.easeOutCubic,
-                  switchOutCurve: Curves.easeInCubic,
-                  transitionBuilder: (Widget child, Animation<double> animation) {
-                    return SlideTransition(
-                      position: Tween<Offset>(begin: const Offset(0.15, 0), end: Offset.zero).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
-                      child: FadeTransition(opacity: animation, child: child),
-                    );
-                  },
-                  child: Column(
-                    key: ValueKey<int>(_currentIndex),
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _rowAppDesign(theme, dark, '학과', _str(pluck(['department', 'major', 'departmentName']))),
-                      _rowAppDesign(theme, dark, '성별', _toLabel('gender', pluck(['gender', 'sex'])?.toString())),
-                      _rowAppDesign(theme, dark, '소속', _str(pluck(['affiliation', 'school', 'affiliationText', 'organization']))),
-                      _rowAppDesign(theme, dark, '키', pluck(['heightCm', 'height']) != null ? '${pluck(['heightCm', 'height'])} cm' : '-'),
-                      _rowAppDesign(theme, dark, '학년', _toLabel('gradeYear', pluck(['grade', 'year', 'schoolYear', 'class']))),
-                      _rowAppDesign(theme, dark, 'MBTI', _str(pluck(['mbti', 'mbtiType']))),
-                      _rowAppDesign(theme, dark, '흡연', _toLabel('smoking', pluck(['smoking', 'smoke'])?.toString())),
-                      _rowAppDesign(theme, dark, '음주', _toLabel('drinking', pluck(['drinking', 'alcohol'])?.toString())),
-                      _rowAppDesign(theme, dark, '자기소개', _str(pluck(['oneLineIntroduce', 'introOneLine', 'bio', 'introduction']))),
-                      _rowAppDesign(theme, dark, '요즘 빠진 것', _str(pluck(['intoLately', 'hobby', 'recentInterest']))),
-                      _rowAppDesign(theme, dark, '이상형', _str(pluck(['idealType', 'ideal']))),
-                      _rowAppDesign(theme, dark, '패션 스타일', _toLabel('fashionStyle', pluck(['fashionStyle', 'style']))),
-                      _rowAppDesign(theme, dark, '선호 데이트', _toLabel('preferredDateType', pluck(['preferredDateType', 'preferredDate']))),
-                      _rowAppDesign(theme, dark, '활동 시간대', _toLabel('activityTime', pluck(['activityTime', 'activeTime']))),
-                      if (listTags.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SizedBox(
-                              width: 112,
-                              child: Text(
-                                '나를 소개하는 태그',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Wrap(
-                                spacing: 8,
-                                runSpacing: 6,
-                                children: listTags.map((tag) => Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: dark ? Colors.grey.shade700 : Colors.grey.shade100,
-                                    borderRadius: BorderRadius.circular(999),
-                                  ),
-                                  child: Text(
-                                    tag,
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: dark ? Colors.grey.shade300 : Colors.grey.shade800,
-                                    ),
-                                  ),
-                                )).toList(),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
+              child: MeetzyProfileDetailModal(
+                profile: detailData,
+                darkMode: dark,
+                avatarWidget: widget.buildAvatar(context, profile),
+                hideMatchButton: true,
+                hideBottomBar: true,
+                topCornerRadius: 20,
+                onClose: () {
+                  Navigator.of(context).pop();
+                  widget.onPop();
+                },
+                photoUrlForEnlarge: photoUrlForEnlarge,
+                avatarUrlForEnlarge: avatarUrlForEnlarge,
               ),
             ),
-            // 설명 주석
             Container(
               padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + MediaQuery.of(context).padding.bottom),
               decoration: BoxDecoration(
@@ -1668,7 +2161,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                           side: BorderSide(color: dark ? Colors.grey.shade600 : Colors.grey.shade300),
                         ),
                         child: Text(
-                          '?リ린',
+                          '닫기',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: dark ? Colors.grey.shade200 : Colors.grey.shade700,
@@ -1678,24 +2171,50 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                     )
                   : Row(
                       children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: _taking ? null : _skip,
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              side: BorderSide(color: dark ? Colors.grey.shade600 : Colors.grey.shade300),
-                            ),
-                            child: Text(
-                              '숨기기',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: dark ? Colors.grey.shade200 : Colors.grey.shade700,
+                        // showTertiaryCloseButton일 때는 하단에 X 없음 — 카드 오른쪽 위 X로만 닫기
+                        if (!widget.showTertiaryCloseButton)
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: (_taking || _loadingNext)
+                                  ? null
+                                  : () {
+                                      Navigator.of(context).pop();
+                                      widget.onPop();
+                                    },
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                side: BorderSide(color: dark ? Colors.grey.shade600 : Colors.grey.shade300),
+                              ),
+                              child: Text(
+                                '닫기',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: dark ? Colors.grey.shade200 : Colors.grey.shade700,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
+                        if (!widget.showTertiaryCloseButton && widget.onRequestNextProfile != null) const SizedBox(width: 8),
+                        if (widget.onRequestNextProfile != null)
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: (_taking || _loadingNext) ? null : _skip,
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                side: BorderSide(color: dark ? Colors.grey.shade600 : Colors.grey.shade300),
+                              ),
+                              child: Text(
+                                '다음 프로필',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: dark ? Colors.grey.shade200 : Colors.grey.shade700,
+                                ),
+                              ),
+                            ),
+                          ),
+                        if (widget.onRequestNextProfile != null) const SizedBox(width: 8),
                         Expanded(
                           child: Container(
                             decoration: BoxDecoration(
@@ -1708,7 +2227,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                             child: Material(
                               color: Colors.transparent,
                               child: InkWell(
-                                onTap: _taking ? null : _take,
+                                onTap: (_taking || _loadingNext) ? null : _take,
                                 borderRadius: BorderRadius.circular(12),
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -1716,7 +2235,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
                                     child: _taking
                                         ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                                         : const Text(
-                                            '諛쏄린',
+                                            '매칭하기',
                                             style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                                           ),
                                   ),

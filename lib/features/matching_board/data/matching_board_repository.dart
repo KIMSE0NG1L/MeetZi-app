@@ -1,4 +1,4 @@
-﻿import 'package:dio/dio.dart';
+import 'package:dio/dio.dart';
 import 'package:nearo_app/shared/api/api_client.dart';
 
 /// 설명 주석
@@ -46,11 +46,12 @@ class MatchingBoardRepository {
   }
 
   /// 설명 주석
-  Future<List<Map<String, dynamic>>> fetchProfiles({String? preferredGender}) async {
+  Future<List<Map<String, dynamic>>> fetchProfiles({String? preferredGender, bool allSchools = false}) async {
     final query = <String, dynamic>{};
     if (preferredGender != null && preferredGender.isNotEmpty) {
       query['gender'] = preferredGender;
     }
+    if (allSchools) query['allSchools'] = 'true';
     final response = await _client.dio.get('/matching-board', queryParameters: query);
     final rawList = response.data;
     if (rawList is! List) return [];
@@ -187,6 +188,29 @@ class MatchingBoardRepository {
   /// 설명 주석
   Future<void> buyMatchingTickets({int quantity = 1}) async {
     await _client.dio.post('/users/me/tickets/purchase', data: {'quantity': quantity});
+  }
+
+  /// 개발자 프로필(고정 1명) 조회: GET /matching-board/developer
+  Future<Map<String, dynamic>> fetchDeveloperProfile() async {
+    final response = await _client.dio.get('/matching-board/developer');
+    final data = Map<String, dynamic>.from(response.data as Map);
+    return _normalizeBoardProfile(data);
+  }
+
+  Future<Map<String, dynamic>> fetchProfileByUserId(String userId) async {
+    final response = await _client.dio.get('/matching-board/user/$userId');
+    final data = Map<String, dynamic>.from(response.data as Map);
+    return _normalizeBoardProfile(data);
+  }
+
+  Future<Map<String, dynamic>> fetchRandomProfile({List<String> excludeUserIds = const []}) async {
+    final query = <String, dynamic>{};
+    if (excludeUserIds.isNotEmpty) {
+      query['excludeUserIds'] = excludeUserIds.join(',');
+    }
+    final response = await _client.dio.get('/matching-board/random-profile', queryParameters: query);
+    final data = Map<String, dynamic>.from(response.data as Map);
+    return _normalizeBoardProfile(data);
   }
 }
 

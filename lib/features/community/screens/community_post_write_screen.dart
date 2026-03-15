@@ -8,11 +8,13 @@ import 'package:nearo_app/shared/theme/theme_controller.dart';
 class CommunityPostWriteScreen extends StatefulWidget {
   final String environmentId;
   final String schoolName;
+  final String? initialTag;
 
   const CommunityPostWriteScreen({
     super.key,
     required this.environmentId,
     required this.schoolName,
+    this.initialTag,
   });
 
   @override
@@ -20,6 +22,14 @@ class CommunityPostWriteScreen extends StatefulWidget {
 }
 
 class _CommunityPostWriteScreenState extends State<CommunityPostWriteScreen> {
+  static const List<MapEntry<String, String>> _postTags = [
+    MapEntry('free', '\uC790\uC720'),
+    MapEntry('love', '\uC5F0\uC560\u00B7\uC378'),
+    MapEntry('matching_review', '\uC18C\uAC1C\uD305\u00B7\uB9E4\uCE6D\uD6C4\uAE30'),
+    MapEntry('counsel', '\uACE0\uBBFC\uC0C1\uB2F4'),
+    MapEntry('meme', '\uC720\uBA38\u00B7\uBC08'),
+  ];
+
   final CommunityRepository _repo = CommunityRepository();
   final TextEditingController _contentController = TextEditingController();
   final TextEditingController _pollQuestionController = TextEditingController();
@@ -29,13 +39,18 @@ class _CommunityPostWriteScreenState extends State<CommunityPostWriteScreen> {
   ];
   bool _sending = false;
   bool _addPoll = false;
-  bool _isAnonymous = true;
+  String _selectedTag = 'free';
 
   static const _maxLength = 1000;
 
   @override
   void initState() {
     super.initState();
+    final allowed = _postTags.map((e) => e.key).toSet();
+    final initial = widget.initialTag;
+    if (initial != null && allowed.contains(initial)) {
+      _selectedTag = initial;
+    }
     _contentController.addListener(() => setState(() {}));
   }
 
@@ -84,7 +99,12 @@ class _CommunityPostWriteScreenState extends State<CommunityPostWriteScreen> {
     }
     setState(() => _sending = true);
     try {
-      await _repo.createPost(widget.environmentId, content, poll: poll);
+      await _repo.createPost(
+        widget.environmentId,
+        content,
+        tag: _selectedTag,
+        poll: poll,
+      );
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
@@ -147,7 +167,7 @@ class _CommunityPostWriteScreenState extends State<CommunityPostWriteScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-            // Author Info (Design: 익명 아바타 + 이름 + 학교 + 익명/실명 토글)
+            // Author Info
             Row(
               children: [
                 Container(
@@ -155,7 +175,7 @@ class _CommunityPostWriteScreenState extends State<CommunityPostWriteScreen> {
                   height: 48,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: _isAnonymous ? const Color(0xFFE5E5E5) : const Color(0xFFFFE5E5),
+                    color: const Color(0xFFE5E7EB),
                     border: Border.all(
                       color: dark ? Colors.grey.shade600 : Colors.grey.shade300,
                       width: 2,
@@ -169,16 +189,7 @@ class _CommunityPostWriteScreenState extends State<CommunityPostWriteScreen> {
                     ],
                   ),
                   alignment: Alignment.center,
-                  child: _isAnonymous
-                      ? Text(
-                          '?',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey.shade600,
-                          ),
-                        )
-                      : Icon(LucideIcons.user, size: 24, color: Colors.grey.shade600),
+                  child: Icon(LucideIcons.user, size: 24, color: Colors.grey.shade600),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -186,7 +197,7 @@ class _CommunityPostWriteScreenState extends State<CommunityPostWriteScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _isAnonymous ? '익명' : '내 이름',
+                        '작성자',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
@@ -204,28 +215,44 @@ class _CommunityPostWriteScreenState extends State<CommunityPostWriteScreen> {
                     ],
                   ),
                 ),
-                Material(
-                  color: _isAnonymous
-                      ? NearoTheme.designPink500
-                      : (dark ? Colors.grey.shade700 : Colors.grey.shade200),
-                  borderRadius: BorderRadius.circular(12),
-                  child: InkWell(
-                    onTap: () => setState(() => _isAnonymous = !_isAnonymous),
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      child: Text(
-                        _isAnonymous ? '익명' : '실명',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: _isAnonymous ? Colors.white : (dark ? Colors.grey.shade300 : Colors.grey.shade700),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
               ],
+            ),
+            const SizedBox(height: 16),
+
+            Text(
+              '\uC8FC\uC81C \uD0DC\uADF8',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: dark ? Colors.grey.shade300 : const Color(0xFF374151),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _postTags.map((tag) {
+                final selected = _selectedTag == tag.key;
+                return ChoiceChip(
+                  label: Text(tag.value),
+                  selected: selected,
+                  onSelected: (_) => setState(() => _selectedTag = tag.key),
+                  selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                  backgroundColor: dark ? Colors.grey.shade800 : Colors.grey.shade100,
+                  labelStyle: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: selected
+                        ? Theme.of(context).colorScheme.primary
+                        : (dark ? Colors.grey.shade300 : Colors.grey.shade700),
+                  ),
+                  side: BorderSide(
+                    color: selected
+                        ? Theme.of(context).colorScheme.primary
+                        : (dark ? Colors.grey.shade700 : Colors.grey.shade300),
+                  ),
+                );
+              }).toList(),
             ),
             const SizedBox(height: 16),
 

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/core/theme/meetzy_design_tokens.dart';
 import 'package:nearo_app/core/theme/university_theme.dart';
@@ -20,6 +20,12 @@ class MeetzyBoardContent extends StatelessWidget {
     this.onProfileTap,
     this.onRefresh,
     this.onMatchingInboxTap,
+    this.onDeveloperMatchTap,
+    this.onLoadAllUniversities,
+    this.onLoadMySchool,
+    this.isShowingAllUniversities = false,
+    this.mySchoolName,
+    this.onFilterTap,
     this.isLoading = false,
   });
 
@@ -31,6 +37,12 @@ class MeetzyBoardContent extends StatelessWidget {
   final void Function(int index, MeetzyBoardProfileItem item)? onProfileTap;
   final Future<void> Function()? onRefresh;
   final VoidCallback? onMatchingInboxTap;
+  final VoidCallback? onDeveloperMatchTap;
+  final VoidCallback? onLoadAllUniversities;
+  final VoidCallback? onLoadMySchool;
+  final bool isShowingAllUniversities;
+  final String? mySchoolName;
+  final VoidCallback? onFilterTap;
   final bool isLoading;
 
   @override
@@ -44,6 +56,7 @@ class MeetzyBoardContent extends StatelessWidget {
       builder: (context, constraints) {
         final contentWidth = constraints.maxWidth;
         return SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: MeetzyDesignTokens.contentPadding,
           child: SizedBox(
             width: contentWidth,
@@ -56,6 +69,83 @@ class MeetzyBoardContent extends StatelessWidget {
                   matchingTicket: matchingTicket,
                   receivedRequestCount: receivedRequestCount,
                   onMatchingInboxTap: onMatchingInboxTap,
+                ),
+                if (onLoadAllUniversities != null && onLoadMySchool != null) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(
+                        LucideIcons.school,
+                        size: 14,
+                        color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        isShowingAllUniversities ? '전체 대학' : (mySchoolName ?? '우리 학교'),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: MeetzyDesignTokens.space4),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _ActionButton(
+                        onTap: onDeveloperMatchTap,
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF6366F1), Color(0xFFE879F9)],
+                        ),
+                        label: '개발자와\n매칭 신청',
+                        textColor: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    if (onLoadAllUniversities != null && onLoadMySchool != null) ...[
+                      Flexible(
+                        child: _ActionButton(
+                          onTap: isShowingAllUniversities ? onLoadMySchool : onLoadAllUniversities,
+                          color: Colors.white,
+                          borderColor: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
+                          icon: LucideIcons.school,
+                          label: isShowingAllUniversities ? '우리 대학\n불러오기' : '전체 대학\n불러오기',
+                          textColor: const Color(0xFF111827),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                    ],
+                    Material(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                      child: InkWell(
+                        onTap: onFilterTap,
+                        borderRadius: BorderRadius.circular(18),
+                        child: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
+                            ),
+                            boxShadow: const [
+                              BoxShadow(color: Color(0x24000000), blurRadius: 8, offset: Offset(0, 2)),
+                            ],
+                          ),
+                          alignment: Alignment.center,
+                          child: Icon(
+                            LucideIcons.funnel,
+                            size: 20,
+                            color: const Color(0xFF111827),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: MeetzyDesignTokens.space6),
                 if (profiles.isEmpty)
@@ -134,6 +224,67 @@ class MeetzyBoardContent extends StatelessWidget {
     return Container(
       color: UniversityTheme.bgGradientStart,
       child: const Icon(LucideIcons.user, size: 32, color: Colors.grey),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.onTap,
+    this.icon,
+    required this.label,
+    required this.textColor,
+    this.gradient,
+    this.color,
+    this.borderColor,
+  });
+
+  final VoidCallback? onTap;
+  final IconData? icon;
+  final String label;
+  final Color textColor;
+  final Gradient? gradient;
+  final Color? color;
+  final Color? borderColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        height: 72,
+        decoration: BoxDecoration(
+          gradient: gradient,
+          color: gradient == null ? color : null,
+          borderRadius: BorderRadius.circular(18),
+          border: borderColor != null ? Border.all(color: borderColor!) : null,
+          boxShadow: const [
+            BoxShadow(color: Color(0x24000000), blurRadius: 8, offset: Offset(0, 2)),
+          ],
+        ),
+        child: Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 18, color: textColor),
+                const SizedBox(width: 8),
+              ],
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: textColor,
+                  height: 1.2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -310,7 +461,7 @@ class MeetzyBoardPage extends StatelessWidget {
                     _navItem(context, 'ranking', LucideIcons.trophy, '대학교 랭킹', primary),
                     _navItem(context, 'messages', LucideIcons.messageCircle, '메시지함', primary),
                     _navItem(context, 'board', LucideIcons.house, '홈', primary),
-                    _navItem(context, 'profile', LucideIcons.user, '마이프로필', primary),
+                    _navItem(context, 'profile', LucideIcons.user, 'My프로필', primary),
                     _navItem(context, 'shop', LucideIcons.shoppingBag, '상점', primary),
                   ],
                 ),
