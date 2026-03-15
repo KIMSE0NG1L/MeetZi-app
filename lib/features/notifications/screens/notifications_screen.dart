@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/features/notifications/data/notification_history_store.dart';
-import 'package:nearo_app/features/matching_board/screens/take_note_request_response_screen.dart';
+import 'package:nearo_app/features/matching_board/screens/mailbox_screen.dart';
 import 'package:nearo_app/features/community/screens/community_post_detail_screen.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 
@@ -263,16 +263,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               if (type == 'take_note_request') {
                                 final requestId = item.data['requestId']?.toString();
                                 if (requestId != null && requestId.isNotEmpty) {
-                                  final requesterProfile = item.data['requesterProfile'] is Map
-                                      ? Map<String, dynamic>.from(item.data['requesterProfile'] as Map)
-                                      : null;
                                   if (!context.mounted) return;
                                   Navigator.of(context).push(
                                     MaterialPageRoute<void>(
-                                      builder: (ctx) => TakeNoteRequestResponseScreen(
-                                        requestId: requestId,
-                                        requesterProfile: requesterProfile,
-                                      ),
+                                      builder: (ctx) => const MailboxScreen(),
                                     ),
                                   );
                                 }
