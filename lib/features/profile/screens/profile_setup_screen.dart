@@ -40,13 +40,12 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   String _affiliation = '';
   bool _affiliationLoaded = false;
   final _heightController = TextEditingController();
-  final _mbtiController = TextEditingController();
   final _introOneLineController = TextEditingController();
   final _intoLatelyController = TextEditingController();
   String _gender = 'male';
   String _preferredGender = 'opposite';
-  String? _smoking;
-  String? _drinking;
+  bool? _isSmoking;
+  bool? _isDrinking;
   String? _gradeYear;
   List<String> _idealTypeKeywords = [];
   String? _fashionStyle;
@@ -67,6 +66,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   bool _isUploadingPhoto = false;
   String? _photoError;
   String _boardDisplayType = 'avatar'; // avatar | photo — 게시판에 아바타 vs 본인 사진
+  // MBTI 세그먼트 버튼용 (각 차원별 선택, null이면 미선택)
+  String? _mbtiEI; // E / I
+  String? _mbtiNS; // N / S
+  String? _mbtiFT; // F / T
+  String? _mbtiPJ; // P / J
+
+  bool get _hasAvatarConfigured =>
+      _avatarSeed != null && _avatarSeed!.trim().isNotEmpty;
 
   @override
   void didChangeDependencies() {
@@ -105,7 +112,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   void dispose() {
     _nicknameController.dispose();
     _heightController.dispose();
-    _mbtiController.dispose();
     _idealTypeController.dispose();
     _departmentController.dispose();
     _introOneLineController.dispose();
@@ -113,28 +119,85 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     super.dispose();
   }
 
-  static const List<String> _idealKeywordOptions = [
-    // 원래 있던 태그
-    '귀여운', '다정한', '장난기 많은', '차분한', '지적인',
-    '운동 좋아하는', '패션 감각 있는', '집돌이/집순이', '외향적인', '내향적인', '솔직한',
-    // 추가 태그
-    '유머감각 있는', '책임감 있는', '리더십 있는', '배려심 있는', '감성적인',
-    '현실적인', '긍정적인', '낙천적인', '호기심 많은', '도전적인', '열정적인',
-    '계획적인', '즉흥적인', '자기관리 잘하는', '성실한', '논리적인', '철학적인',
-    '생각이 깊은', '대화 좋아하는', '경청 잘하는', '공감 잘하는', '장난 좋아하는',
-    '여유로운', '침착한', '신뢰감 있는', '듬직한', '귀여운 매력 있는', '반전 매력 있는',
-    '카리스마 있는', '따뜻한', '감정 표현 잘하는', '조용히 챙겨주는', '사람 좋아하는',
-    '친구 많은', '독립적인', '자기주도적인', '창의적인', '아이디어 많은',
-    '새로운 거 좋아하는', '여행 좋아하는', '맛집 탐방 좋아하는', '카페 좋아하는',
-    '영화 좋아하는', '음악 좋아하는', '산책 좋아하는', '드라이브 좋아하는',
-    '게임 좋아하는', '책 읽는 거 좋아하는', '자기계발 좋아하는', '미래지향적인',
+  static const List<MapEntry<String, List<String>>> _idealKeywordGroups = [
+    MapEntry('1. 성격 (Personality)', [
+      '귀여운',
+      '다정한',
+      '장난기 많은',
+      '차분한',
+      '긍정적인',
+      '낙천적인',
+      '여유로운',
+      '침착한',
+      '따뜻한',
+      '감성적인',
+      '현실적인',
+      '솔직한',
+    ]),
+    MapEntry('2. 사고방식 / 가치관 (Mindset)', [
+      '지적인',
+      '논리적인',
+      '철학적인',
+      '생각이 깊은',
+      '호기심 많은',
+      '도전적인',
+      '열정적인',
+      '계획적인',
+      '즉흥적인',
+      '미래지향적인',
+      '창의적인',
+      '아이디어 많은',
+      '새로운 거 좋아하는',
+    ]),
+    MapEntry('3. 인간관계 / 사회성 (Social)', [
+      '외향적인',
+      '내향적인',
+      '사람 좋아하는',
+      '친구 많은',
+      '대화 좋아하는',
+      '경청 잘하는',
+      '공감 잘하는',
+      '배려심 있는',
+    ]),
+    MapEntry('4. 신뢰 / 성숙함 (Reliability)', [
+      '책임감 있는',
+      '리더십 있는',
+      '자기관리 잘하는',
+      '성실한',
+      '독립적인',
+      '자기주도적인',
+      '신뢰감 있는',
+      '듬직한',
+    ]),
+    MapEntry('5. 매력 / 분위기 (Charm)', [
+      '유머감각 있는',
+      '장난 좋아하는',
+      '귀여운 매력 있는',
+      '반전 매력 있는',
+      '카리스마 있는',
+      '감정 표현 잘하는',
+      '조용히 챙겨주는',
+    ]),
+    MapEntry('6. 라이프스타일 (Lifestyle)', [
+      '운동 좋아하는',
+      '패션 감각 있는',
+      '집돌이/집순이',
+    ]),
+    MapEntry('7. 취미 / 활동 (Hobby)', [
+      '여행 좋아하는',
+      '맛집 탐방 좋아하는',
+      '카페 좋아하는',
+      '영화 좋아하는',
+      '음악 좋아하는',
+      '산책 좋아하는',
+      '드라이브 좋아하는',
+      '게임 좋아하는',
+      '책 읽는 거 좋아하는',
+      '자기계발 좋아하는',
+    ]),
   ];
   static const List<String> _gradeYearOptions = ['1', '2', '3', '4', '5', '졸업유예'];
   static const List<String> _gradeYearValues = ['one', 'two', 'three', 'four', 'five', 'graduation_deferred'];
-  static const List<String> _mbtiOptions = [
-    'INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP',
-    'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ', 'ISTP', 'ISFP', 'ESTP', 'ESFP',
-  ];
   static const List<MapEntry<String, String>> _fashionOptions = [
     MapEntry('hood_casual', '후드/캐주얼'),
     MapEntry('shirt_neat', '셔츠/단정'),
@@ -155,10 +218,12 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   ];
   static const List<MapEntry<String, String>> _activityTimeOptions = [
     MapEntry('morning', '아침형'),
-    MapEntry('daytime', '낮 활동형'),
-    MapEntry('evening', '저녁형'),
     MapEntry('night_owl', '야행성'),
   ];
+  String _keywordDisplayLabel(String label) {
+    if (label == '집돌이/집순이') return '집돌이 / 집순이';
+    return label;
+  }
 
   Future<void> _loadProfileIfExists() async {
     try {
@@ -181,12 +246,26 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       if (heightCm != null) {
         _heightController.text = heightCm.toString();
       }
-      final smoking = user['smoking']?.toString();
-      final drinking = user['drinking']?.toString();
-      if (smoking != null) _smoking = smoking;
-      if (drinking != null) _drinking = drinking;
+      // smoking/drinking: boolean 필드 우선, 없으면 legacy 문자열에서 변환
+      final isSmoking = user['isSmoking'];
+      final isDrinking = user['isDrinking'];
+      if (isSmoking != null) _isSmoking = isSmoking == true;
+      if (isDrinking != null) _isDrinking = isDrinking == true;
+      if (_isSmoking == null) {
+        final smoking = user['smoking']?.toString();
+        if (smoking != null) _isSmoking = smoking != 'none';
+      }
+      if (_isDrinking == null) {
+        final drinking = user['drinking']?.toString();
+        if (drinking != null) _isDrinking = drinking != 'none';
+      }
       final mbti = user['mbti']?.toString();
-      if (mbti != null) _mbtiController.text = mbti;
+      if (mbti != null && mbti.length == 4) {
+        _mbtiEI = mbti[0];
+        _mbtiNS = mbti[1];
+        _mbtiFT = mbti[2];
+        _mbtiPJ = mbti[3];
+      }
 
       final idealType = user['idealType']?.toString();
       if (idealType != null) _idealTypeController.text = idealType;
@@ -434,7 +513,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     }
 
     final heightCm = _heightCm ?? int.tryParse(_heightController.text.trim());
-    if (heightCm != null && (heightCm < 120 || heightCm > 200)) {
+    if (heightCm == null) {
+      setState(() => _result = '키를 반드시 입력해 주세요.');
+      return;
+    }
+    if (heightCm < 120 || heightCm > 200) {
       setState(() => _result = '키는 120~200cm 범위로 입력해 주세요.');
       return;
     }
@@ -454,12 +537,36 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       setState(() => _result = '이상형은 10자 이상 100자 이하로 입력해 주세요.');
       return;
     }
-    if (_fashionStyle == null || _preferredDateType == null || _activityTime == null || _smoking == null || _drinking == null) {
+    if (_gradeYear == null) {
+      setState(() => _result = '학년을 선택해 주세요.');
+      return;
+    }
+    if (_mbtiEI == null || _mbtiNS == null || _mbtiFT == null || _mbtiPJ == null) {
+      setState(() => _result = 'MBTI를 모두 선택해 주세요.');
+      return;
+    }
+    if (_idealTypeKeywords.isEmpty) {
+      setState(() => _result = '나를 소개하는 태그를 1개 이상 선택해 주세요.');
+      return;
+    }
+    if (_fashionStyle == null || _preferredDateType == null || _activityTime == null || _isSmoking == null || _isDrinking == null) {
       setState(() => _result = '취향과 라이프스타일 항목을 모두 선택해 주세요.');
       return;
     }
     if (_idealTypeKeywords.length > _maxTagCount) {
       setState(() => _result = '나를 소개하는 태그는 최대 10개까지 선택할 수 있어요.');
+      return;
+    }
+
+    if (!_hasAvatarConfigured) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('\uC544\uBC14\uD0C0\uB97C \uBA3C\uC800 \uC124\uC815\uD574\uC8FC\uC138\uC694.'),
+        ),
+      );
+      await Navigator.of(context).pushNamed(AppRoutes.avatarSetup);
+      if (!mounted) return;
+      await _loadProfileIfExists();
       return;
     }
 
@@ -476,36 +583,32 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         'nickname': nickname,
         if (!_isEditing) 'gender': _gender,
         'affiliationText': _affiliation,
-        if (heightCm != null) 'heightCm': heightCm,
-        if (_smoking != null) 'smoking': _smoking,
-        if (_drinking != null) 'drinking': _drinking,
-        if (_mbtiController.text.trim().isNotEmpty) 'mbti': _mbtiController.text.trim(),
+        'heightCm': heightCm,
+        'isSmoking': _isSmoking,
+        'isDrinking': _isDrinking,
+        'mbti': '$_mbtiEI$_mbtiNS$_mbtiFT$_mbtiPJ',
         'idealType': idealType,
         'preferredGenders': preferredGenders,
-        if (_gradeYear != null) 'gradeYear': _gradeYear,
+        'gradeYear': _gradeYear,
         'introOneLine': intro,
-        if (_idealTypeKeywords.isNotEmpty) 'idealTypeKeywords': _idealTypeKeywords,
-        if (_fashionStyle != null) 'fashionStyle': _fashionStyle,
-        if (_preferredDateType != null) 'preferredDateType': _preferredDateType,
-        if (_activityTime != null) 'activityTime': _activityTime,
+        'idealTypeKeywords': _idealTypeKeywords,
+        'fashionStyle': _fashionStyle,
+        'preferredDateType': _preferredDateType,
+        'activityTime': _activityTime,
         'intoLately': hobby,
       });
       _applyThemeForAffiliation();
+      if (!mounted) return;
+      if (_isInitialSetup || _isEditing) {
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          AppRoutes.home,
+          (route) => false,
+        );
+        return;
+      }
       setState(() => _result = response.toString());
       if (!mounted) return;
-      if (_isInitialSetup) {
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          AppRoutes.home,
-          (route) => false,
-        );
-      } else if (_isEditing) {
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          AppRoutes.home,
-          (route) => false,
-        );
-      } else {
-        Navigator.of(context).pushNamed(AppRoutes.environment);
-      }
+      Navigator.of(context).pushNamed(AppRoutes.environment);
     } on DioException catch (error) {
       String msg = '요청 실패';
       final data = error.response?.data;
@@ -516,7 +619,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       }
       setState(() => _result = msg);
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -636,6 +739,226 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     );
   }
 
+  /// 스크린샷 스타일: 한 열 = 위 라벨 + 위 버튼 + 아래 버튼 + 아래 라벨 (E/I, N/S, F/T, P/J)
+  Widget _buildMbtiColumn(
+    BuildContext context, {
+    required String topLabel,
+    required String bottomLabel,
+    required String topLetter,
+    required String bottomLetter,
+    required void Function(String?) onSelect,
+    required String? current,
+    Color? surface,
+    Color? onSurface,
+    Color? borderColor,
+  }) {
+    final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
+    final bg = surface ?? (dark ? const Color(0xFF374151) : const Color(0xFFF3F4F6));
+    final fg = onSurface ?? (dark ? const Color(0xFFE5E7EB) : const Color(0xFF374151));
+    final border = borderColor ?? (dark ? const Color(0xFF4B5563) : const Color(0xFFE5E7EB));
+    final labelColor = dark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
+    final primary = theme.colorScheme.primary;
+
+    Widget letterButton(String letter) {
+      final selected = current == letter;
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => setState(() => onSelect(letter)),
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: selected ? primary.withValues(alpha: 0.15) : bg,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: selected ? primary : border,
+                width: selected ? 2 : 1,
+              ),
+              boxShadow: selected ? null : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 4, offset: const Offset(0, 2))],
+            ),
+            child: Center(
+              child: Text(
+                letter,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: selected ? primary : fg,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(topLabel, style: TextStyle(fontSize: 11, color: labelColor, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 6),
+        letterButton(topLetter),
+        const SizedBox(height: 6),
+        letterButton(bottomLetter),
+        const SizedBox(height: 6),
+        Text(bottomLabel, style: TextStyle(fontSize: 11, color: labelColor, fontWeight: FontWeight.w500)),
+      ],
+    );
+  }
+
+  Widget _buildMbtiSegmentRow(
+    BuildContext context,
+    String left,
+    String right,
+    void Function(String?) onSelect,
+    String? current,
+    Color surface,
+    Color onSurface,
+    Color borderColor,
+  ) {
+    return Row(
+      children: [
+        Expanded(
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => setState(() => onSelect(left)),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: current == left ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15) : surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: current == left ? Theme.of(context).colorScheme.primary : borderColor,
+                    width: current == left ? 2 : 1,
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    left,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: current == left ? Theme.of(context).colorScheme.primary : onSurface,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => setState(() => onSelect(right)),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: current == right ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15) : surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: current == right ? Theme.of(context).colorScheme.primary : borderColor,
+                    width: current == right ? 2 : 1,
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    right,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: current == right ? Theme.of(context).colorScheme.primary : onSurface,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOxRow(
+    BuildContext context,
+    void Function(bool?) onSelect,
+    bool? current,
+    Color surface,
+    Color onSurface,
+    Color borderColor,
+  ) {
+    return Row(
+      children: [
+        Expanded(
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => setState(() => onSelect(true)),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: current == true ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15) : surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: current == true ? Theme.of(context).colorScheme.primary : borderColor,
+                    width: current == true ? 2 : 1,
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    'O',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: current == true ? Theme.of(context).colorScheme.primary : onSurface,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => setState(() => onSelect(false)),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: current == false ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15) : surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: current == false ? Theme.of(context).colorScheme.primary : borderColor,
+                    width: current == false ? 2 : 1,
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    'X',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: current == false ? Theme.of(context).colorScheme.primary : onSurface,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   /// ad ProfileEditScreen: rounded-2xl card with icon + title
   Widget _adSectionCard({
     required BuildContext context,
@@ -684,8 +1007,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       borderRadius: BorderRadius.circular(12),
       borderSide: BorderSide(color: borderColor, width: 1),
     );
-    final labelStyle = TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: onSurface);
-    final sectionLabelStyle = TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: onSurface);
+    final labelStyle = TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: onSurfaceVariant);
+    final sectionLabelStyle = TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: onSurfaceVariant);
 
     final cardBg = dark ? Colors.white.withValues(alpha: 0.06) : Colors.white.withValues(alpha: 0.6);
     const bool useAdStyle = true; // ad 폴더 ProfileEditScreen 디자인 항상 사용
@@ -1115,22 +1438,72 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               ),
               const SizedBox(height: 16),
               Text('MBTI', style: labelStyle),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                value: _mbtiOptions.contains(_mbtiController.text.trim()) ? _mbtiController.text.trim() : null,
-                dropdownColor: surface,
-                style: TextStyle(color: onSurface),
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: surface,
-                  border: inputBorder,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
-                items: _mbtiOptions.map((e) => DropdownMenuItem(value: e, child: Text(e, style: TextStyle(color: onSurface)))).toList(),
-                onChanged: (v) { if (v != null) setState(() => _mbtiController.text = v); },
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildMbtiColumn(
+                      context,
+                      topLabel: '외향',
+                      bottomLabel: '내향',
+                      topLetter: 'E',
+                      bottomLetter: 'I',
+                      onSelect: (v) => _mbtiEI = v,
+                      current: _mbtiEI,
+                      surface: surface,
+                      onSurface: onSurface,
+                      borderColor: borderColor,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildMbtiColumn(
+                      context,
+                      topLabel: '직관',
+                      bottomLabel: '현실',
+                      topLetter: 'N',
+                      bottomLetter: 'S',
+                      onSelect: (v) => _mbtiNS = v,
+                      current: _mbtiNS,
+                      surface: surface,
+                      onSurface: onSurface,
+                      borderColor: borderColor,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildMbtiColumn(
+                      context,
+                      topLabel: '감성',
+                      bottomLabel: '이성',
+                      topLetter: 'F',
+                      bottomLetter: 'T',
+                      onSelect: (v) => _mbtiFT = v,
+                      current: _mbtiFT,
+                      surface: surface,
+                      onSurface: onSurface,
+                      borderColor: borderColor,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildMbtiColumn(
+                      context,
+                      topLabel: '탐색',
+                      bottomLabel: '계획',
+                      topLetter: 'P',
+                      bottomLetter: 'J',
+                      onSelect: (v) => _mbtiPJ = v,
+                      current: _mbtiPJ,
+                      surface: surface,
+                      onSurface: onSurface,
+                      borderColor: borderColor,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
-              Text('자기 소개 (20~100자)', style: labelStyle),
+              Text('자기 소개 (20자 이상)', style: labelStyle),
               const SizedBox(height: 8),
               TextField(
                 controller: _introOneLineController,
@@ -1161,37 +1534,65 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                         children: [
                           Text('나를 잘 표현하는 태그를 선택해보세요 (최대 10개)', style: TextStyle(fontSize: 12, color: onSurfaceVariant)),
                           const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 4,
-                            runSpacing: 2,
-                            children: _idealKeywordOptions.map((label) {
-                              final selected = _idealTypeKeywords.contains(label);
-                              final primary = Theme.of(context).colorScheme.primary;
-                              return FilterChip(
-                                label: Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: selected ? Colors.white : onSurface)),
-                                selected: selected,
-                                selectedColor: primary,
-                                checkmarkColor: Colors.white,
-                                visualDensity: const VisualDensity(horizontal: -2, vertical: -3),
-                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
-                                labelPadding: const EdgeInsets.symmetric(horizontal: 2),
-                                side: BorderSide(color: selected ? primary : borderColor),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-                                onSelected: (v) {
-                                  setState(() {
-                                    if (v == true) {
-                                      if (_idealTypeKeywords.length < _maxTagCount) {
-                                        _idealTypeKeywords.add(label);
-                                      }
-                                    } else {
-                                      _idealTypeKeywords.remove(label);
-                                    }
-                                  });
-                                },
-                              );
-                            }).toList(),
-                          ),
+                          ..._idealKeywordGroups.map((group) {
+                            final sectionTitle = group.key;
+                            final labels = group.value;
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    sectionTitle,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: onSurfaceVariant,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Wrap(
+                                    spacing: 4,
+                                    runSpacing: 2,
+                                    children: labels.map((label) {
+                                      final selected = _idealTypeKeywords.contains(label);
+                                      final primary = Theme.of(context).colorScheme.primary;
+                                      return FilterChip(
+                                        label: Text(
+                                          _keywordDisplayLabel(label),
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w500,
+                                            color: selected ? Colors.white : onSurface,
+                                          ),
+                                        ),
+                                        selected: selected,
+                                        selectedColor: primary,
+                                        checkmarkColor: Colors.white,
+                                        visualDensity: const VisualDensity(horizontal: -2, vertical: -3),
+                                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
+                                        labelPadding: const EdgeInsets.symmetric(horizontal: 2),
+                                        side: BorderSide(color: selected ? primary : borderColor),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+                                        onSelected: (v) {
+                                          setState(() {
+                                            if (v == true) {
+                                              if (_idealTypeKeywords.length < _maxTagCount) {
+                                                _idealTypeKeywords.add(label);
+                                              }
+                                            } else {
+                                              _idealTypeKeywords.remove(label);
+                                            }
+                                          });
+                                        },
+                                      );
+                                    }).toList(),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
                         ],
                       ),
                     ),
@@ -1255,45 +1656,13 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               const SizedBox(height: 16),
               Text('흡연 여부', style: labelStyle),
               const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                value: _smoking,
-                dropdownColor: surface,
-                style: TextStyle(color: onSurface),
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: surface,
-                  border: inputBorder,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
-                items: [
-                  DropdownMenuItem(value: 'none', child: Text('비흡연', style: TextStyle(color: onSurface))),
-                  DropdownMenuItem(value: 'sometimes', child: Text('가끔', style: TextStyle(color: onSurface))),
-                  DropdownMenuItem(value: 'often', child: Text('자주', style: TextStyle(color: onSurface))),
-                ],
-                onChanged: (value) => setState(() => _smoking = value),
-              ),
+              _buildOxRow(context, (v) => _isSmoking = v, _isSmoking, surface, onSurface, borderColor),
               const SizedBox(height: 16),
               Text('음주 여부', style: labelStyle),
               const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                value: _drinking,
-                dropdownColor: surface,
-                style: TextStyle(color: onSurface),
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: surface,
-                  border: inputBorder,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
-                items: [
-                  DropdownMenuItem(value: 'none', child: Text('안 함', style: TextStyle(color: onSurface))),
-                  DropdownMenuItem(value: 'sometimes', child: Text('가끔', style: TextStyle(color: onSurface))),
-                  DropdownMenuItem(value: 'often', child: Text('자주', style: TextStyle(color: onSurface))),
-                ],
-                onChanged: (value) => setState(() => _drinking = value),
-              ),
+              _buildOxRow(context, (v) => _isDrinking = v, _isDrinking, surface, onSurface, borderColor),
               const SizedBox(height: 16),
-              Text('취미 (10~100자)', style: labelStyle),
+              Text('취미 (10자 이상)', style: labelStyle),
               const SizedBox(height: 8),
               TextField(
                 controller: _intoLatelyController,
@@ -1310,7 +1679,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              Text('이상형 (10~100자)', style: labelStyle),
+              Text('이상형 (10자 이상)', style: labelStyle),
               const SizedBox(height: 8),
               TextField(
                 controller: _idealTypeController,

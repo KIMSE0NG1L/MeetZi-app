@@ -22,16 +22,10 @@ class ApiEndpoints {
   static String photoVisibility(String photoId) =>
       '/photos/$photoId/visibility';
   static String photoPrimary(String photoId) => '/photos/$photoId/primary';
-  static const String subscription = '/subscription';
-  static const String subscriptionCancel = '/subscription/cancel';
-  static const String subscriptionPause = '/subscription/pause';
-  static const String subscriptionResume = '/subscription/resume';
-  static const String subscriptionIsActive = '/subscription/is-active';
   static String emailVerificationRequest(String environmentId) =>
       '/environments/$environmentId/email-verifications/request';
   static String emailVerificationConfirm(String environmentId) =>
       '/environments/$environmentId/email-verifications/confirm';
-  static const String health = '/health';
   static String userBlock(String userId) => '/users/block/$userId';
 
   // 커뮤니티 (학교별, 누구나 진입 가능)
@@ -45,9 +39,14 @@ class ApiEndpoints {
       '/communities/$environmentId/posts/$postId/comments';
   static String communityPostLike(String environmentId, String postId) =>
       '/communities/$environmentId/posts/$postId/like';
+  static String communityPostCommentLike(String environmentId, String postId, String commentId) =>
+      '/communities/$environmentId/posts/$postId/comments/$commentId/like';
+  static String communityPostCommentDelete(String environmentId, String postId, String commentId) =>
+      '/communities/$environmentId/posts/$postId/comments/$commentId';
   static String communityPostVote(String environmentId, String postId) =>
       '/communities/$environmentId/posts/$postId/vote';
 
   // 신고
   static const String reportCommunityPost = '/report/community-post';
+  static const String reportCommunityComment = '/report/community-comment';
 }

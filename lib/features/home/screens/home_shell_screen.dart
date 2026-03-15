@@ -1,18 +1,24 @@
-﻿import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/app/app.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/community/screens/community_tab_screen.dart';
+import 'package:nearo_app/features/matching_board/data/matching_board_repository.dart';
 import 'package:nearo_app/features/matching_board/screens/matching_board_screen.dart';
+import 'package:nearo_app/features/matching_board/screens/mailbox_screen.dart';
+import 'package:nearo_app/features/matching_board/widgets/match_card_avatar.dart';
 import 'package:nearo_app/features/messages/screens/messages_screen.dart';
 import 'package:nearo_app/features/notifications/screens/notifications_screen.dart';
 import 'package:nearo_app/features/notifications/data/pending_take_note_store.dart';
-import 'package:nearo_app/features/matching_board/screens/take_note_request_response_screen.dart';
 import 'package:nearo_app/features/profile/screens/my_profile_screen.dart';
 import 'package:nearo_app/features/ratings/screens/ratings_screen.dart';
 import 'package:nearo_app/features/settings/screens/settings_screen.dart';
+import 'package:nearo_app/shared/api/api_client.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
+import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/features/auth/data/environment_status_repository.dart';
 import 'package:nearo_app/presentation/widgets/meetzy_coach_mark.dart';
@@ -29,12 +35,15 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
   int _currentIndex = 2;
   final PageController _pageController = PageController(initialPage: 2);
   final _authRepository = AuthRepository();
+  final MatchingBoardRepository _matchingBoardRepository = MatchingBoardRepository();
   Map<String, dynamic>? _profile;
   bool _profileLoading = true;
   final ValueNotifier<int> _boardRefreshTrigger = ValueNotifier<int>(0);
   bool _routeObserverSubscribed = false;
   bool _takeNoteDialogShown = false;
   bool _showCoachMark = false;
+  bool _randomMatchLoading = false;
+  final List<String> _recentRandomUserIds = <String>[];
 
   List<Widget> get _pages => [
     const CommunityTabScreen(),
@@ -54,8 +63,24 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
   void initState() {
     super.initState();
     _loadThemeAndProfile();
+    _registerPushTokenIfNeeded();
     PendingTakeNoteStore.instance.pending.addListener(_onPendingTakeNote);
     _checkCoachMark();
+  }
+
+  /// 로그인 후 홈 진입 시 FCM 토큰을 서버에 등록 (매칭 요청 등 알림 수신용)
+  Future<void> _registerPushTokenIfNeeded() async {
+    try {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token == null || token.isEmpty) return;
+      final client = ApiClient();
+      await client.dio.post(
+        '/users/push-token',
+        data: {'token': token, 'platform': 'android'},
+      );
+    } catch (_) {
+      // 로그인 전이거나 네트워크 오류 시 무시
+    }
   }
 
   Future<void> _checkCoachMark() async {
@@ -70,38 +95,71 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
     PendingTakeNoteStore.instance.clear();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _showTakeNoteDialog(requestId: req.requestId, requesterProfile: req.requesterProfile);
+      _showTakeNoteDialog();
     });
   }
 
-  void _showTakeNoteDialog({required String requestId, Map<String, dynamic>? requesterProfile}) {
+
+  Future<void> _openMatchingInboxModal() async {
+    final size = MediaQuery.of(context).size;
+    final padding = EdgeInsets.symmetric(
+      horizontal: size.width > 400 ? 24 : 16,
+      vertical: 48,
+    );
+    await showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black54,
+      barrierLabel: '닫기',
+      pageBuilder: (_, __, ___) => Padding(
+        padding: padding,
+        child: Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              constraints: BoxConstraints(
+                maxWidth: 420,
+                maxHeight: size.height * 0.75,
+              ),
+              decoration: BoxDecoration(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF1F2937)
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(32),
+                boxShadow: const [
+                  BoxShadow(color: Color(0x40000000), blurRadius: 24, offset: Offset(0, 8)),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: const MailboxScreen(isModal: true),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showTakeNoteDialog() {
     showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
         return AlertDialog(
           title: const Text('매칭 요청'),
-          content: const Text('누군가 당신의 프로필을 가져갔어요.\n매칭 대기함에서 확인해 보세요.'),
+          content: const Text('누군가 당신의 프로필을 가져가려 해요.\n매칭 대기함에서 확인해 보세요.'),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(ctx).pop();
                 _takeNoteDialogShown = false;
               },
-              child: const Text('나중에'),
+              child: const Text('취소'),
             ),
             FilledButton(
               onPressed: () {
                 Navigator.of(ctx).pop();
                 _takeNoteDialogShown = false;
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => TakeNoteRequestResponseScreen(
-                      requestId: requestId,
-                      requesterProfile: requesterProfile,
-                    ),
-                  ),
-                );
+                _openMatchingInboxModal();
               },
               child: const Text('확인'),
             ),
@@ -187,7 +245,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
         subtitle = _affiliationShort.isNotEmpty ? _affiliationShort : null;
         break;
       case 3:
-        title = '마이프로필';
+        title = 'My프로필';
         subtitle = null;
         break;
       case 4:
@@ -280,7 +338,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
     const inactiveColor = Color(0xFF9CA3AF); // gray-400 (last)
     // last: active tab = bg-gradient-to-br themeColors.gradient (from-rose-300 via-pink-300 to-rose-400), text white
     final activeGradient = ThemeController.getActiveAccentGradient();
-    final labels = ['커뮤니티', '메시지함', '홈', '마이프로필', '상점'];
+    final labels = ['커뮤니티', '메시지함', '홈', 'My프로필', '상점'];
     final icons = [
       LucideIcons.users,
       LucideIcons.messageCircle,
@@ -312,11 +370,15 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
                     onTap: () {
                       if (i == _currentIndex) return;
                       setState(() => _currentIndex = i);
-                      _pageController.animateToPage(
-                        i,
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
-                      );
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (_pageController.hasClients && _currentIndex == i) {
+                          _pageController.animateToPage(
+                            i,
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                          );
+                        }
+                      });
                     },
                     borderRadius: BorderRadius.circular(16),
                     child: Container(
@@ -360,6 +422,151 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
     );
   }
 
+  void _rememberRandomUser(Map<String, dynamic> profile) {
+    final user = profile['user'] as Map<String, dynamic>?;
+    final userId = profile['userId']?.toString() ?? user?['id']?.toString();
+    if (userId == null || userId.isEmpty) return;
+    _recentRandomUserIds.remove(userId);
+    _recentRandomUserIds.add(userId);
+    if (_recentRandomUserIds.length > 30) {
+      _recentRandomUserIds.removeAt(0);
+    }
+  }
+
+  Future<void> _onTapRandomMatch() async {
+    if (_randomMatchLoading || !mounted) return;
+    setState(() => _randomMatchLoading = true);
+    try {
+      final profile = await _matchingBoardRepository.fetchRandomProfile(
+        excludeUserIds: _recentRandomUserIds,
+      );
+      if (!mounted) return;
+      final tickets = await _matchingBoardRepository.fetchMyTickets();
+      if (!mounted) return;
+      await showBoardNoteSheet(
+        context,
+        profiles: [profile],
+        startIndex: 0,
+        buildAvatar: (ctx, p) => buildMatchCardAvatar(p),
+        myMatchingTicket: tickets.matchingTicket,
+        onRefreshTickets: () async {
+          if (!mounted) return;
+          setState(() {});
+        },
+        showTertiaryCloseButton: true,
+        onPop: () {
+          if (mounted) setState(() {});
+        },
+        onRequestNextProfile: (excludeUserIds) async {
+          try {
+            // 이번 시트에서 이미 본 사람만 제외. _recentRandomUserIds 넣으면 게시판에 4명 있어도 전부 제외돼서 다음 프로필 없음 뜸
+            final next = await _matchingBoardRepository.fetchRandomProfile(
+              excludeUserIds: excludeUserIds,
+            );
+            _rememberRandomUser(next);
+            return next;
+          } catch (_) {
+            return null;
+          }
+        },
+        onTakeNote: (profileId, _, {String? message}) async {
+          try {
+            await _matchingBoardRepository.takeNote(profileId, message: message);
+            return true;
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+              );
+            }
+            return false;
+          }
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      String message = '랜덤 매칭 대상을 불러오지 못했어요.';
+      if (e is DioException && e.response?.statusCode == 404) {
+        final msg = (e.response?.data is Map)
+            ? (e.response!.data as Map)['message'] as String?
+            : null;
+        message = (msg != null && msg.trim().isNotEmpty)
+            ? msg.trim()
+            : '같은 학교에 매칭 상대가 없습니다.';
+        // 게시판은 '전체 대학'이면 다른 학교도 보이지만, 랜덤 매칭은 같은 학교만 대상
+        message = '$message 지금 카드는 전체 대학이라 다른 학교일 수 있어요. 랜덤 매칭은 같은 학교만 됩니다.';
+      } else if (e is DioException && e.response?.data is Map) {
+        final msg = (e.response!.data as Map)['message'];
+        if (msg is String && msg.trim().isNotEmpty) message = msg.trim();
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), duration: const Duration(seconds: 5)),
+      );
+    } finally {
+      if (mounted) setState(() => _randomMatchLoading = false);
+    }
+  }
+
+  Widget _buildRandomMatchButton() {
+    final bgColor = Theme.of(context).brightness == Brightness.dark
+        ? const Color(0xFF111827)
+        : const Color(0xFFF9FAFB);
+    return Container(
+      color: bgColor,
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      child: SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: ThemeController.getActiveAccentGradient(),
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.16),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: _randomMatchLoading ? null : _onTapRandomMatch,
+                child: Center(
+                  child: _randomMatchLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(LucideIcons.shuffle, color: Colors.white, size: 18),
+                            SizedBox(width: 8),
+                            Text(
+                              '\uB79C\uB364 \uB9E4\uCE6D',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+            ),
+          ),
+        ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final hideTopBarForCommunity = _currentIndex == 0;
@@ -381,6 +588,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
                   itemBuilder: (_, index) => _pages[index],
                 ),
               ),
+              if (_currentIndex == 2) _buildRandomMatchButton(),
               _buildBottomNav(),
             ],
           ),
@@ -394,6 +602,5 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
     );
   }
 }
-
 
 

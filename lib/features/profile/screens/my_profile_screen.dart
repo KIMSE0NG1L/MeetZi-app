@@ -79,6 +79,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             default: return s;
           }
         case 'smoking':
+          if (value is bool) return value ? '흡연' : '비흡연';
           switch (s.toLowerCase()) {
             case 'none': return '비흡연';
             case 'sometimes': return '가끔';
@@ -86,6 +87,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             default: return s;
           }
         case 'drinking':
+          if (value is bool) return value ? '음주' : '비음주';
           switch (s.toLowerCase()) {
             case 'none': return '안 함';
             case 'sometimes': return '가끔';
@@ -356,6 +358,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Wrap(
+                                          alignment: WrapAlignment.start,
+                                          runAlignment: WrapAlignment.start,
                                           spacing: 8,
                                           runSpacing: 8,
                                           children: [
@@ -365,8 +369,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                             _infoTag(_profile?['heightCm'] != null ? '${_profile!['heightCm']}cm' : '', dark),
                                             _infoTag(_toLabel('gradeYear', _profile?['gradeYear']), dark),
                                             _infoTag(_profile?['mbti']?.toString() ?? '', dark),
-                                            _infoTag(_toLabel('smoking', _profile?['smoking']), dark),
-                                            _infoTag(_toLabel('drinking', _profile?['drinking']), dark),
+                                            _infoTag(_toLabel('smoking', _profile?['isSmoking'] ?? _profile?['smoking']), dark),
+                                            _infoTag(_toLabel('drinking', _profile?['isDrinking'] ?? _profile?['drinking']), dark),
                                           ],
                                         ),
                                         const SizedBox(height: 16),
@@ -383,6 +387,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                           const SizedBox(height: 12),
                                         ],
                                         Wrap(
+                                          alignment: WrapAlignment.start,
+                                          runAlignment: WrapAlignment.start,
                                           spacing: 8,
                                           runSpacing: 8,
                                           children: [
@@ -402,6 +408,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                           ),
                                           const SizedBox(height: 8),
                                           Wrap(
+                                            alignment: WrapAlignment.start,
+                                            runAlignment: WrapAlignment.start,
                                             spacing: 8,
                                             runSpacing: 8,
                                             children: ((_profile!['idealTypeKeywords'] as List).map((e) => e?.toString() ?? '')).where((s) => s.isNotEmpty).map((tag) => Container(

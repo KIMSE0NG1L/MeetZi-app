@@ -3,7 +3,9 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
+import 'package:nearo_app/features/auth/data/environment_status_repository.dart';
 import 'package:nearo_app/shared/data/lorelei_options.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/shared/widgets/primary_button.dart';
@@ -18,12 +20,15 @@ class AvatarSetupScreen extends StatefulWidget {
 
 class _AvatarSetupScreenState extends State<AvatarSetupScreen> {
   final AuthRepository _repository = AuthRepository();
+  final EnvironmentStatusRepository _environmentStatusRepository =
+      EnvironmentStatusRepository();
   static const String _avatarStyle = 'lorelei';
   String _avatarSeed = '';
   Map<String, String> _avatarOptions = {};
   Map<String, String> _initialOptions = {};
   bool _loading = true;
   bool _saving = false;
+  bool _hadAvatarOnOpen = false;
   String? _error;
 
   late List<AvatarOptionCategory> _categories;
@@ -91,6 +96,7 @@ class _AvatarSetupScreenState extends State<AvatarSetupScreen> {
       }
       if (!mounted) return;
       setState(() {
+        _hadAvatarOnOpen = seed?.isNotEmpty == true;
         _avatarSeed = seed?.isNotEmpty == true ? seed! : _randomSeed();
         _avatarOptions = Map<String, String>.from(options);
         _initialOptions = Map<String, String>.from(options);
@@ -105,6 +111,23 @@ class _AvatarSetupScreenState extends State<AvatarSetupScreen> {
         _loading = false;
         _error = '프로필을 불러오지 못했습니다.';
       });
+    }
+  }
+
+  bool _isAvatarRequiredFlow() =>
+      !_hadAvatarOnOpen && !Navigator.of(context).canPop();
+
+  Future<String> _nextRouteAfterSave() async {
+    try {
+      final status = await _environmentStatusRepository.getMyEnvironmentStatus();
+      if (status['environmentId'] == null) {
+        return AppRoutes.environment;
+      }
+      return status['verified'] == true
+          ? AppRoutes.home
+          : AppRoutes.environment;
+    } catch (_) {
+      return AppRoutes.environment;
     }
   }
 
@@ -138,7 +161,13 @@ class _AvatarSetupScreenState extends State<AvatarSetupScreen> {
       await _repository.updateProfile(payload);
       if (!mounted) return;
       setState(() => _initialOptions = Map<String, String>.from(_avatarOptions));
-      Navigator.of(context).pop();
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+        return;
+      }
+      final route = await _nextRouteAfterSave();
+      if (!mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil(route, (route) => false);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -149,6 +178,14 @@ class _AvatarSetupScreenState extends State<AvatarSetupScreen> {
   }
 
   Future<void> _onBack() async {
+    if (_isAvatarRequiredFlow()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('\uC544\uBC14\uD0C0\uB97C \uC124\uC815\uD574\uC57C \uC571 \uC774\uC6A9\uC774 \uAC00\uB2A5\uD569\uB2C8\uB2E4.'),
+        ),
+      );
+      return;
+    }
     if (!_isDirty) {
       if (!mounted) return;
       Navigator.of(context).pop();

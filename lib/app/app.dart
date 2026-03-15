@@ -13,14 +13,9 @@ import 'package:nearo_app/presentation/pages/meetzy_onboarding_page.dart';
 import 'package:nearo_app/features/consent/screens/consent_decision_screen.dart';
 import 'package:nearo_app/features/consent/screens/consent_preview_screen.dart';
 import 'package:nearo_app/features/consent/screens/consent_success_screen.dart';
-import 'package:nearo_app/features/health/screens/health_screen.dart';
-import 'package:nearo_app/features/matching/screens/matching_result_screen.dart';
-import 'package:nearo_app/features/matching/screens/matching_wait_screen.dart';
 import 'package:nearo_app/features/matching/screens/matching_home_screen.dart';
 import 'package:nearo_app/features/messages/screens/chat_room_screen.dart';
 import 'package:nearo_app/features/photo/screens/photo_screen.dart';
-import 'package:nearo_app/features/subscription/screens/subscription_screen.dart';
-import 'package:nearo_app/features/dev/screens/api_dashboard_screen.dart';
 import 'package:nearo_app/features/auth/screens/profile_screen.dart';
 import 'package:nearo_app/features/profile/screens/profile_setup_screen.dart';
 import 'package:nearo_app/features/profile/screens/partner_profile_screen.dart';
@@ -29,7 +24,8 @@ import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/auth/data/environment_status_repository.dart';
 import 'package:nearo_app/features/home/screens/home_shell_screen.dart';
 import 'package:nearo_app/features/home/screens/splash_screen.dart';
-import 'package:nearo_app/features/matching_board/screens/take_note_request_response_screen.dart';
+import 'package:nearo_app/features/matching_board/screens/mailbox_screen.dart';
+import 'package:nearo_app/features/community/screens/community_post_detail_screen.dart';
 import 'dart:async';
 import 'package:nearo_app/features/profile/screens/avatar_setup_screen.dart';
 import 'package:nearo_app/features/settings/screens/customer_support_screen.dart';
@@ -55,6 +51,11 @@ class _NearoAppState extends State<NearoApp> {
   Map<String, dynamic>? _pendingNotificationData;
   /// 설명 주석
   String? _initialRoute;
+
+  bool _hasAvatarConfigured(Map user) {
+    final avatarSeed = user['avatarSeed']?.toString().trim();
+    return avatarSeed != null && avatarSeed.isNotEmpty;
+  }
 
   @override
   void initState() {
@@ -98,6 +99,8 @@ class _NearoAppState extends State<NearoApp> {
             (user['affiliationText'] as String?)?.trim().isNotEmpty ?? false;
         if (!hasProfile || !hasAffiliation) {
           route = AppRoutes.universitySelect;
+        } else if (!_hasAvatarConfigured(user)) {
+          route = AppRoutes.avatarSetup;
         } else {
           try {
             final status =
@@ -150,21 +153,29 @@ class _NearoAppState extends State<NearoApp> {
       _navigatorKey.currentState?.pushNamed(AppRoutes.customerSupport);
       return;
     }
-    if (type == 'take_note_request') {
-      final requestId = data['requestId']?.toString();
-      if (requestId != null && requestId.isNotEmpty) {
-        Map<String, dynamic>? requesterProfile;
-        final rp = data['requesterProfile'];
-        if (rp is Map) requesterProfile = Map<String, dynamic>.from(rp);
+    if (type == 'community_comment_reply' || type == 'community_mention') {
+      final environmentId = data['environmentId']?.toString();
+      final postId = data['postId']?.toString();
+      final schoolName = data['schoolName']?.toString() ?? '커뮤니티';
+      if (environmentId != null && environmentId.isNotEmpty && postId != null && postId.isNotEmpty) {
         _navigatorKey.currentState?.push(
           MaterialPageRoute<void>(
-            builder: (_) => TakeNoteRequestResponseScreen(
-              requestId: requestId,
-              requesterProfile: requesterProfile,
+            builder: (_) => CommunityPostDetailScreen(
+              environmentId: environmentId,
+              schoolName: schoolName,
+              postId: postId,
             ),
           ),
         );
       }
+      return;
+    }
+    if (type == 'take_note_request') {
+      _navigatorKey.currentState?.push(
+        MaterialPageRoute<void>(
+          builder: (_) => const MailboxScreen(),
+        ),
+      );
       return;
     }
     final roomId = data['roomId']?.toString();
@@ -195,7 +206,8 @@ class _NearoAppState extends State<NearoApp> {
                 ?.trim()
                 .isNotEmpty ??
             false;
-        if (hasProfile && hasAffiliation) {
+        final hasAvatar = _hasAvatarConfigured(user);
+        if (hasProfile && hasAffiliation && hasAvatar) {
           try {
             // 설명 주석
             final status =
@@ -227,6 +239,11 @@ class _NearoAppState extends State<NearoApp> {
               (route) => false,
             );
           }
+        } else if (hasProfile && hasAffiliation) {
+          _navigatorKey.currentState?.pushNamedAndRemoveUntil(
+            AppRoutes.avatarSetup,
+            (route) => false,
+          );
         } else {
           _navigatorKey.currentState?.pushNamedAndRemoveUntil(
             AppRoutes.universitySelect,
@@ -330,16 +347,12 @@ class _NearoAppState extends State<NearoApp> {
                       onComplete: null,
                     ),
                     AppRoutes.environment: (_) => const EnvironmentScreen(),
-                    AppRoutes.matchingResult: (_) => const MatchingResultScreen(),
                     AppRoutes.matchingHome: (_) => const MatchingHomeScreen(),
                     AppRoutes.chatPreview: (_) => const ConsentPreviewScreen(),
                     AppRoutes.chatRoom: (_) => const ChatRoomScreen(),
                     AppRoutes.consentDecision: (_) => const ConsentDecisionScreen(),
                     AppRoutes.consentSuccess: (_) => const ConsentSuccessScreen(),
-                    AppRoutes.apiDashboard: (_) => const ApiDashboardScreen(),
                     AppRoutes.photo: (_) => const PhotoScreen(),
-                    AppRoutes.subscription: (_) => const SubscriptionScreen(),
-                    AppRoutes.health: (_) => const HealthScreen(),
                     AppRoutes.authProfile: (_) => const ProfileScreen(),
                     AppRoutes.users: (_) => const UsersScreen(),
                     AppRoutes.profileSetup: (_) => const ProfileSetupScreen(),
@@ -358,5 +371,3 @@ class _NearoAppState extends State<NearoApp> {
     );
   }
 }
-
-

@@ -14,8 +14,10 @@ class MeetzyProfileDetailModal extends StatelessWidget {
     this.darkMode = false,
     this.avatarWidget,
     this.hideMatchButton = false,
-    this.photoUrlForEnlarge,
-    this.avatarUrlForEnlarge,
+  this.photoUrlForEnlarge,
+  this.avatarUrlForEnlarge,
+  this.hideBottomBar = false,
+  this.topCornerRadius,
   });
 
   final MeetzyProfileDetailData profile;
@@ -28,6 +30,10 @@ class MeetzyProfileDetailModal extends StatelessWidget {
   final String? photoUrlForEnlarge;
   /// 탭 시 크게 보기할 아바타 URL (dicebear 등)
   final String? avatarUrlForEnlarge;
+  /// true면 하단 닫기/매칭하기 영역 비표시 (다른 위젯에서 하단 버튼을 그릴 때 사용)
+  final bool hideBottomBar;
+  /// 헤더 상단 곡률 (시트에 넣을 때 상단 하얀 귀 터짐 방지용, null이면 32)
+  final double? topCornerRadius;
 
   /// 사진/아바타 크게 보기 다이얼로그 표시 (외부에서 재사용)
   static void showPhotoEnlarge(
@@ -136,6 +142,8 @@ class MeetzyProfileDetailModal extends StatelessWidget {
           fontSize: 14,
           fontWeight: FontWeight.w500,
           color: darkMode ? const Color(0xFFE5E7EB) : Colors.white,
+          decoration: TextDecoration.none,
+          decorationColor: Colors.transparent,
         ),
       ),
     );
@@ -148,11 +156,12 @@ class MeetzyProfileDetailModal extends StatelessWidget {
     final contentBg = darkMode ? const Color(0xFF374151).withValues(alpha: 0.5) : const Color(0xFFF9FAFB);
     final onContent = darkMode ? const Color(0xFFD1D5DB) : const Color(0xFF374151);
 
+    final radius = topCornerRadius ?? 32.0;
     return Container(
       height: 700,
       decoration: BoxDecoration(
         color: surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(radius)),
         boxShadow: const [
           BoxShadow(color: Color(0x40000000), blurRadius: 24, offset: Offset(0, -4)),
         ],
@@ -167,7 +176,9 @@ class MeetzyProfileDetailModal extends StatelessWidget {
                 height: 160,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(topCornerRadius ?? 32),
+                  ),
                   gradient: ThemeController.getSheetGradient(),
                 ),
                 child: Center(
@@ -209,6 +220,8 @@ class MeetzyProfileDetailModal extends StatelessWidget {
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
+                                decoration: TextDecoration.none,
+                                decorationColor: Colors.transparent,
                               ),
                             ),
                           ],
@@ -288,7 +301,12 @@ class MeetzyProfileDetailModal extends StatelessWidget {
                     ),
                     child: Text(
                       '💬 ${profile.intro}',
-                      style: TextStyle(fontSize: 14, height: 1.5, color: onContent),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        height: 1.5,
+                        color: onContent,
+                        decoration: TextDecoration.none,
+                        decorationColor: Colors.transparent,
+                      ) ?? TextStyle(fontSize: 14, height: 1.5, color: onContent, decoration: TextDecoration.none, decorationColor: Colors.transparent),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -304,7 +322,12 @@ class MeetzyProfileDetailModal extends StatelessWidget {
                     ),
                     child: Text(
                       '✨ 요즘 빠진 것: ${profile.interest}',
-                      style: TextStyle(fontSize: 14, height: 1.5, color: onContent),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        height: 1.5,
+                        color: onContent,
+                        decoration: TextDecoration.none,
+                        decorationColor: Colors.transparent,
+                      ) ?? TextStyle(fontSize: 14, height: 1.5, color: onContent, decoration: TextDecoration.none, decorationColor: Colors.transparent),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -320,7 +343,12 @@ class MeetzyProfileDetailModal extends StatelessWidget {
                     ),
                     child: Text(
                       '💕 이상형: ${profile.idealType}',
-                      style: TextStyle(fontSize: 14, height: 1.5, color: onContent),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        height: 1.5,
+                        color: onContent,
+                        decoration: TextDecoration.none,
+                        decorationColor: Colors.transparent,
+                      ) ?? TextStyle(fontSize: 14, height: 1.5, color: onContent, decoration: TextDecoration.none, decorationColor: Colors.transparent),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -349,6 +377,8 @@ class MeetzyProfileDetailModal extends StatelessWidget {
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: darkMode ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
+                      decoration: TextDecoration.none,
+                      decorationColor: Colors.transparent,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -364,7 +394,7 @@ class MeetzyProfileDetailModal extends StatelessWidget {
                               ),
                               child: Text(
                                 '#$t',
-                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white),
+                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white, decoration: TextDecoration.none, decorationColor: Colors.transparent),
                               ),
                             ))
                         .toList(),
@@ -373,59 +403,62 @@ class MeetzyProfileDetailModal extends StatelessWidget {
               ],
             ),
           ),
-          // ad: bottom border-t p-4 gap-3, 닫기 border-2 rounded-xl, 매칭하기 gradient rounded-xl (hideMatchButton 시 매칭하기 비표시)
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: surface,
-              border: Border(top: BorderSide(color: borderColor)),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: onClose,
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: BorderSide(
-                        color: darkMode ? const Color(0xFF4B5563) : const Color(0xFFE5E7EB),
-                        width: 2,
-                      ),
-                      foregroundColor: darkMode ? const Color(0xFFE5E7EB) : const Color(0xFF374151),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text('닫기'),
-                  ),
-                ),
-                if (!hideMatchButton && onMatch != null) ...[
-                  const SizedBox(width: 12),
+          if (!hideBottomBar)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: surface,
+                border: Border(top: BorderSide(color: borderColor)),
+              ),
+              child: Row(
+                children: [
                   Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: ThemeController.getSheetGradient(),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.35),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+                    child: OutlinedButton(
+                      onPressed: onClose,
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: BorderSide(
+                          color: darkMode ? const Color(0xFF4B5563) : const Color(0xFFE5E7EB),
+                          width: 2,
+                        ),
+                        foregroundColor: darkMode ? const Color(0xFFE5E7EB) : const Color(0xFF374151),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: onMatch,
+                      child: const Text('닫기', style: TextStyle(decoration: TextDecoration.none, decorationColor: Colors.transparent)),
+                    ),
+                  ),
+                  if (!hideMatchButton && onMatch != null) ...[
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: ThemeController.getSheetGradient(),
                           borderRadius: BorderRadius.circular(12),
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 16),
-                            child: Center(
-                              child: Text(
-                                '매칭하기',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.35),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: onMatch,
+                            borderRadius: BorderRadius.circular(12),
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              child: Center(
+                                child: Text(
+                                  '매칭하기',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    decoration: TextDecoration.none,
+                                    decorationColor: Colors.transparent,
+                                  ),
                                 ),
                               ),
                             ),
@@ -433,11 +466,10 @@ class MeetzyProfileDetailModal extends StatelessWidget {
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
         ],
       ),
     );

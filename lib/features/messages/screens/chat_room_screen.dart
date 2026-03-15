@@ -14,6 +14,7 @@ import 'package:nearo_app/shared/utils/app_config.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/core/auth/auth_repository.dart';
 import 'package:nearo_app/features/matching_board/profile_detail_sheet.dart';
+import 'package:nearo_app/features/messages/data/ice_breaking_phrases.dart';
 import 'package:nearo_app/features/messages/data/report_repository.dart';
 import 'package:nearo_app/features/users/data/block_repository.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
@@ -118,6 +119,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
   bool _isActive = true;
   bool _isProfileRevealed = false;
   String? _partnerConsentStatus; // 'yes' | 'pending' | 'no' - 상대방 동의 여부
+  bool _partnerInRoom = false; // 상대가 이 채팅방 화면에 있는지(서버 presence)
   String? _partnerPhotoStorageKey;
   String? _partnerNickname;
   String? _partnerAvatarSeed;
@@ -126,6 +128,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
   String? _matchId;
 
   final ScrollController _scrollController = ScrollController();
+
+  /// 채팅방에서 내가 직접 한 번이라도 메시지를 보냈으면 아이스브레이커 문구 숨김
+  bool get _shouldHideIceBreakers => _messages.any((m) => m.isMine);
 
   @override
   void initState() {
@@ -229,8 +234,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
       }
       // 매칭 취소 시 서버에서 isActive=false로 오므로 주기적으로 반영해 입력 막기
       final isActiveFromServer = room['isActive'] == true;
+      final partnerInRoom = room['partnerInRoom'] == true;
       if (!isActiveFromServer && _isActive) {
         setState(() => _isActive = false);
+      }
+      if (partnerInRoom != _partnerInRoom) {
+        setState(() => _partnerInRoom = partnerInRoom);
       }
       final list = room['messageReadAts'];
       if (list is List) _applyMessageReadAts(list);
@@ -425,6 +434,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
       if (!mounted) return;
       _isActive = room['isActive'] == true;
       _isProfileRevealed = room['isProfileRevealed'] == true;
+      _partnerInRoom = room['partnerInRoom'] == true;
       _partnerConsentStatus = room['partnerConsentStatus']?.toString();
       final roomPhotoKey = room['partnerPhotoStorageKey']?.toString();
       if (roomPhotoKey != null && roomPhotoKey.trim().isNotEmpty) {
@@ -655,6 +665,85 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
   }
 
 
+  void _insertIceBreaker(String phrase) {
+    _controller.text = phrase;
+    _controller.selection = TextSelection.collapsed(offset: phrase.length);
+    setState(() {});
+  }
+
+  Widget _buildEmptyStateWithIceBreakers(BuildContext context, bool dark, Color timeColor) {
+    if (IceBreakingPhrases.phrases.isEmpty) {
+      return Center(
+        child: Text(
+          '첫 메시지를 보내 보세요.',
+          style: TextStyle(color: timeColor, fontSize: 15),
+        ),
+      );
+    }
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(height: 40),
+          Text(
+            '첫 메시지를 보내 보세요.',
+            style: TextStyle(color: timeColor, fontSize: 15),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            '어색한 분위기가 걱정된다면?',
+            style: TextStyle(
+              color: timeColor,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 8,
+            runSpacing: 8,
+            children: IceBreakingPhrases.phrases.map((phrase) {
+              return ActionChip(
+                label: Text(phrase, style: const TextStyle(fontSize: 12)),
+                onPressed: () => _insertIceBreaker(phrase),
+                backgroundColor: dark ? Colors.grey.shade800 : Colors.white,
+                side: BorderSide(color: dark ? Colors.grey.shade600 : Colors.grey.shade300),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIceBreakerChipsRow(bool dark, Color hintColor) {
+    if (IceBreakingPhrases.phrases.isEmpty) return const SizedBox.shrink();
+    const maxChips = 6;
+    final list = IceBreakingPhrases.phrases.take(maxChips).toList();
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+      height: 44,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: list.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final phrase = list[index];
+          return ActionChip(
+            label: Text(phrase, style: const TextStyle(fontSize: 11)),
+            onPressed: () => _insertIceBreaker(phrase),
+            backgroundColor: dark ? Colors.grey.shade800 : Colors.white,
+            side: BorderSide(color: dark ? Colors.grey.shade600 : Colors.grey.shade300),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -730,7 +819,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    '온라인',
+                                    _partnerInRoom ? '온라인' : '오프라인',
                                     style: TextStyle(
                                       color: Colors.white.withOpacity(0.8),
                                       fontSize: 12,
@@ -778,7 +867,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
                 child: Text(
-                  '매칭이 취소되어 메시지를 보낼 수 없습니다.',
+                  '매칭이 취소되어 비활성화되었습니다.',
                   style: TextStyle(color: dark ? Colors.grey.shade300 : Colors.grey.shade700),
                 ),
               ),
@@ -786,12 +875,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
                   : _messages.isEmpty
-                      ? Center(
-                          child: Text(
-                            '첫 메시지를 보내 보세요.',
-                            style: TextStyle(color: timeColor, fontSize: 15),
-                          ),
-                        )
+                      ? _buildEmptyStateWithIceBreakers(context, dark, timeColor)
                       : ListView.separated(
                           controller: _scrollController,
                           reverse: true,
@@ -985,6 +1069,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                           },
                         ),
             ),
+            if (_isActive && _messages.isNotEmpty && _messages.length <= 3 && !_shouldHideIceBreakers)
+              _buildIceBreakerChipsRow(dark, hintColor),
             if (_isActive)
               Container(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
