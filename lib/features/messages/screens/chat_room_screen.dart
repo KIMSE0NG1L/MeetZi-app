@@ -672,6 +672,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
   }
 
   Widget _buildEmptyStateWithIceBreakers(BuildContext context, bool dark, Color timeColor) {
+    if (IceBreakingPhrases.phrases.isEmpty) {
+      return Center(
+        child: Text(
+          '첫 메시지를 보내 보세요.',
+          style: TextStyle(color: timeColor, fontSize: 15),
+        ),
+      );
+    }
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       child: Column(
@@ -711,6 +719,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
   }
 
   Widget _buildIceBreakerChipsRow(bool dark, Color hintColor) {
+    if (IceBreakingPhrases.phrases.isEmpty) return const SizedBox.shrink();
     const maxChips = 6;
     final list = IceBreakingPhrases.phrases.take(maxChips).toList();
     return Container(

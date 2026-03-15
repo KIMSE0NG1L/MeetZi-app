@@ -8,7 +8,6 @@ import 'package:nearo_app/features/matching_board/widgets/match_card_avatar.dart
 import 'package:nearo_app/features/messages/data/report_repository.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
-import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/shared/utils/post_time_format.dart';
 import 'package:nearo_app/shared/utils/mention_text_span.dart';
 
@@ -464,11 +463,10 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
                           width: 1.5,
                         ),
                       ),
-                      child: DiceBearAvatar(
-                        style: ca['avatarStyle']?.toString() ?? 'lorelei',
-                        seed: ca['avatarSeed']?.toString() ?? cn,
-                        options: parseAvatarOptions(ca['avatarOptions']),
-                        size: 32,
+                      child: SizedBox(
+                        width: 32,
+                        height: 32,
+                        child: buildMatchCardAvatar(ca, size: 32),
                       ),
                     ),
                   ),
@@ -798,18 +796,16 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
                                           width: 2,
                                         ),
                                       ),
-                                      child: DiceBearAvatar(
-                                      style: (isPostAuthorMe && _myProfile != null
-                                              ? _myProfile!['avatarStyle']?.toString()
-                                              : author['avatarStyle']?.toString()) ?? 'lorelei',
-                                      seed: (isPostAuthorMe && _myProfile != null
-                                              ? _myProfile!['avatarSeed']?.toString()
-                                              : author['avatarSeed']?.toString()) ?? nickname,
-                                      options: parseAvatarOptions(isPostAuthorMe && _myProfile != null
-                                          ? _myProfile!['avatarOptions']
-                                          : author['avatarOptions']),
-                                      size: 48,
-                                    ),
+                                      child: SizedBox(
+                                        width: 48,
+                                        height: 48,
+                                        child: buildMatchCardAvatar(
+                                          isPostAuthorMe && _myProfile != null
+                                              ? _myProfile!
+                                              : author,
+                                          size: 48,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -1084,11 +1080,14 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
                           width: 2,
                         ),
                       ),
-                      child: DiceBearAvatar(
-                        style: _myProfile?['avatarStyle']?.toString() ?? 'lorelei',
-                        seed: _myProfile?['avatarSeed']?.toString() ?? _myUserIdResolved ?? 'me',
-                        options: parseAvatarOptions(_myProfile?['avatarOptions']),
-                        size: 40,
+                      child: SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: buildMatchCardAvatar(
+                          _myProfile ??
+                              <String, dynamic>{'userId': _myUserIdResolved ?? 'me'},
+                          size: 40,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),

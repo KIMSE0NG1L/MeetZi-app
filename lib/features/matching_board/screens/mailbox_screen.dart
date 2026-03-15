@@ -1,14 +1,12 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/matching_board/data/matching_board_repository.dart';
 import 'package:nearo_app/features/matching_board/profile_detail_sheet.dart';
-import 'package:nearo_app/features/matching_board/screens/take_note_request_response_screen.dart';
+import 'package:nearo_app/features/matching_board/screens/matching_board_screen.dart'
+    as board;
+import 'package:nearo_app/features/matching_board/utils/take_note_request_profile.dart';
+import 'package:nearo_app/features/matching_board/widgets/match_card_avatar.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
-import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
-import 'package:nearo_app/shared/utils/photo_url.dart';
 
 /// 매칭대기함: 내가 받은 가져가기 요청 목록 (매칭 알림이 여기로 옴)
 class MailboxScreen extends StatefulWidget {
@@ -21,7 +19,8 @@ class MailboxScreen extends StatefulWidget {
   State<MailboxScreen> createState() => _MailboxScreenState();
 }
 
-class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProviderStateMixin {
+class _MailboxScreenState extends State<MailboxScreen>
+    with SingleTickerProviderStateMixin {
   final MatchingBoardRepository _repository = MatchingBoardRepository();
   List<Map<String, dynamic>> _receivedRequests = [];
   List<Map<String, dynamic>> _sentRequests = [];
@@ -53,8 +52,37 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
         _repository.fetchMySentTakeNoteRequests(),
       ]);
       if (!mounted) return;
+      final received = List<Map<String, dynamic>>.from(results[0]);
+      received.sort((a, b) {
+        int statusRank(Map<String, dynamic> req) {
+          final status = req['status']?.toString() ?? 'pending';
+          switch (status) {
+            case 'pending':
+              return 0;
+            case 'accepted':
+              return 1;
+            case 'rejected':
+              return 2;
+            default:
+              return 3;
+          }
+        }
+
+        DateTime? createdAt(Map<String, dynamic> req) {
+          final raw = req['createdAt'] ?? req['created_at'];
+          if (raw is DateTime) return raw;
+          if (raw is String) return DateTime.tryParse(raw);
+          return null;
+        }
+
+        final rankCompare = statusRank(a).compareTo(statusRank(b));
+        if (rankCompare != 0) return rankCompare;
+        final atA = createdAt(a) ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final atB = createdAt(b) ?? DateTime.fromMillisecondsSinceEpoch(0);
+        return atB.compareTo(atA);
+      });
       setState(() {
-        _receivedRequests = results[0];
+        _receivedRequests = received;
         _sentRequests = results[1];
         _loading = false;
       });
@@ -67,20 +95,8 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
     }
   }
 
-  Map<String, String> _parseAvatarOptions(dynamic raw) {
-    if (raw == null) return {};
-    final s = raw.toString();
-    if (s.isEmpty) return {};
-    try {
-      final decoded = jsonDecode(s);
-      if (decoded is Map<String, dynamic>) {
-        return decoded.map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
-      }
-    } catch (_) {}
-    return {};
-  }
-
-  Widget _buildRecipientAvatar(BuildContext context, Map<String, dynamic>? recipient) {
+  Widget _buildRecipientAvatar(
+      BuildContext context, Map<String, dynamic>? recipient) {
     if (recipient == null) {
       return CircleAvatar(
         radius: 24,
@@ -88,50 +104,10 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
         child: Icon(LucideIcons.user, color: Colors.grey.shade600),
       );
     }
-    final user = recipient['user'] as Map<String, dynamic>?;
-    final displayType = recipient['boardDisplayType']?.toString() ?? user?['boardDisplayType']?.toString();
-    final photos = recipient['photos'] ?? user?['photos'];
-    String? primaryPhotoKey;
-    if (photos is List && photos.isNotEmpty && photos[0] is Map) {
-      primaryPhotoKey = (photos[0] as Map<String, dynamic>)['storageKey']?.toString();
-    }
-    final photoUrl = primaryPhotoKey != null ? photoUrlFromStorageKey(primaryPhotoKey) : null;
-    if (displayType == 'photo' && photoUrl != null && photoUrl.isNotEmpty) {
-      return CircleAvatar(
-        radius: 24,
-        backgroundColor: Colors.grey.shade200,
-        child: ClipOval(
-          child: Image.network(
-            photoUrl,
-            width: 48,
-            height: 48,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Icon(LucideIcons.user, size: 28, color: Theme.of(context).colorScheme.primary),
-          ),
-        ),
-      );
-    }
-    final seed = recipient['avatarSeed']?.toString() ?? recipient['id']?.toString();
-    final options = _parseAvatarOptions(recipient['avatarOptions']);
-    if (seed != null && seed.isNotEmpty) {
-      return CircleAvatar(
-        radius: 24,
-        backgroundColor: Colors.grey.shade200,
-        child: ClipOval(
-          child: SvgPicture.network(
-            diceBearAvatarUrl(seed, options: options.isNotEmpty ? options : null),
-            fit: BoxFit.cover,
-            width: 48,
-            height: 48,
-            placeholderBuilder: (context) => Icon(LucideIcons.user, size: 28, color: Theme.of(context).colorScheme.primary),
-          ),
-        ),
-      );
-    }
-    return CircleAvatar(
-      radius: 24,
-      backgroundColor: Colors.grey.shade300,
-      child: Icon(LucideIcons.user, size: 28, color: Theme.of(context).colorScheme.primary),
+    return SizedBox(
+      width: 48,
+      height: 48,
+      child: buildMatchCardAvatar(recipient, size: 48),
     );
   }
 
@@ -159,73 +135,64 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
     return '방금 전';
   }
 
-  Widget _buildRequesterAvatar(BuildContext context, Map<String, dynamic>? requester) {
+  Widget _buildRequesterAvatar(
+      BuildContext context, Map<String, dynamic>? requester) {
     return _buildRecipientAvatar(context, requester);
   }
 
-  Map<String, dynamic>? _mergeProfileMaps(List<Map<String, dynamic>?> maps) {
-    final merged = <String, dynamic>{};
-    bool hasAny = false;
-    for (final m in maps) {
-      if (m == null) continue;
-      hasAny = true;
-      m.forEach((key, value) {
-        if (value == null) return;
-        if (value is String && value.trim().isEmpty) return;
-        merged[key] = value;
-      });
-      final nestedUser = m['user'];
-      if (nestedUser is Map<String, dynamic>) {
-        final userOut = Map<String, dynamic>.from(
-          merged['user'] is Map<String, dynamic>
-              ? merged['user'] as Map<String, dynamic>
-              : const <String, dynamic>{},
-        );
-        nestedUser.forEach((key, value) {
-          if (value == null) return;
-          if (value is String && value.trim().isEmpty) return;
-          userOut[key] = value;
-        });
-        merged['user'] = userOut;
-      }
-    }
-    return hasAny ? merged : null;
+  Map<String, dynamic>? _resolveReceivedRequestProfile(Map<String, dynamic> req,
+      {Map<String, dynamic>? primary}) {
+    return resolveReceivedRequestTargetProfile(req, primary: primary);
   }
 
-  Map<String, dynamic>? _resolveRequestProfile(Map<String, dynamic> req, {Map<String, dynamic>? primary}) {
-    final profile = req['profile'] as Map<String, dynamic>?;
-    final requesterProfile = req['requesterProfile'] as Map<String, dynamic>?;
-    final recipientProfile = req['recipientProfile'] as Map<String, dynamic>?;
-    final requester = req['requester'] as Map<String, dynamic>?;
-    final recipient = req['recipient'] as Map<String, dynamic>?;
-    return _mergeProfileMaps([primary, profile, requesterProfile, recipientProfile, requester, recipient]);
+  Map<String, dynamic>? _resolveSentRequestProfile(Map<String, dynamic> req,
+      {Map<String, dynamic>? primary}) {
+    return resolveSentRequestTargetProfile(req, primary: primary);
   }
 
-  Future<Map<String, dynamic>?> _resolveRequestDetailProfile(
+  Future<Map<String, dynamic>?> _resolveReceivedRequestDetailProfile(
     String requestId, {
     Map<String, dynamic>? primary,
   }) async {
     Map<String, dynamic>? fetched;
     try {
       final detail = await _repository.fetchTakeNoteRequest(requestId);
-      final profile = detail['profile'] as Map<String, dynamic>?;
-      final requesterProfile = detail['requesterProfile'] as Map<String, dynamic>?;
-      final recipientProfile = detail['recipientProfile'] as Map<String, dynamic>?;
-      final requester = detail['requester'] as Map<String, dynamic>?;
-      final recipient = detail['recipient'] as Map<String, dynamic>?;
-      fetched = _mergeProfileMaps([profile, requesterProfile, recipientProfile, requester, recipient, detail]);
+      fetched = resolveReceivedRequestTargetProfile(detail);
     } catch (_) {
       fetched = null;
     }
-    return _mergeProfileMaps([primary, fetched]);
+    return mergeProfileMaps([primary, fetched]);
+  }
+
+  Future<Map<String, dynamic>?> _resolveSentRequestDetailProfile(
+    String requestId, {
+    Map<String, dynamic>? primary,
+  }) async {
+    Map<String, dynamic>? fetched;
+    try {
+      final detail = await _repository.fetchTakeNoteRequest(requestId);
+      fetched = resolveSentRequestTargetProfile(detail);
+    } catch (_) {
+      fetched = null;
+    }
+    return mergeProfileMaps([primary, fetched]);
   }
 
   Future<void> _openRequestProfileDetail(
     BuildContext context, {
     required String requestId,
     required Map<String, dynamic>? fallbackProfile,
+    required bool isSentRequest,
   }) async {
-    final profile = await _resolveRequestDetailProfile(requestId, primary: fallbackProfile);
+    final profile = isSentRequest
+        ? await _resolveSentRequestDetailProfile(
+            requestId,
+            primary: fallbackProfile,
+          )
+        : await _resolveReceivedRequestDetailProfile(
+            requestId,
+            primary: fallbackProfile,
+          );
     if (!mounted || profile == null) return;
     await showProfileDetailSheet(
       context,
@@ -269,8 +236,10 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
                         : TabBarView(
                             controller: _tabController,
                             children: [
-                              _buildReceivedList(context, surface, onSurface, onSurfaceVariant),
-                              _buildSentList(context, surface, onSurface, onSurfaceVariant),
+                              _buildReceivedList(context, surface, onSurface,
+                                  onSurfaceVariant),
+                              _buildSentList(context, surface, onSurface,
+                                  onSurfaceVariant),
                             ],
                           ),
               ),
@@ -330,13 +299,18 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: const [
-                  BoxShadow(color: Color(0x26000000), blurRadius: 10, offset: Offset(0, 4)),
+                  BoxShadow(
+                      color: Color(0x26000000),
+                      blurRadius: 10,
+                      offset: Offset(0, 4)),
                 ],
               ),
               labelColor: const Color(0xFF111827),
               unselectedLabelColor: Colors.white.withOpacity(0.90),
-              labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
-              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+              labelStyle:
+                  const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+              unselectedLabelStyle:
+                  const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
               tabs: [
                 Tab(text: '받은 요청 ($receivedCount)'),
                 Tab(text: '보낸 요청 ($sentCount)'),
@@ -361,13 +335,17 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
             color: dark ? const Color(0xFF1F2937) : Colors.white,
             borderRadius: BorderRadius.circular(20),
             boxShadow: const [
-              BoxShadow(color: Color(0x1A000000), blurRadius: 16, offset: Offset(0, 6)),
+              BoxShadow(
+                  color: Color(0x1A000000),
+                  blurRadius: 16,
+                  offset: Offset(0, 6)),
             ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(LucideIcons.circleAlert, color: Color(0xFFEF4444), size: 22),
+              const Icon(LucideIcons.circleAlert,
+                  color: Color(0xFFEF4444), size: 22),
               const SizedBox(height: 10),
               Text(
                 _error ?? '오류가 발생했습니다.',
@@ -387,7 +365,8 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
     );
   }
 
-  Widget _buildReceivedList(BuildContext context, Color surface, Color onSurface, Color onSurfaceVariant) {
+  Widget _buildReceivedList(BuildContext context, Color surface,
+      Color onSurface, Color onSurfaceVariant) {
     if (_receivedRequests.isEmpty) {
       return Center(
         child: Column(
@@ -414,13 +393,18 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
           final dark = Theme.of(context).brightness == Brightness.dark;
           final onSurface = dark ? Colors.white : const Color(0xFF111827);
           final requestId = req['id']?.toString() ?? '';
+          final status = req['status']?.toString() ?? 'pending';
+          final isPending = status == 'pending';
           final requester = req['requester'] as Map<String, dynamic>?;
-          final detailProfile = _resolveRequestProfile(req, primary: requester);
-          final nickname = detailProfile?['nickname']?.toString() ?? requester?['nickname']?.toString() ?? '알 수 없음';
+          final detailProfile =
+              _resolveReceivedRequestProfile(req, primary: requester);
+          final nickname = detailProfile?['nickname']?.toString() ??
+              requester?['nickname']?.toString() ??
+              '알 수 없음';
           final senderMessage = (req['senderMessage'] as String?)?.trim();
           final subtitle = _buildProfileSubtitle(detailProfile ?? requester);
           final readAt = req['recipientReadAt']?.toString().trim();
-          final isNew = readAt == null || readAt.isEmpty;
+          final isNew = isPending && (readAt == null || readAt.isEmpty);
           final timeAgo = _formatTimeAgo(req);
 
           return _adLikeRequestCard(
@@ -431,6 +415,7 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
                 context,
                 requestId: requestId,
                 fallbackProfile: detailProfile ?? requester,
+                isSentRequest: false,
               ),
               behavior: HitTestBehavior.opaque,
               child: _buildRequesterAvatar(context, detailProfile ?? requester),
@@ -441,11 +426,13 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
             message: senderMessage,
             badge: isNew
                 ? Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: const Color(0xFF10B981).withOpacity(0.15),
                       borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: const Color(0xFF10B981).withOpacity(0.25)),
+                      border: Border.all(
+                          color: const Color(0xFF10B981).withOpacity(0.25)),
                     ),
                     child: const Text(
                       'NEW',
@@ -458,51 +445,72 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
                     ),
                   )
                 : null,
-            footer: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => _showRejectReasonModal(context, requestId, detailProfile ?? requester, nickname, subtitle),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: onSurface,
-                      side: BorderSide(color: dark ? Colors.grey.shade500 : Colors.grey.shade300),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text('거절'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Material(
-                    borderRadius: BorderRadius.circular(12),
-                    child: InkWell(
-                      onTap: () => _openRequestResponse(context, requestId, detailProfile ?? requester),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          gradient: ThemeController.getHeaderGradient(),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: const [
-                            BoxShadow(color: Color(0x26000000), blurRadius: 8, offset: Offset(0, 4)),
-                          ],
+            footer: isPending
+                ? Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => _showRejectReasonModal(
+                              context,
+                              requestId,
+                              detailProfile ?? requester,
+                              nickname,
+                              subtitle),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: onSurface,
+                            side: BorderSide(
+                                color: dark
+                                    ? Colors.grey.shade500
+                                    : Colors.grey.shade300),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text('거절'),
                         ),
-                        alignment: Alignment.center,
-                        child: const Text(
-                          '수락',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Material(
+                          borderRadius: BorderRadius.circular(12),
+                          child: InkWell(
+                            onTap: () => _confirmAcceptRequest(
+                                context, requestId),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              decoration: BoxDecoration(
+                                gradient: ThemeController.getHeaderGradient(),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: const [
+                                  BoxShadow(
+                                      color: Color(0x26000000),
+                                      blurRadius: 8,
+                                      offset: Offset(0, 4)),
+                                ],
+                              ),
+                              alignment: Alignment.center,
+                              child: const Text(
+                                '수락',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                    ],
+                  )
+                : _sentStatusRow(
+                    dark: dark,
+                    status: status,
+                    statusLabel: status == 'accepted' ? '수락됨' : '거절됨',
+                    read: true,
+                    isRejected: status == 'rejected',
                   ),
-                ),
-              ],
-            ),
             onTap: null,
           );
         },
@@ -510,16 +518,41 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
     );
   }
 
-  Future<void> _openRequestResponse(BuildContext context, String requestId, Map<String, dynamic>? requester) async {
-    final result = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => TakeNoteRequestResponseScreen(
-          requestId: requestId,
-          requesterProfile: requester,
-        ),
-      ),
+  Future<void> _confirmAcceptRequest(
+      BuildContext context, String requestId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('수락하시겠습니까?'),
+          content: const Text('수락하면 매칭이 성사되고 바로 대화를 시작할 수 있어요.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('취소'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('확인'),
+            ),
+          ],
+        );
+      },
     );
-    if (result == true || result == false) _load();
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await _repository.acceptTakeNoteRequest(requestId);
+      if (!mounted) return;
+      await board.showMatchCompleteCelebration(context);
+      if (!mounted) return;
+      await _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
   }
 
   Future<void> _showRejectReasonModal(
@@ -539,25 +572,28 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
           subtitle: subtitle,
           avatarWidget: _buildRequesterAvatar(ctx, requester),
           onSubmit: (String message) async {
-          try {
-            await _repository.rejectTakeNoteRequest(requestId, message);
-            if (!ctx.mounted) return;
-            Navigator.of(ctx).pop(true);
-          } catch (e) {
-            if (ctx.mounted) {
-              ScaffoldMessenger.of(ctx).showSnackBar(
-                SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-              );
+            try {
+              await _repository.rejectTakeNoteRequest(requestId, message);
+              if (!ctx.mounted) return;
+              Navigator.of(ctx).pop(true);
+            } catch (e) {
+              if (ctx.mounted) {
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  SnackBar(
+                      content:
+                          Text(e.toString().replaceFirst('Exception: ', ''))),
+                );
+              }
             }
-          }
-        },
+          },
+        ),
       ),
-    ),
     );
     if (submitted == true && mounted) _load();
   }
 
-  Widget _buildSentList(BuildContext context, Color surface, Color onSurface, Color onSurfaceVariant) {
+  Widget _buildSentList(BuildContext context, Color surface, Color onSurface,
+      Color onSurfaceVariant) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     if (_sentRequests.isEmpty) {
       return Center(
@@ -586,11 +622,12 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
           final status = req['status']?.toString() ?? 'pending';
           final recipient = req['recipient'] as Map<String, dynamic>?;
           final profile = req['profile'] as Map<String, dynamic>?;
-          final detailProfile = _resolveRequestProfile(req, primary: recipient ?? profile);
-          final nickname = detailProfile?['nickname']?.toString()
-              ?? recipient?['nickname']?.toString()
-              ?? profile?['nickname']?.toString()
-              ?? '알 수 없음';
+          final detailProfile =
+              _resolveSentRequestProfile(req, primary: recipient ?? profile);
+          final nickname = detailProfile?['nickname']?.toString() ??
+              recipient?['nickname']?.toString() ??
+              profile?['nickname']?.toString() ??
+              '알 수 없음';
           final read = _isRead(req);
           final rejectionMessage = req['rejectionMessage'] as String?;
           final isRejected = status == 'rejected';
@@ -600,7 +637,8 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
                   ? '거절됨'
                   : '대기 중';
           final senderMessage = (req['senderMessage'] as String?)?.trim();
-          final subtitle = _buildProfileSubtitle(detailProfile ?? recipient ?? profile);
+          final subtitle =
+              _buildProfileSubtitle(detailProfile ?? recipient ?? profile);
           final timeAgo = _formatTimeAgo(req);
 
           return _adLikeRequestCard(
@@ -611,9 +649,11 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
                 context,
                 requestId: requestId,
                 fallbackProfile: detailProfile ?? recipient ?? profile,
+                isSentRequest: true,
               ),
               behavior: HitTestBehavior.opaque,
-              child: _buildRecipientAvatar(context, detailProfile ?? recipient ?? profile),
+              child: _buildRecipientAvatar(
+                  context, detailProfile ?? recipient ?? profile),
             ),
             title: nickname,
             subtitle: subtitle,
@@ -688,7 +728,11 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
         children: [
           Icon(Icons.favorite, size: 16, color: Color(0xFF10B981)),
           SizedBox(width: 6),
-          Text('수락됨', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF10B981))),
+          Text('수락됨',
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF10B981))),
         ],
       );
     }
@@ -698,14 +742,20 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
         children: [
           Icon(LucideIcons.heartCrack, size: 16, color: Color(0xFF9CA3AF)),
           SizedBox(width: 6),
-          Text('거절됨', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF9CA3AF))),
+          Text('거절됨',
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF9CA3AF))),
         ],
       );
     }
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(LucideIcons.clock, size: 16, color: dark ? const Color(0xFFFBBF24) : const Color(0xFFB45309)),
+        Icon(LucideIcons.clock,
+            size: 16,
+            color: dark ? const Color(0xFFFBBF24) : const Color(0xFFB45309)),
         const SizedBox(width: 6),
         Text(
           read ? '읽음' : '답변 대기중',
@@ -731,8 +781,11 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
     Widget? badge,
     VoidCallback? onTap,
   }) {
-    final outerBg = dark ? const Color(0xFF374151).withOpacity(0.55) : Colors.white;
-    final innerBg = dark ? const Color(0xFF4B5563).withOpacity(0.50) : const Color(0xFFF9FAFB);
+    final outerBg =
+        dark ? const Color(0xFF374151).withOpacity(0.55) : Colors.white;
+    final innerBg = dark
+        ? const Color(0xFF4B5563).withOpacity(0.50)
+        : const Color(0xFFF9FAFB);
     final onTitle = dark ? Colors.white : const Color(0xFF111827);
     final onSub = dark ? Colors.grey.shade300 : Colors.grey.shade600;
     final onMsg = dark ? Colors.grey.shade200 : const Color(0xFF374151);
@@ -745,7 +798,10 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
         boxShadow: dark
             ? null
             : const [
-                BoxShadow(color: Color(0x1A000000), blurRadius: 16, offset: Offset(0, 6)),
+                BoxShadow(
+                    color: Color(0x1A000000),
+                    blurRadius: 16,
+                    offset: Offset(0, 6)),
               ],
       ),
       child: Material(
@@ -769,7 +825,10 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
                           width: 2,
                         ),
                         boxShadow: const [
-                          BoxShadow(color: Color(0x1A000000), blurRadius: 12, offset: Offset(0, 6)),
+                          BoxShadow(
+                              color: Color(0x1A000000),
+                              blurRadius: 12,
+                              offset: Offset(0, 6)),
                         ],
                       ),
                       child: avatar,
@@ -786,7 +845,10 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
                                   title,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: onTitle),
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                      color: onTitle),
                                 ),
                               ),
                               if (badge != null) ...[
@@ -801,7 +863,10 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
                               subtitle,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: onSub),
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: onSub),
                             ),
                           ],
                         ],
@@ -812,7 +877,10 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
                         padding: const EdgeInsets.only(left: 8),
                         child: Text(
                           timestamp,
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: onSub),
+                          style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: onSub),
                         ),
                       ),
                   ],
@@ -820,14 +888,18 @@ class _MailboxScreenState extends State<MailboxScreen> with SingleTickerProvider
                 if (message != null && message.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
                     decoration: BoxDecoration(
                       color: innerBg,
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: dark
                           ? null
                           : const [
-                              BoxShadow(color: Color(0x0D000000), blurRadius: 8, offset: Offset(0, 2)),
+                              BoxShadow(
+                                  color: Color(0x0D000000),
+                                  blurRadius: 8,
+                                  offset: Offset(0, 2)),
                             ],
                     ),
                     child: Text(
@@ -895,8 +967,11 @@ class _RejectReasonModalState extends State<RejectReasonModal> {
     final surface = dark ? const Color(0xFF1F2937) : Colors.white;
     final onSurface = dark ? Colors.white : const Color(0xFF111827);
     final onSurfaceVariant = dark ? Colors.grey.shade400 : Colors.grey.shade600;
-    final cardBg = dark ? const Color(0xFF374151).withOpacity(0.5) : const Color(0xFFF3F4F6);
-    final borderColor = dark ? const Color(0xFF4B5563) : const Color(0xFFE5E7EB);
+    final cardBg = dark
+        ? const Color(0xFF374151).withOpacity(0.5)
+        : const Color(0xFFF3F4F6);
+    final borderColor =
+        dark ? const Color(0xFF4B5563) : const Color(0xFFE5E7EB);
 
     return Material(
       color: Colors.transparent,
@@ -912,7 +987,8 @@ class _RejectReasonModalState extends State<RejectReasonModal> {
           color: surface,
           borderRadius: BorderRadius.circular(24),
           boxShadow: const [
-            BoxShadow(color: Color(0x40000000), blurRadius: 24, offset: Offset(0, 8)),
+            BoxShadow(
+                color: Color(0x40000000), blurRadius: 24, offset: Offset(0, 8)),
           ],
         ),
         clipBehavior: Clip.antiAlias,
@@ -942,7 +1018,8 @@ class _RejectReasonModalState extends State<RejectReasonModal> {
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(LucideIcons.x, size: 24, color: Colors.white),
+                        icon: const Icon(LucideIcons.x,
+                            size: 24, color: Colors.white),
                         onPressed: () => Navigator.of(context).pop(false),
                         tooltip: '닫기',
                       ),
@@ -951,7 +1028,8 @@ class _RejectReasonModalState extends State<RejectReasonModal> {
                   const SizedBox(height: 4),
                   Text(
                     '상대방에게 정중하게 거절 사유를 전달해주세요',
-                    style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.9)),
+                    style: TextStyle(
+                        fontSize: 14, color: Colors.white.withOpacity(0.9)),
                   ),
                 ],
               ),
@@ -965,134 +1043,160 @@ class _RejectReasonModalState extends State<RejectReasonModal> {
                   children: [
                     // 프로필 카드
                     Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: cardBg,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Row(
-                      children: [
-                        widget.avatarWidget,
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                widget.nickname,
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: onSurface),
-                              ),
-                              if (widget.subtitle.isNotEmpty) ...[
-                                const SizedBox(height: 2),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: cardBg,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        children: [
+                          widget.avatarWidget,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                                 Text(
-                                  widget.subtitle,
-                                  style: TextStyle(fontSize: 12, color: onSurfaceVariant),
+                                  widget.nickname,
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: onSurface),
                                 ),
+                                if (widget.subtitle.isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    widget.subtitle,
+                                    style: TextStyle(
+                                        fontSize: 12, color: onSurfaceVariant),
+                                  ),
+                                ],
                               ],
-                            ],
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // 사유 입력
-                  Stack(
-                    alignment: Alignment.bottomRight,
-                    children: [
-                      TextField(
-                        controller: _controller,
-                        maxLines: 4,
-                        maxLength: _maxLength,
-                        onChanged: (_) => setState(() {}),
-                        style: TextStyle(fontSize: 14, color: onSurface),
-                        decoration: InputDecoration(
-                          hintText: '',
-                          filled: true,
-                          fillColor: dark ? const Color(0xFF374151) : surface,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(color: borderColor),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(color: borderColor),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
-                          ),
-                          contentPadding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-                          counterText: '',
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(right: 12, bottom: 8),
-                        child: Text(
-                          '${_controller.text.trim().length}/$_maxLength',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: _isValid ? const Color(0xFF059669) : onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  // 검증 메시지
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: _isValid
-                          ? (dark ? const Color(0xFF064E3B).withOpacity(0.3) : const Color(0xFFD1FAE5).withOpacity(0.8))
-                          : (dark ? const Color(0xFF78350F).withOpacity(0.3) : const Color(0xFFFEF3C7)),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: _isValid
-                            ? (dark ? const Color(0xFF047857) : const Color(0xFFA7F3D0))
-                            : (dark ? const Color(0xFFB45309) : const Color(0xFFFDE68A)),
+                        ],
                       ),
                     ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    const SizedBox(height: 16),
+                    // 사유 입력
+                    Stack(
+                      alignment: Alignment.bottomRight,
                       children: [
-                        Icon(
-                          _isValid ? LucideIcons.heartCrack : LucideIcons.circleAlert,
-                          size: 20,
-                          color: _isValid ? const Color(0xFF059669) : const Color(0xFFB45309),
+                        TextField(
+                          controller: _controller,
+                          maxLines: 4,
+                          maxLength: _maxLength,
+                          onChanged: (_) => setState(() {}),
+                          style: TextStyle(fontSize: 14, color: onSurface),
+                          decoration: InputDecoration(
+                            hintText: '',
+                            filled: true,
+                            fillColor: dark ? const Color(0xFF374151) : surface,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(color: borderColor),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(color: borderColor),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  width: 2),
+                            ),
+                            contentPadding:
+                                const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                            counterText: '',
+                          ),
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
+                        Padding(
+                          padding: const EdgeInsets.only(right: 12, bottom: 8),
                           child: Text(
-                            _isValid
-                                ? '정중한 사유네요. 이제 전송할 수 있어요'
-                                : '최소 $_minLength자 이상 입력해주세요 (현재 ${_controller.text.trim().length}자)',
+                            '${_controller.text.trim().length}/$_maxLength',
                             style: TextStyle(
-                              fontSize: 13,
+                              fontSize: 12,
                               color: _isValid
-                                  ? (dark ? const Color(0xFF34D399) : const Color(0xFF047857))
-                                  : (dark ? const Color(0xFFFBBF24) : const Color(0xFFB45309)),
+                                  ? const Color(0xFF059669)
+                                  : onSurfaceVariant,
                             ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  // 전송 버튼
-                  FilledButton.icon(
-                    onPressed: _isValid ? _submit : null,
-                    icon: const Icon(LucideIcons.send, size: 18),
-                    label: Text(_isValid ? '정중하게 거절하기' : '사유를 입력해주세요'),
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    const SizedBox(height: 12),
+                    // 검증 메시지
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: _isValid
+                            ? (dark
+                                ? const Color(0xFF064E3B).withOpacity(0.3)
+                                : const Color(0xFFD1FAE5).withOpacity(0.8))
+                            : (dark
+                                ? const Color(0xFF78350F).withOpacity(0.3)
+                                : const Color(0xFFFEF3C7)),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _isValid
+                              ? (dark
+                                  ? const Color(0xFF047857)
+                                  : const Color(0xFFA7F3D0))
+                              : (dark
+                                  ? const Color(0xFFB45309)
+                                  : const Color(0xFFFDE68A)),
+                        ),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            _isValid
+                                ? LucideIcons.heartCrack
+                                : LucideIcons.circleAlert,
+                            size: 20,
+                            color: _isValid
+                                ? const Color(0xFF059669)
+                                : const Color(0xFFB45309),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _isValid
+                                  ? '정중한 사유네요. 이제 전송할 수 있어요'
+                                  : '최소 $_minLength자 이상 입력해주세요 (현재 ${_controller.text.trim().length}자)',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: _isValid
+                                    ? (dark
+                                        ? const Color(0xFF34D399)
+                                        : const Color(0xFF047857))
+                                    : (dark
+                                        ? const Color(0xFFFBBF24)
+                                        : const Color(0xFFB45309)),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                    // 전송 버튼
+                    FilledButton.icon(
+                      onPressed: _isValid ? _submit : null,
+                      icon: const Icon(LucideIcons.send, size: 18),
+                      label: Text(_isValid ? '정중하게 거절하기' : '사유를 입력해주세요'),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14)),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
           ],
         ),
       ),
@@ -1143,7 +1247,8 @@ class TakeNoteSentDetailScreen extends StatelessWidget {
           child: Column(
             children: [
               Container(
-                decoration: BoxDecoration(gradient: ThemeController.getHeaderGradient()),
+                decoration: BoxDecoration(
+                    gradient: ThemeController.getHeaderGradient()),
                 padding: const EdgeInsets.fromLTRB(12, 10, 12, 16),
                 child: Row(
                   children: [
@@ -1161,7 +1266,10 @@ class TakeNoteSentDetailScreen extends StatelessWidget {
                         '보낸 가져가기 요청',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white),
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white),
                       ),
                     ),
                   ],
@@ -1179,24 +1287,34 @@ class TakeNoteSentDetailScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 14),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
                         decoration: BoxDecoration(
                           color: dark ? const Color(0xFF1F2937) : Colors.white,
                           borderRadius: BorderRadius.circular(18),
                           boxShadow: const [
-                            BoxShadow(color: Color(0x14000000), blurRadius: 16, offset: Offset(0, 6)),
+                            BoxShadow(
+                                color: Color(0x14000000),
+                                blurRadius: 16,
+                                offset: Offset(0, 6)),
                           ],
                         ),
                         child: Row(
                           children: [
                             Icon(
-                              isRejected ? LucideIcons.heartCrack : (status == 'accepted' ? Icons.favorite : LucideIcons.clock),
+                              isRejected
+                                  ? LucideIcons.heartCrack
+                                  : (status == 'accepted'
+                                      ? Icons.favorite
+                                      : LucideIcons.clock),
                               size: 18,
                               color: isRejected
                                   ? const Color(0xFF9CA3AF)
                                   : status == 'accepted'
                                       ? const Color(0xFF10B981)
-                                      : (dark ? const Color(0xFFFBBF24) : const Color(0xFFB45309)),
+                                      : (dark
+                                          ? const Color(0xFFFBBF24)
+                                          : const Color(0xFFB45309)),
                             ),
                             const SizedBox(width: 8),
                             Text(
@@ -1214,44 +1332,60 @@ class TakeNoteSentDetailScreen extends StatelessWidget {
                           ],
                         ),
                       ),
-                      if (senderMessage != null && senderMessage!.trim().isNotEmpty) ...[
+                      if (senderMessage != null &&
+                          senderMessage!.trim().isNotEmpty) ...[
                         const SizedBox(height: 18),
                         _sectionLabel('내가 보낸 멘트', onSurfaceVariant),
                         const SizedBox(height: 8),
                         Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 12),
                           decoration: BoxDecoration(
-                            color: dark ? const Color(0xFF1F2937) : Colors.white,
+                            color:
+                                dark ? const Color(0xFF1F2937) : Colors.white,
                             borderRadius: BorderRadius.circular(18),
                             boxShadow: const [
-                              BoxShadow(color: Color(0x14000000), blurRadius: 16, offset: Offset(0, 6)),
+                              BoxShadow(
+                                  color: Color(0x14000000),
+                                  blurRadius: 16,
+                                  offset: Offset(0, 6)),
                             ],
                           ),
                           child: Text(
                             senderMessage!.trim(),
-                            style: TextStyle(fontSize: 14, height: 1.35, color: onSurface),
+                            style: TextStyle(
+                                fontSize: 14, height: 1.35, color: onSurface),
                           ),
                         ),
                       ],
-                      if (isRejected && rejectionMessage != null && rejectionMessage!.trim().isNotEmpty) ...[
+                      if (isRejected &&
+                          rejectionMessage != null &&
+                          rejectionMessage!.trim().isNotEmpty) ...[
                         const SizedBox(height: 18),
                         _sectionLabel('상대방 거절 사유', onSurfaceVariant),
                         const SizedBox(height: 8),
                         Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 12),
                           decoration: BoxDecoration(
-                            color: (dark ? Colors.red.shade900 : Colors.red.shade50).withOpacity(0.60),
+                            color: (dark
+                                    ? Colors.red.shade900
+                                    : Colors.red.shade50)
+                                .withOpacity(0.60),
                             borderRadius: BorderRadius.circular(18),
                             border: Border.all(
-                              color: dark ? Colors.red.shade700 : Colors.red.shade200,
+                              color: dark
+                                  ? Colors.red.shade700
+                                  : Colors.red.shade200,
                               width: 1,
                             ),
                           ),
                           child: Text(
                             rejectionMessage!.trim(),
-                            style: TextStyle(fontSize: 14, height: 1.35, color: onSurface),
+                            style: TextStyle(
+                                fontSize: 14, height: 1.35, color: onSurface),
                           ),
                         ),
                       ],

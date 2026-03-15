@@ -9,7 +9,6 @@ import 'package:nearo_app/features/matching_board/screens/matching_board_screen.
 import 'package:nearo_app/features/matching_board/widgets/match_card_avatar.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
-import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/shared/utils/post_time_format.dart';
 import 'package:nearo_app/shared/utils/mention_text_span.dart';
 
@@ -668,11 +667,10 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         onTap: () => _onAuthorTap(author),
                         child: Row(
                           children: [
-                            DiceBearAvatar(
-                              style: author['avatarStyle']?.toString() ?? 'lorelei',
-                              seed: author['avatarSeed']?.toString() ?? nickname,
-                              options: parseAvatarOptions(author['avatarOptions']),
-                              size: 34,
+                            SizedBox(
+                              width: 34,
+                              height: 34,
+                              child: buildMatchCardAvatar(author, size: 34),
                             ),
                             const SizedBox(width: 10),
                             Expanded(

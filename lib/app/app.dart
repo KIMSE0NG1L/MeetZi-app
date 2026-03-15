@@ -24,7 +24,7 @@ import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/auth/data/environment_status_repository.dart';
 import 'package:nearo_app/features/home/screens/home_shell_screen.dart';
 import 'package:nearo_app/features/home/screens/splash_screen.dart';
-import 'package:nearo_app/features/matching_board/screens/take_note_request_response_screen.dart';
+import 'package:nearo_app/features/matching_board/screens/mailbox_screen.dart';
 import 'package:nearo_app/features/community/screens/community_post_detail_screen.dart';
 import 'dart:async';
 import 'package:nearo_app/features/profile/screens/avatar_setup_screen.dart';
@@ -164,20 +164,11 @@ class _NearoAppState extends State<NearoApp> {
       return;
     }
     if (type == 'take_note_request') {
-      final requestId = data['requestId']?.toString();
-      if (requestId != null && requestId.isNotEmpty) {
-        Map<String, dynamic>? requesterProfile;
-        final rp = data['requesterProfile'];
-        if (rp is Map) requesterProfile = Map<String, dynamic>.from(rp);
-        _navigatorKey.currentState?.push(
-          MaterialPageRoute<void>(
-            builder: (_) => TakeNoteRequestResponseScreen(
-              requestId: requestId,
-              requesterProfile: requesterProfile,
-            ),
-          ),
-        );
-      }
+      _navigatorKey.currentState?.push(
+        MaterialPageRoute<void>(
+          builder: (_) => const MailboxScreen(),
+        ),
+      );
       return;
     }
     final roomId = data['roomId']?.toString();

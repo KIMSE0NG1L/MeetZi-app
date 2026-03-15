@@ -32,14 +32,19 @@ Widget buildMatchCardAvatar(
     }
   }
 
+  final rawOptions = user['avatarOptions'] ?? profile['avatarOptions'];
+  final options = parseAvatarOptions(rawOptions);
   final seed = user['avatarSeed']?.toString() ??
       profile['avatarSeed']?.toString() ??
+      user['id']?.toString() ??
+      profile['id']?.toString() ??
       profile['userId']?.toString() ??
       profile['nickname']?.toString() ??
       'user';
   return DiceBearAvatar(
     style: user['avatarStyle']?.toString() ?? 'lorelei',
     seed: seed,
+    options: options.isNotEmpty ? options : null,
     size: size,
   );
 }
