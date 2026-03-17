@@ -6,9 +6,14 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:nearo_app/app/app.dart';
+import 'package:nearo_app/app/app_routes.dart';
+import 'package:nearo_app/features/community/screens/community_post_detail_screen.dart';
+import 'package:nearo_app/features/matching_board/screens/mailbox_screen.dart';
 import 'package:nearo_app/features/notifications/data/notification_history_store.dart';
 import 'package:nearo_app/features/notifications/data/pending_take_note_store.dart';
 import 'package:nearo_app/shared/api/api_client.dart';
+
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
 void _saveNotificationToHistory(RemoteMessage message) {
   final id = message.messageId ?? '${message.hashCode}_${DateTime.now().millisecondsSinceEpoch}';
@@ -63,9 +68,53 @@ Future<void> _clearAppBadge() async {
   } catch (_) {}
 }
 
+void _handleNotificationNavigation(Map<String, dynamic> data) {
+  final navigator = rootNavigatorKey.currentState;
+  if (navigator == null) return;
+
+  final type = data['type']?.toString();
+  if (type == 'support_reply' || type == 'support_submitted') {
+    navigator.pushNamed(AppRoutes.customerSupport);
+    return;
+  }
+  if (type == 'community_comment_reply' || type == 'community_mention') {
+    final environmentId = data['environmentId']?.toString();
+    final postId = data['postId']?.toString();
+    final schoolName = data['schoolName']?.toString() ?? '커뮤니티';
+    if (environmentId != null && environmentId.isNotEmpty && postId != null && postId.isNotEmpty) {
+      navigator.push(
+        MaterialPageRoute<void>(
+          builder: (_) => CommunityPostDetailScreen(
+            environmentId: environmentId,
+            schoolName: schoolName,
+            postId: postId,
+          ),
+        ),
+      );
+    }
+    return;
+  }
+  if (type == 'take_note_request') {
+    navigator.push(
+      MaterialPageRoute<void>(
+        builder: (_) => const MailboxScreen(),
+      ),
+    );
+    return;
+  }
+  final roomId = data['roomId']?.toString();
+  if (roomId != null && roomId.isNotEmpty) {
+    navigator.pushNamed(
+      AppRoutes.chatRoom,
+      arguments: {'roomId': roomId, 'partnerNickname': '상대'},
+    );
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  Map<String, dynamic>? initialNavigationData;
 
   final messaging = FirebaseMessaging.instance;
   await messaging.requestPermission(alert: true, badge: true, sound: true);
@@ -111,6 +160,7 @@ void main() async {
 
   final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
   if (initialMessage != null && initialMessage.data.isNotEmpty) {
+    initialNavigationData = Map<String, dynamic>.from(initialMessage.data);
     final type = initialMessage.data['type']?.toString();
     if (type == 'take_note_request') {
       final requestId = initialMessage.data['requestId']?.toString();
@@ -194,12 +244,23 @@ void main() async {
         if (rp is Map) requesterProfile = Map<String, dynamic>.from(rp);
         PendingTakeNoteStore.instance.setPending(requestId, requesterProfile);
       }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _handleNotificationNavigation(Map<String, dynamic>.from(message.data));
+      });
       return;
     }
 
     _saveNotificationToHistory(message);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _handleNotificationNavigation(Map<String, dynamic>.from(message.data));
+    });
   });
 
   await _clearAppBadge();
-  runApp(const NearoApp());
+  runApp(NearoApp(navigatorKey: rootNavigatorKey));
+  if (initialNavigationData != null) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _handleNotificationNavigation(initialNavigationData!);
+    });
+  }
 }

@@ -1,6 +1,5 @@
 ﻿
 import 'package:app_links/app_links.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
@@ -24,8 +23,6 @@ import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/auth/data/environment_status_repository.dart';
 import 'package:nearo_app/features/home/screens/home_shell_screen.dart';
 import 'package:nearo_app/features/home/screens/splash_screen.dart';
-import 'package:nearo_app/features/matching_board/screens/mailbox_screen.dart';
-import 'package:nearo_app/features/community/screens/community_post_detail_screen.dart';
 import 'dart:async';
 import 'package:nearo_app/features/profile/screens/avatar_setup_screen.dart';
 import 'package:nearo_app/features/settings/screens/customer_support_screen.dart';
@@ -35,14 +32,16 @@ import 'package:nearo_app/presentation/pages/meetzy_email_verification_page.dart
 final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
 
 class NearoApp extends StatefulWidget {
-  const NearoApp({super.key});
+  const NearoApp({super.key, this.navigatorKey});
+
+  final GlobalKey<NavigatorState>? navigatorKey;
 
   @override
   State<NearoApp> createState() => _NearoAppState();
 }
 
 class _NearoAppState extends State<NearoApp> {
-  final _navigatorKey = GlobalKey<NavigatorState>();
+  final _fallbackNavigatorKey = GlobalKey<NavigatorState>();
   final _appLinks = AppLinks();
   final _tokenStorage = TokenStorage();
   late final ApiClient _apiClient;
@@ -50,9 +49,11 @@ class _NearoAppState extends State<NearoApp> {
   late final AuthRepository _authRepository;
   final _environmentStatusRepository = EnvironmentStatusRepository();
   StreamSubscription<Uri>? _linkSub;
-  Map<String, dynamic>? _pendingNotificationData;
   /// 설명 주석
   String? _initialRoute;
+
+  GlobalKey<NavigatorState> get _navigatorKey =>
+      widget.navigatorKey ?? _fallbackNavigatorKey;
 
   bool _hasAvatarConfigured(Map user) {
     final avatarSeed = user['avatarSeed']?.toString().trim();
@@ -68,7 +69,6 @@ class _NearoAppState extends State<NearoApp> {
     _authRepository = AuthRepository(client: _apiClient, tokenStorage: _tokenStorage);
 
     _authService.init();
-    _initFcmOpenHandler();
     _resolveInitialRoute();
     _initDeepLinks();
   }
@@ -139,64 +139,6 @@ class _NearoAppState extends State<NearoApp> {
       await Future.delayed(Duration(milliseconds: 3300 - elapsed));
     }
     if (mounted) setState(() => _initialRoute = route);
-  }
-
-  Future<void> _initFcmOpenHandler() async {
-    final initial = await FirebaseMessaging.instance.getInitialMessage();
-    if (initial?.data != null && initial!.data.isNotEmpty) {
-      _pendingNotificationData = Map<String, dynamic>.from(initial.data);
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _pendingNotificationData != null) {
-          _handleNotificationData(_pendingNotificationData!);
-          _pendingNotificationData = null;
-        }
-      });
-    }
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage msg) {
-      if (msg.data.isNotEmpty) {
-        _handleNotificationData(Map<String, dynamic>.from(msg.data));
-      }
-    });
-  }
-
-  void _handleNotificationData(Map<String, dynamic> data) {
-    final type = data['type']?.toString();
-    if (type == 'support_reply' || type == 'support_submitted') {
-      _navigatorKey.currentState?.pushNamed(AppRoutes.customerSupport);
-      return;
-    }
-    if (type == 'community_comment_reply' || type == 'community_mention') {
-      final environmentId = data['environmentId']?.toString();
-      final postId = data['postId']?.toString();
-      final schoolName = data['schoolName']?.toString() ?? '커뮤니티';
-      if (environmentId != null && environmentId.isNotEmpty && postId != null && postId.isNotEmpty) {
-        _navigatorKey.currentState?.push(
-          MaterialPageRoute<void>(
-            builder: (_) => CommunityPostDetailScreen(
-              environmentId: environmentId,
-              schoolName: schoolName,
-              postId: postId,
-            ),
-          ),
-        );
-      }
-      return;
-    }
-    if (type == 'take_note_request') {
-      _navigatorKey.currentState?.push(
-        MaterialPageRoute<void>(
-          builder: (_) => const MailboxScreen(),
-        ),
-      );
-      return;
-    }
-    final roomId = data['roomId']?.toString();
-    if (roomId != null && roomId.isNotEmpty) {
-      _navigatorKey.currentState?.pushNamed(
-        AppRoutes.chatRoom,
-        arguments: {'roomId': roomId, 'partnerNickname': '상대'},
-      );
-    }
   }
 
   Future<void> _initDeepLinks() async {
