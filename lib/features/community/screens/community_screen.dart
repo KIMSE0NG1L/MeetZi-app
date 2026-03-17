@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/community/data/community_repository.dart';
@@ -6,6 +6,7 @@ import 'package:nearo_app/features/community/screens/community_post_detail_scree
 import 'package:nearo_app/features/community/screens/community_post_write_screen.dart';
 import 'package:nearo_app/features/matching_board/data/matching_board_repository.dart';
 import 'package:nearo_app/features/matching_board/screens/matching_board_screen.dart';
+import 'package:nearo_app/features/matching_board/utils/board_note_sheet_launcher.dart';
 import 'package:nearo_app/features/matching_board/widgets/match_card_avatar.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
@@ -162,30 +163,11 @@ class _CommunityScreenState extends State<CommunityScreen> {
     try {
       final profile = await _matchingRepo.fetchProfileByUserId(userId);
       if (!mounted) return;
-      final tickets = await _matchingRepo.fetchMyTickets();
-      if (!mounted) return;
-      await showBoardNoteSheet(
-        context,
-        profiles: [profile],
-        startIndex: 0,
+      await launchBoardNoteSheet(
+        context: context,
+        repo: _matchingRepo,
+        profile: profile,
         buildAvatar: (ctx, p) => buildMatchCardAvatar(p),
-        myMatchingTicket: tickets.matchingTicket,
-        onRefreshTickets: () async {
-          if (mounted) setState(() {});
-        },
-        onTakeNote: (profileId, _, {String? message}) async {
-          try {
-            await _matchingRepo.takeNote(profileId, message: message);
-            return true;
-          } catch (e) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-              );
-            }
-            return false;
-          }
-        },
       );
     } catch (e) {
       if (!mounted) return;
