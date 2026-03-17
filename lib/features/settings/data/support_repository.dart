@@ -18,14 +18,13 @@ class SupportRepository {
   }
 
   /// 내 문의 목록 (로그인 시 앱 내 문의함용)
+  /// 
+  /// 예외:
+  /// - [DioException]: 네트워크 오류 또는 서버 에러
   Future<List<Map<String, dynamic>>> getMyInquiries() async {
-    try {
-      final res = await _client.dio.get<List>('/support/inquiries');
-      final list = res.data;
-      if (list == null) return [];
-      return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
-    } catch (_) {
-      return [];
-    }
+    final res = await _client.dio.get<List>('/support/inquiries');
+    final list = res.data;
+    if (list == null) return [];
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 }
