@@ -45,7 +45,9 @@ class _NearoAppState extends State<NearoApp> {
   final _navigatorKey = GlobalKey<NavigatorState>();
   final _appLinks = AppLinks();
   final _tokenStorage = TokenStorage();
-  final _authRepository = AuthRepository();
+  late final ApiClient _apiClient;
+  late final AuthService _authService;
+  late final AuthRepository _authRepository;
   final _environmentStatusRepository = EnvironmentStatusRepository();
   StreamSubscription<Uri>? _linkSub;
   Map<String, dynamic>? _pendingNotificationData;
@@ -60,6 +62,12 @@ class _NearoAppState extends State<NearoApp> {
   @override
   void initState() {
     super.initState();
+
+    _apiClient = ApiClient(onLogout: _handleLogout, tokenStorage: _tokenStorage);
+    _authService = AuthService(apiClient: _apiClient, tokenStorage: _tokenStorage, onLogout: _handleLogout);
+    _authRepository = AuthRepository(client: _apiClient, tokenStorage: _tokenStorage);
+
+    _authService.init();
     _initFcmOpenHandler();
     _resolveInitialRoute();
     _initDeepLinks();
@@ -82,7 +90,11 @@ class _NearoAppState extends State<NearoApp> {
 
     if (isLoginSuccessLink) {
       final tokenFromLink = (initialLink.queryParameters['token'] ?? '').trim();
-      if (tokenFromLink.isNotEmpty) {
+      final refreshFromLink = (initialLink.queryParameters['refresh_token'] ?? '').trim();
+      if (tokenFromLink.isNotEmpty && refreshFromLink.isNotEmpty) {
+        await _authRepository.saveTokens(accessToken: tokenFromLink, refreshToken: refreshFromLink);
+      } else if (tokenFromLink.isNotEmpty) {
+        // 기존 동작 유지 (구버전 호환)
         await _tokenStorage.saveAccessToken(tokenFromLink);
       }
     }
@@ -259,8 +271,13 @@ class _NearoAppState extends State<NearoApp> {
   void _handleLink(Uri uri, {bool isInitial = false}) {
     if (uri.scheme == 'nearo' && uri.host == 'login-success') {
       final token = uri.queryParameters['token'];
+      final refreshToken = uri.queryParameters['refresh_token'];
       if (token != null && token.isNotEmpty) {
-        _tokenStorage.saveAccessToken(token);
+        if (refreshToken != null && refreshToken.isNotEmpty) {
+          _authRepository.saveTokens(accessToken: token, refreshToken: refreshToken);
+        } else {
+          _tokenStorage.saveAccessToken(token);
+        }
       }
       // 코드 시작이 아닌 동안(앱이 이미 떠 있는 상태에서 링크로 복귀) 세션 복원 분기로 이동
       if (!isInitial) {
@@ -268,6 +285,16 @@ class _NearoAppState extends State<NearoApp> {
           _restoreSession();
         });
       }
+    }
+  }
+
+  Future<void> _handleLogout() async {
+    await _authService.logout();
+    if (_navigatorKey.currentState != null) {
+      _navigatorKey.currentState!.pushNamedAndRemoveUntil(
+        AppRoutes.login,
+        (route) => false,
+      );
     }
   }
 

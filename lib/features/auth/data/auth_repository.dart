@@ -15,6 +15,10 @@ class AuthRepository {
       : _client = client ?? ApiClient(),
         _tokenStorage = tokenStorage ?? TokenStorage();
 
+  Future<void> saveTokens({required String accessToken, required String refreshToken}) {
+    return _tokenStorage.saveTokens(accessToken: accessToken, refreshToken: refreshToken);
+  }
+
   Future<Map<String, dynamic>> getProfile({bool forceRefresh = false}) async {
     final now = DateTime.now();
     if (!forceRefresh &&
