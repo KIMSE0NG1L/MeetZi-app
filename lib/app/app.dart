@@ -41,6 +41,7 @@ class NearoApp extends StatefulWidget {
 }
 
 class _NearoAppState extends State<NearoApp> {
+  static const int _minSplashDurationMs = 3300;
   final _fallbackNavigatorKey = GlobalKey<NavigatorState>();
   final _appLinks = AppLinks();
   final _tokenStorage = TokenStorage();
@@ -135,8 +136,8 @@ class _NearoAppState extends State<NearoApp> {
     }
     // 설명 주석
     final elapsed = stopwatch.elapsedMilliseconds;
-    if (elapsed < 3300) {
-      await Future.delayed(Duration(milliseconds: 3300 - elapsed));
+    if (elapsed < _minSplashDurationMs) {
+      await Future.delayed(Duration(milliseconds: _minSplashDurationMs - elapsed));
     }
     if (mounted) setState(() => _initialRoute = route);
   }
