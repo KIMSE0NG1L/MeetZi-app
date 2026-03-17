@@ -16,6 +16,7 @@ import 'package:nearo_app/features/notifications/data/pending_take_note_store.da
 import 'package:nearo_app/features/profile/screens/my_profile_screen.dart';
 import 'package:nearo_app/features/ratings/screens/ratings_screen.dart';
 import 'package:nearo_app/features/settings/screens/settings_screen.dart';
+import 'package:nearo_app/features/matching_board/utils/board_note_sheet_launcher.dart';
 import 'package:nearo_app/shared/api/api_client.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
@@ -441,25 +442,17 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
         excludeUserIds: _recentRandomUserIds,
       );
       if (!mounted) return;
-      final tickets = await _matchingBoardRepository.fetchMyTickets();
-      if (!mounted) return;
-      await showBoardNoteSheet(
-        context,
-        profiles: [profile],
-        startIndex: 0,
+      await launchBoardNoteSheet(
+        context: context,
+        repo: _matchingBoardRepository,
+        profile: profile,
         buildAvatar: (ctx, p) => buildMatchCardAvatar(p),
-        myMatchingTicket: tickets.matchingTicket,
-        onRefreshTickets: () async {
-          if (!mounted) return;
-          setState(() {});
-        },
         showTertiaryCloseButton: true,
         onPop: () {
           if (mounted) setState(() {});
         },
         onRequestNextProfile: (excludeUserIds) async {
           try {
-            // 이번 시트에서 이미 본 사람만 제외. _recentRandomUserIds 넣으면 게시판에 4명 있어도 전부 제외돼서 다음 프로필 없음 뜸
             final next = await _matchingBoardRepository.fetchRandomProfile(
               excludeUserIds: excludeUserIds,
             );
@@ -467,19 +460,6 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
             return next;
           } catch (_) {
             return null;
-          }
-        },
-        onTakeNote: (profileId, _, {String? message}) async {
-          try {
-            await _matchingBoardRepository.takeNote(profileId, message: message);
-            return true;
-          } catch (e) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-              );
-            }
-            return false;
           }
         },
       );
