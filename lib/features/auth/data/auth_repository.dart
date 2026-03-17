@@ -86,9 +86,8 @@ class AuthRepository {
     }
     try {
       // 헤더만으로 401 나는 경우 대비, 쿼리에도 토큰 전달
-      final uri = '${ApiEndpoints.accountDelete}?access_token=${Uri.encodeComponent(token)}';
       await _client.dio.delete(
-        uri,
+        ApiEndpoints.accountDelete,
         options: Options(
           headers: {'Authorization': 'Bearer $token'},
         ),

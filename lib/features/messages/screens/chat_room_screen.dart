@@ -12,6 +12,7 @@ import 'package:nearo_app/shared/utils/app_config.dart';
 import 'package:nearo_app/shared/utils/photo_url.dart';
 import 'package:nearo_app/shared/utils/app_config.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
+import 'package:nearo_app/shared/utils/token_storage.dart';
 import 'package:nearo_app/core/auth/auth_repository.dart';
 import 'package:nearo_app/features/matching_board/profile_detail_sheet.dart';
 import 'package:nearo_app/features/messages/data/ice_breaking_phrases.dart';
@@ -60,6 +61,7 @@ class ChatRoomScreen extends StatefulWidget {
 class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObserver {
   bool _isMuted = false;
   final _authRepository = AuthRepository();
+  final _tokenStorage = TokenStorage();
   Future<void> _toggleMute() async {
     if (_roomId == null) return;
     final newMute = !_isMuted;
@@ -328,15 +330,22 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
 
   Future<void> _initSocket() async {
     if (_roomId == null || _myUserId == null || _myUserId!.isEmpty) return;
+    final accessToken = await _tokenStorage.readAccessToken();
+    if (accessToken == null || accessToken.isEmpty) {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+      return;
+    }
     final completer = Completer<void>();
     print('[소켓 연결 시도] roomId=$_roomId, myUserId=$_myUserId');
     _socket = IO.io(
-      '${AppConfig.baseUrl}/chat',
-      IO.OptionBuilder()
-          .setTransports(['websocket'])
-          .setAuth({'userId': _myUserId})
-          .disableAutoConnect()
-          .build(),
+        '${AppConfig.baseUrl}/chat',
+        IO.OptionBuilder()
+            .setTransports(['websocket'])
+            .setAuth({'accessToken': accessToken})
+            .disableAutoConnect()
+            .build(),
     );
     _socket!.onConnect((_) {
       print('[소켓 연결 성공]');
