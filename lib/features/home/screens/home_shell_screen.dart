@@ -79,7 +79,8 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
         '/users/push-token',
         data: {'token': token, 'platform': 'android'},
       );
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Failed to register push token: $e');
       // 로그인 전이거나 네트워크 오류 시 무시
     }
   }
@@ -206,7 +207,9 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
           final primaryHex = (status['environment'] as Map?)?['primaryColor']?.toString();
           final primary = ThemeController.parsePrimaryColor(primaryHex);
           if (primary != null) ThemeController.setSeedColor(primary);
-        } catch (_) {}
+        } catch (e) {
+          debugPrint('Failed to load school theme color: $e');
+        }
       }
       final result = await _authRepository.getProfile();
       final user = (result['user'] as Map?)?.cast<String, dynamic>() ?? result as Map<String, dynamic>;
@@ -214,7 +217,8 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
         _profile = user;
         _profileLoading = false;
       });
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Failed to load theme and profile: $e');
       setState(() => _profileLoading = false);
     }
   }
@@ -458,7 +462,8 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
             );
             _rememberRandomUser(next);
             return next;
-          } catch (_) {
+          } catch (e) {
+            debugPrint('Failed to fetch next random profile: $e');
             return null;
           }
         },

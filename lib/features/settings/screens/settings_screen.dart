@@ -38,7 +38,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           schoolName = (user['affiliationText'] ?? user['school'])?.toString().trim();
           if (schoolName != null && schoolName.isEmpty) schoolName = null;
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('Failed to get profile for school color: $e');
+      }
       if (schoolName != null) {
         final list = await EnvironmentRepository().getEnvironments();
         for (final e in list) {
@@ -56,7 +58,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final primaryHex = (status['environment'] as Map?)?['primaryColor']?.toString();
       final primary = ThemeController.parsePrimaryColor(primaryHex);
       if (mounted && primary != null) setState(() => _schoolColor = primary);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Failed to load school color: $e');
+    }
   }
   Future<void> _logout(BuildContext context) async {
     final confirmed = await showDialog<bool>(
@@ -239,7 +243,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               if (primary != null && context.mounted) {
                                 await ThemeController.setThemeColorModeSchool(primary);
                               }
-                            } catch (_) {
+                            } catch (e) {
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(content: Text('교색을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')),

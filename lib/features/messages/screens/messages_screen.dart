@@ -41,7 +41,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
       final user = res['user'] as Map<String, dynamic>?;
       final id = user?['id']?.toString() ?? res['id']?.toString();
       if (mounted) setState(() => _myUserId = id);
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Failed to load profile: $e');
       if (mounted) setState(() => _myUserId = null);
     }
     await _loadRooms();
@@ -74,7 +75,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
         }
         unreadCounts[roomId] = count;
         lastTimes[roomId] = lastTime;
-      } catch (_) {
+      } catch (e) {
+        debugPrint('Failed to load messages for room $roomId: $e');
         unreadCounts[roomId] = 0;
         lastTimes[roomId] = null;
       }
@@ -149,7 +151,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
         _loading = false;
       });
       await _loadUnreadCountsAndTimes();
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Failed to load rooms: $e');
       if (!mounted) return;
       setState(() {
         _rooms = [];
@@ -187,7 +190,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
       try {
         final roomData = await _repository.getRoom(roomId: roomId);
         matchId = roomData['matchId']?.toString();
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('Failed to get matchId for room: $e');
+      }
     }
     if (matchId == null || matchId.isEmpty) {
       if (context.mounted) {
@@ -234,7 +239,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
         hideMatchButton: true,
         overridePhotoUrlForEnlarge: effectivePhotoUrl,
       );
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Failed to load partner profile: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('프로필을 불러올 수 없습니다.')),

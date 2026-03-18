@@ -100,7 +100,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         if (name != null && name.isNotEmpty) _affiliation = name;
         _affiliationLoaded = true;
       });
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Failed to load verified affiliation: $e');
       if (!mounted) return;
       setState(() {
         _affiliationLoaded = true;
@@ -299,7 +300,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
           if (decoded is Map<String, dynamic>) {
             _avatarOptions = decoded.map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
           }
-        } catch (_) {}
+        } catch (e) {
+          debugPrint('Failed to decode avatarOptions: $e');
+        }
       }
       final boardDisplay = user['boardDisplayType']?.toString();
       if (boardDisplay == 'photo' || boardDisplay == 'avatar') _boardDisplayType = boardDisplay!;
@@ -310,7 +313,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         _isEditing = _forceEdit || (!_isInitialSetup && hasExistingProfile);
       });
       await _loadPhotos();
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Failed to load profile: $e');
       // ignore if profile not found
     }
   }
@@ -320,7 +324,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       final photos = await _photoRepository.getMyPhotos();
       if (!mounted) return;
       setState(() => _photos = photos);
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Failed to load photos: $e');
       if (!mounted) return;
       setState(() => _photoError = '사진을 불러오지 못했습니다.');
     }
@@ -464,7 +469,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
           setState(() => _boardDisplayType = value);
           try {
             await _repository.setBoardDisplayType(value);
-          } catch (_) {
+          } catch (e) {
+            debugPrint('Failed to set board display type: $e');
             if (mounted) setState(() => _boardDisplayType = prev);
           }
         },

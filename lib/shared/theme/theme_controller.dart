@@ -22,7 +22,9 @@ class ThemeController {
       if (mode == _valuePink) {
         setSeedColor(designPink);
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Failed to load theme color mode: $e');
+    }
   }
 
   /// 핑크색 선택 시: seedColor를 Design 핑크로 설정 후 저장.
@@ -32,7 +34,9 @@ class ThemeController {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_keyThemeColorMode, _valuePink);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Failed to save pink theme mode: $e');
+    }
   }
 
   /// 교색 선택 시: seedColor는 호출측에서 DB primary로 설정. 모드만 저장.
@@ -42,7 +46,9 @@ class ThemeController {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_keyThemeColorMode, _valueSchool);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Failed to save school theme mode: $e');
+    }
   }
 
   /// DB primaryColor(hex, e.g. "#003380") → Color. null/empty면 null.

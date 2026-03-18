@@ -187,7 +187,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
         _myUserId = null;
         setState(() => _loading = false);
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Failed to fetch user profile/init socket: $e');
       _myUserId = null;
       setState(() => _loading = false);
     }
@@ -245,7 +246,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
       }
       final list = room['messageReadAts'];
       if (list is List) _applyMessageReadAts(list);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[syncReadAt] failed: $e');
+    }
   }
 
   // 읽지 않은 메시지에 대해 소켓으로 읽음 이벤트 전송
@@ -322,7 +325,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
       // 알림/뱃지 클리어
       await clearAllNotifications();
       await _loadRoomState();
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[loadMessages] failed: $e');
       if (!mounted) return;
       setState(() => _loading = false);
     }
@@ -550,7 +554,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
       });
       try {
         await _repository.sendMessage(roomId: _roomId!, content: text);
-      } catch (_) {
+      } catch (e) {
+        debugPrint('[sendMessage HTTP fallback] failed: $e');
         if (!mounted) return;
         setState(() {
           _messages.add(_ChatMessage(
@@ -594,7 +599,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
       setState(() => _isActive = false);
       _controller.clear();
       Navigator.of(context).pop(true);
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[cancelMatch] failed: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('매칭 취소에 실패했습니다.')),
