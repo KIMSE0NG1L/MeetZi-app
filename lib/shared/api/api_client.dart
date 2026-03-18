@@ -75,7 +75,8 @@ class ApiClient {
                 final response = await _dio.fetch(error.requestOptions);
                 return handler.resolve(response);
               }
-            } catch (_) {
+            } catch (e) {
+              debugPrint('[ApiClient] token refresh failed: $e');
               // ignore, fallback to logout handler below
             }
 
@@ -112,7 +113,8 @@ class ApiClient {
           return true;
         }
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[ApiClient] refresh token request failed: $e');
       // ignore
     } finally {
       _refreshing = false;
