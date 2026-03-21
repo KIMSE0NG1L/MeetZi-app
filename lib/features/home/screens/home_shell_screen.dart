@@ -16,6 +16,7 @@ import 'package:nearo_app/features/notifications/data/pending_take_note_store.da
 import 'package:nearo_app/features/profile/screens/my_profile_screen.dart';
 import 'package:nearo_app/features/ratings/screens/ratings_screen.dart';
 import 'package:nearo_app/features/settings/screens/settings_screen.dart';
+import 'package:nearo_app/features/matching_board/utils/board_note_sheet_launcher.dart';
 import 'package:nearo_app/shared/api/api_client.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
@@ -78,7 +79,8 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
         '/users/push-token',
         data: {'token': token, 'platform': 'android'},
       );
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Failed to register push token: $e');
       // 로그인 전이거나 네트워크 오류 시 무시
     }
   }
@@ -205,7 +207,9 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
           final primaryHex = (status['environment'] as Map?)?['primaryColor']?.toString();
           final primary = ThemeController.parsePrimaryColor(primaryHex);
           if (primary != null) ThemeController.setSeedColor(primary);
-        } catch (_) {}
+        } catch (e) {
+          debugPrint('Failed to load school theme color: $e');
+        }
       }
       final result = await _authRepository.getProfile();
       final user = (result['user'] as Map?)?.cast<String, dynamic>() ?? result as Map<String, dynamic>;
@@ -213,7 +217,8 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
         _profile = user;
         _profileLoading = false;
       });
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Failed to load theme and profile: $e');
       setState(() => _profileLoading = false);
     }
   }
@@ -441,45 +446,25 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
         excludeUserIds: _recentRandomUserIds,
       );
       if (!mounted) return;
-      final tickets = await _matchingBoardRepository.fetchMyTickets();
-      if (!mounted) return;
-      await showBoardNoteSheet(
-        context,
-        profiles: [profile],
-        startIndex: 0,
+      await launchBoardNoteSheet(
+        context: context,
+        repo: _matchingBoardRepository,
+        profile: profile,
         buildAvatar: (ctx, p) => buildMatchCardAvatar(p),
-        myMatchingTicket: tickets.matchingTicket,
-        onRefreshTickets: () async {
-          if (!mounted) return;
-          setState(() {});
-        },
         showTertiaryCloseButton: true,
         onPop: () {
           if (mounted) setState(() {});
         },
         onRequestNextProfile: (excludeUserIds) async {
           try {
-            // 이번 시트에서 이미 본 사람만 제외. _recentRandomUserIds 넣으면 게시판에 4명 있어도 전부 제외돼서 다음 프로필 없음 뜸
             final next = await _matchingBoardRepository.fetchRandomProfile(
               excludeUserIds: excludeUserIds,
             );
             _rememberRandomUser(next);
             return next;
-          } catch (_) {
-            return null;
-          }
-        },
-        onTakeNote: (profileId, _, {String? message}) async {
-          try {
-            await _matchingBoardRepository.takeNote(profileId, message: message);
-            return true;
           } catch (e) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-              );
-            }
-            return false;
+            debugPrint('Failed to fetch next random profile: $e');
+            return null;
           }
         },
       );

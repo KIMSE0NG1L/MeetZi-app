@@ -1,0 +1,18 @@
+workflows:
+  ios-release:
+    name: iOS Release Build
+    environment:
+      flutter: stable
+      xcode: latest
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.nearo.nearoApp
+
+    scripts:
+      - flutter pub get
+      - name: Set up code signing settings on Xcode project
+        script: xcode-project use-profiles
+      - flutter build ipa --release
+
+    artifacts:
+      - build/ios/ipa/*.ipa

@@ -1,6 +1,4 @@
-﻿
 import 'package:app_links/app_links.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
@@ -24,8 +22,6 @@ import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/auth/data/environment_status_repository.dart';
 import 'package:nearo_app/features/home/screens/home_shell_screen.dart';
 import 'package:nearo_app/features/home/screens/splash_screen.dart';
-import 'package:nearo_app/features/matching_board/screens/mailbox_screen.dart';
-import 'package:nearo_app/features/community/screens/community_post_detail_screen.dart';
 import 'dart:async';
 import 'package:nearo_app/features/profile/screens/avatar_setup_screen.dart';
 import 'package:nearo_app/features/settings/screens/customer_support_screen.dart';
@@ -35,22 +31,30 @@ import 'package:nearo_app/presentation/pages/meetzy_email_verification_page.dart
 final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
 
 class NearoApp extends StatefulWidget {
-  const NearoApp({super.key});
+  const NearoApp({super.key, this.navigatorKey});
+
+  final GlobalKey<NavigatorState>? navigatorKey;
 
   @override
   State<NearoApp> createState() => _NearoAppState();
 }
 
 class _NearoAppState extends State<NearoApp> {
-  final _navigatorKey = GlobalKey<NavigatorState>();
+  static const int _minSplashDurationMs = 3300;
+  final _fallbackNavigatorKey = GlobalKey<NavigatorState>();
   final _appLinks = AppLinks();
   final _tokenStorage = TokenStorage();
-  final _authRepository = AuthRepository();
+  late final ApiClient _apiClient;
+  late final AuthService _authService;
+  late final AuthRepository _authRepository;
   final _environmentStatusRepository = EnvironmentStatusRepository();
   StreamSubscription<Uri>? _linkSub;
-  Map<String, dynamic>? _pendingNotificationData;
+
   /// 설명 주석
   String? _initialRoute;
+
+  GlobalKey<NavigatorState> get _navigatorKey =>
+      widget.navigatorKey ?? _fallbackNavigatorKey;
 
   bool _hasAvatarConfigured(Map user) {
     final avatarSeed = user['avatarSeed']?.toString().trim();
@@ -60,7 +64,17 @@ class _NearoAppState extends State<NearoApp> {
   @override
   void initState() {
     super.initState();
-    _initFcmOpenHandler();
+
+    _apiClient =
+        ApiClient(onLogout: _handleLogout, tokenStorage: _tokenStorage);
+    _authService = AuthService(
+        apiClient: _apiClient,
+        tokenStorage: _tokenStorage,
+        onLogout: _handleLogout);
+    _authRepository =
+        AuthRepository(client: _apiClient, tokenStorage: _tokenStorage);
+
+    _authService.init();
     _resolveInitialRoute();
     _initDeepLinks();
   }
@@ -82,7 +96,13 @@ class _NearoAppState extends State<NearoApp> {
 
     if (isLoginSuccessLink) {
       final tokenFromLink = (initialLink.queryParameters['token'] ?? '').trim();
-      if (tokenFromLink.isNotEmpty) {
+      final refreshFromLink =
+          (initialLink.queryParameters['refresh_token'] ?? '').trim();
+      if (tokenFromLink.isNotEmpty && refreshFromLink.isNotEmpty) {
+        await _authRepository.saveTokens(
+            accessToken: tokenFromLink, refreshToken: refreshFromLink);
+      } else if (tokenFromLink.isNotEmpty) {
+        // 기존 동작 유지 (구버전 호환)
         await _tokenStorage.saveAccessToken(tokenFromLink);
       }
     }
@@ -112,79 +132,24 @@ class _NearoAppState extends State<NearoApp> {
             } else {
               route = AppRoutes.environment;
             }
-          } catch (_) {
+          } catch (e) {
+            debugPrint('Error getting environment status: $e');
             route = AppRoutes.environment;
           }
         }
-      } catch (_) {
+      } catch (e) {
+        debugPrint('Error fetching profile during init: $e');
         await _tokenStorage.clear();
         route = AppRoutes.onboarding;
       }
     }
     // 설명 주석
     final elapsed = stopwatch.elapsedMilliseconds;
-    if (elapsed < 3300) {
-      await Future.delayed(Duration(milliseconds: 3300 - elapsed));
+    if (elapsed < _minSplashDurationMs) {
+      await Future.delayed(
+          Duration(milliseconds: _minSplashDurationMs - elapsed));
     }
     if (mounted) setState(() => _initialRoute = route);
-  }
-
-  Future<void> _initFcmOpenHandler() async {
-    final initial = await FirebaseMessaging.instance.getInitialMessage();
-    if (initial?.data != null && initial!.data.isNotEmpty) {
-      _pendingNotificationData = Map<String, dynamic>.from(initial.data);
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _pendingNotificationData != null) {
-          _handleNotificationData(_pendingNotificationData!);
-          _pendingNotificationData = null;
-        }
-      });
-    }
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage msg) {
-      if (msg.data.isNotEmpty) {
-        _handleNotificationData(Map<String, dynamic>.from(msg.data));
-      }
-    });
-  }
-
-  void _handleNotificationData(Map<String, dynamic> data) {
-    final type = data['type']?.toString();
-    if (type == 'support_reply' || type == 'support_submitted') {
-      _navigatorKey.currentState?.pushNamed(AppRoutes.customerSupport);
-      return;
-    }
-    if (type == 'community_comment_reply' || type == 'community_mention') {
-      final environmentId = data['environmentId']?.toString();
-      final postId = data['postId']?.toString();
-      final schoolName = data['schoolName']?.toString() ?? '커뮤니티';
-      if (environmentId != null && environmentId.isNotEmpty && postId != null && postId.isNotEmpty) {
-        _navigatorKey.currentState?.push(
-          MaterialPageRoute<void>(
-            builder: (_) => CommunityPostDetailScreen(
-              environmentId: environmentId,
-              schoolName: schoolName,
-              postId: postId,
-            ),
-          ),
-        );
-      }
-      return;
-    }
-    if (type == 'take_note_request') {
-      _navigatorKey.currentState?.push(
-        MaterialPageRoute<void>(
-          builder: (_) => const MailboxScreen(),
-        ),
-      );
-      return;
-    }
-    final roomId = data['roomId']?.toString();
-    if (roomId != null && roomId.isNotEmpty) {
-      _navigatorKey.currentState?.pushNamed(
-        AppRoutes.chatRoom,
-        arguments: {'roomId': roomId, 'partnerNickname': '상대'},
-      );
-    }
   }
 
   Future<void> _initDeepLinks() async {
@@ -202,10 +167,8 @@ class _NearoAppState extends State<NearoApp> {
         final profile = await _authRepository.getProfile();
         final user = (profile['user'] as Map?) ?? profile;
         final hasProfile = user['nickname'] != null;
-        final hasAffiliation = (user['affiliationText'] as String?)
-                ?.trim()
-                .isNotEmpty ??
-            false;
+        final hasAffiliation =
+            (user['affiliationText'] as String?)?.trim().isNotEmpty ?? false;
         final hasAvatar = _hasAvatarConfigured(user);
         if (hasProfile && hasAffiliation && hasAvatar) {
           try {
@@ -232,8 +195,9 @@ class _NearoAppState extends State<NearoApp> {
                 (route) => false,
               );
             }
-          } catch (_) {
+          } catch (e) {
             // 설명 주석
+            debugPrint('Error restoring session: $e');
             _navigatorKey.currentState?.pushNamedAndRemoveUntil(
               AppRoutes.environment,
               (route) => false,
@@ -250,7 +214,8 @@ class _NearoAppState extends State<NearoApp> {
             (route) => false,
           );
         }
-      } catch (_) {
+      } catch (e) {
+        debugPrint('Error restoring profile: $e');
         await _tokenStorage.clear();
       }
     }
@@ -259,8 +224,14 @@ class _NearoAppState extends State<NearoApp> {
   void _handleLink(Uri uri, {bool isInitial = false}) {
     if (uri.scheme == 'nearo' && uri.host == 'login-success') {
       final token = uri.queryParameters['token'];
+      final refreshToken = uri.queryParameters['refresh_token'];
       if (token != null && token.isNotEmpty) {
-        _tokenStorage.saveAccessToken(token);
+        if (refreshToken != null && refreshToken.isNotEmpty) {
+          _authRepository.saveTokens(
+              accessToken: token, refreshToken: refreshToken);
+        } else {
+          _tokenStorage.saveAccessToken(token);
+        }
       }
       // 코드 시작이 아닌 동안(앱이 이미 떠 있는 상태에서 링크로 복귀) 세션 복원 분기로 이동
       if (!isInitial) {
@@ -268,6 +239,16 @@ class _NearoAppState extends State<NearoApp> {
           _restoreSession();
         });
       }
+    }
+  }
+
+  Future<void> _handleLogout() async {
+    await _authService.logout();
+    if (_navigatorKey.currentState != null) {
+      _navigatorKey.currentState!.pushNamedAndRemoveUntil(
+        AppRoutes.login,
+        (route) => false,
+      );
     }
   }
 
@@ -279,93 +260,97 @@ class _NearoAppState extends State<NearoApp> {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<ThemeMode>(
-      valueListenable: ThemeController.themeMode,
-      builder: (context, mode, _) {
-        return ValueListenableBuilder<Color>(
-          valueListenable: ThemeController.seedColor,
-          builder: (context, color, __) {
-            return ValueListenableBuilder<bool>(
-              valueListenable: ThemeController.secretMode,
-              builder: (context, secret, ___) {
-                // 설명 주석
-                if (_initialRoute == null) {
-                  final theme = secret
-                      ? NearoTheme.secret(seedColor: color)
-                      : NearoTheme.light(seedColor: color);
-                  return MaterialApp(
-                    title: 'NEARO',
-                    theme: theme,
-                    debugShowCheckedModeBanner: false,
-                    home: SplashScreen(
-                      onComplete: () {},
-                    ),
-                  );
-                }
-                return MaterialApp(
-                  title: 'NEARO',
-                  theme: secret ? NearoTheme.secret(seedColor: color) : NearoTheme.light(seedColor: color),
-                  darkTheme: secret ? NearoTheme.secret(seedColor: color) : NearoTheme.dark(seedColor: color),
-                  themeMode: mode,
-                  navigatorKey: _navigatorKey,
-                  initialRoute: _initialRoute,
-                  builder: (context, child) => child ?? const SizedBox.shrink(),
-                  onGenerateRoute: (settings) {
-                    if (settings.name == AppRoutes.emailVerification) {
-                      final universityName = settings.arguments is String
-                          ? settings.arguments as String
-                          : (settings.arguments?.toString().trim().isNotEmpty == true
-                              ? settings.arguments.toString()
-                              : null);
-                      return MaterialPageRoute<void>(
-                        settings: RouteSettings(
-                          name: settings.name,
-                          arguments: universityName,
-                        ),
-                        builder: (ctx) => MeetzyEmailVerificationPage(
-                          onBack: () => Navigator.of(ctx).pushReplacementNamed(AppRoutes.universitySelect),
-                          onComplete: () => Navigator.of(ctx).pushReplacementNamed(
-                            AppRoutes.universitySelect,
-                            arguments: {'isInitialSetup': true},
-                          ),
-                        ),
-                      );
-                    }
-                    return null;
-                  },
-                  routes: {
-                    AppRoutes.onboarding: (context) => MeetzyOnboardingPage(
-                      onComplete: () {
-                        if (context.mounted) {
-                          Navigator.of(context).pushReplacementNamed(AppRoutes.login);
-                        }
-                      },
-                    ),
-                    AppRoutes.login: (_) => const LoginScreen(),
-                    AppRoutes.universitySelect: (ctx) => MeetzyUniversitySelectPage(
-                      onBack: () => Navigator.pushReplacementNamed(ctx, AppRoutes.login),
-                      onComplete: null,
-                    ),
-                    AppRoutes.environment: (_) => const EnvironmentScreen(),
-                    AppRoutes.matchingHome: (_) => const MatchingHomeScreen(),
-                    AppRoutes.chatPreview: (_) => const ConsentPreviewScreen(),
-                    AppRoutes.chatRoom: (_) => const ChatRoomScreen(),
-                    AppRoutes.consentDecision: (_) => const ConsentDecisionScreen(),
-                    AppRoutes.consentSuccess: (_) => const ConsentSuccessScreen(),
-                    AppRoutes.photo: (_) => const PhotoScreen(),
-                    AppRoutes.authProfile: (_) => const ProfileScreen(),
-                    AppRoutes.users: (_) => const UsersScreen(),
-                    AppRoutes.profileSetup: (_) => const ProfileSetupScreen(),
-                    AppRoutes.avatarSetup: (_) => AvatarSetupScreen(),
-                    AppRoutes.partnerProfile: (_) => const PartnerProfileScreen(),
-                    AppRoutes.home: (_) => const HomeShellScreen(),
-                    AppRoutes.customerSupport: (_) => const CustomerSupportScreen(),
-                  },
-                  navigatorObservers: [routeObserver],
-                );
-              },
-            );
+    return AnimatedBuilder(
+      animation: Listenable.merge([
+        ThemeController.themeMode,
+        ThemeController.seedColor,
+        ThemeController.secretMode,
+      ]),
+      builder: (context, _) {
+        final mode = ThemeController.themeMode.value;
+        final color = ThemeController.seedColor.value;
+        final secret = ThemeController.secretMode.value;
+
+        if (_initialRoute == null) {
+          final theme = secret
+              ? NearoTheme.secret(seedColor: color)
+              : NearoTheme.light(seedColor: color);
+          return MaterialApp(
+            title: 'NEARO',
+            theme: theme,
+            debugShowCheckedModeBanner: false,
+            home: SplashScreen(
+              onComplete: () {},
+            ),
+          );
+        }
+        return MaterialApp(
+          title: 'NEARO',
+          theme: secret
+              ? NearoTheme.secret(seedColor: color)
+              : NearoTheme.light(seedColor: color),
+          darkTheme: secret
+              ? NearoTheme.secret(seedColor: color)
+              : NearoTheme.dark(seedColor: color),
+          themeMode: mode,
+          navigatorKey: _navigatorKey,
+          initialRoute: _initialRoute,
+          builder: (context, child) => child ?? const SizedBox.shrink(),
+          onGenerateRoute: (settings) {
+            if (settings.name == AppRoutes.emailVerification) {
+              final universityName = settings.arguments is String
+                  ? settings.arguments as String
+                  : (settings.arguments?.toString().trim().isNotEmpty == true
+                      ? settings.arguments.toString()
+                      : null);
+              return MaterialPageRoute<void>(
+                settings: RouteSettings(
+                  name: settings.name,
+                  arguments: universityName,
+                ),
+                builder: (ctx) => MeetzyEmailVerificationPage(
+                  onBack: () => Navigator.of(ctx)
+                      .pushReplacementNamed(AppRoutes.universitySelect),
+                  onComplete: () => Navigator.of(ctx).pushReplacementNamed(
+                    AppRoutes.universitySelect,
+                    arguments: {'isInitialSetup': true},
+                  ),
+                ),
+              );
+            }
+            return null;
           },
+          routes: {
+            AppRoutes.onboarding: (context) => MeetzyOnboardingPage(
+                  onComplete: () {
+                    if (context.mounted) {
+                      Navigator.of(context)
+                          .pushReplacementNamed(AppRoutes.login);
+                    }
+                  },
+                ),
+            AppRoutes.login: (_) => const LoginScreen(),
+            AppRoutes.universitySelect: (ctx) => MeetzyUniversitySelectPage(
+                  onBack: () =>
+                      Navigator.pushReplacementNamed(ctx, AppRoutes.login),
+                  onComplete: null,
+                ),
+            AppRoutes.environment: (_) => const EnvironmentScreen(),
+            AppRoutes.matchingHome: (_) => const MatchingHomeScreen(),
+            AppRoutes.chatPreview: (_) => const ConsentPreviewScreen(),
+            AppRoutes.chatRoom: (_) => const ChatRoomScreen(),
+            AppRoutes.consentDecision: (_) => const ConsentDecisionScreen(),
+            AppRoutes.consentSuccess: (_) => const ConsentSuccessScreen(),
+            AppRoutes.photo: (_) => const PhotoScreen(),
+            AppRoutes.authProfile: (_) => const ProfileScreen(),
+            AppRoutes.users: (_) => const UsersScreen(),
+            AppRoutes.profileSetup: (_) => const ProfileSetupScreen(),
+            AppRoutes.avatarSetup: (_) => AvatarSetupScreen(),
+            AppRoutes.partnerProfile: (_) => const PartnerProfileScreen(),
+            AppRoutes.home: (_) => const HomeShellScreen(),
+            AppRoutes.customerSupport: (_) => const CustomerSupportScreen(),
+          },
+          navigatorObservers: [routeObserver],
         );
       },
     );

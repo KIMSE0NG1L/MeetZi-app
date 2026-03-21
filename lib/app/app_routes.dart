@@ -1,4 +1,6 @@
 class AppRoutes {
+  AppRoutes._(); // 인스턴스화 방지
+
   static const String onboarding = '/';
   static const String login = '/login';
   static const String environment = '/environment';
