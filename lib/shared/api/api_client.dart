@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
+import 'package:flutter/foundation.dart';
 import 'package:nearo_app/shared/api/endpoints.dart';
 import 'package:nearo_app/shared/utils/app_config.dart';
 import 'package:nearo_app/shared/utils/token_storage.dart';
@@ -39,7 +40,8 @@ class ApiClient {
         createHttpClient: () {
           final context = SecurityContext(withTrustedRoots: false);
           final client = HttpClient(context: context);
-          client.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+          client.badCertificateCallback =
+              (X509Certificate cert, String host, int port) => true;
           client.connectionTimeout = const Duration(seconds: 25);
           client.idleTimeout = const Duration(seconds: 15);
           return client;
@@ -63,14 +65,16 @@ class ApiClient {
         },
         onError: (error, handler) async {
           // 401: access token expired or invalid.
-          if (error.response?.statusCode == 401 && !error.requestOptions.extra['retry']) {
+          final hasRetried = error.requestOptions.extra['retry'] == true;
+          if (error.response?.statusCode == 401 && !hasRetried) {
             error.requestOptions.extra['retry'] = true;
             try {
               final success = await _tryRefreshToken();
               if (success) {
                 final accessToken = await _tokenStorage.readAccessToken();
                 if (accessToken != null && accessToken.isNotEmpty) {
-                  error.requestOptions.headers['Authorization'] = 'Bearer $accessToken';
+                  error.requestOptions.headers['Authorization'] =
+                      'Bearer $accessToken';
                 }
                 final response = await _dio.fetch(error.requestOptions);
                 return handler.resolve(response);
@@ -106,10 +110,16 @@ class ApiClient {
 
       if (response.statusCode == 200 && response.data is Map) {
         final data = response.data as Map<String, dynamic>;
-        final accessToken = (data['accessToken'] ?? data['access_token'])?.toString();
-        final refreshTokenNew = (data['refreshToken'] ?? data['refresh_token'])?.toString();
-        if (accessToken != null && accessToken.isNotEmpty && refreshTokenNew != null && refreshTokenNew.isNotEmpty) {
-          await _tokenStorage.saveTokens(accessToken: accessToken, refreshToken: refreshTokenNew);
+        final accessToken =
+            (data['accessToken'] ?? data['access_token'])?.toString();
+        final refreshTokenNew =
+            (data['refreshToken'] ?? data['refresh_token'])?.toString();
+        if (accessToken != null &&
+            accessToken.isNotEmpty &&
+            refreshTokenNew != null &&
+            refreshTokenNew.isNotEmpty) {
+          await _tokenStorage.saveTokens(
+              accessToken: accessToken, refreshToken: refreshTokenNew);
           return true;
         }
       }

@@ -19,4 +19,5 @@ class AppRoutes {
   static const String emailVerification = '/onboarding/email-verification';
   static const String avatarSetup = '/profile/avatar-setup';
   static const String customerSupport = '/settings/customer-support';
+  static const String privacyConsentGate = '/privacy-consent-gate';
 }
