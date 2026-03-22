@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nearo_app/app/app_routes.dart';
-import 'package:nearo_app/features/settings/screens/privacy_policy_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/privacy_consent_storage.dart';
 
@@ -33,26 +33,25 @@ class _PrivacyConsentGateScreenState extends State<PrivacyConsentGateScreen> {
         return PopScope(
           canPop: false,
           child: AlertDialog(
-            title: const Text('개인정보 안내 확인'),
+            title: const Text('약관 및 개인정보 처리방침 동의'),
             content: const Text(
-              '메인으로 이동하려면 개인정보 수집·이용 안내를 열어보고, 안내 화면 하단의 동의 버튼을 눌러야 합니다.',
+              '원활한 서비스 이용을 위해 서비스 이용약관 및 개인정보 처리방침에 동의해 주세요.',
             ),
             actions: [
+              TextButton(
+                onPressed: () async {
+                  final url = Uri.parse('https://www.notion.so/32a97b83a0ac80f4b7a2ebac146f3113');
+                  if (await canLaunchUrl(url)) await launchUrl(url, mode: LaunchMode.externalApplication);
+                },
+                child: const Text('개인정보 처리방침 보기'),
+              ),
               FilledButton(
                 onPressed: () async {
-                  final accepted = await Navigator.of(dialogContext).push<bool>(
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          const PrivacyPolicyScreen(showConsentAction: true),
-                    ),
-                  );
-                  if (accepted == true) {
-                    await PrivacyConsentStorage.markAccepted();
-                    if (!dialogContext.mounted) return;
-                    Navigator.of(dialogContext).pop();
-                  }
+                  await PrivacyConsentStorage.markAccepted();
+                  if (!dialogContext.mounted) return;
+                  Navigator.of(dialogContext).pop();
                 },
-                child: const Text('개인정보 안내 보기'),
+                child: const Text('동의하고 시작'),
               ),
             ],
           ),

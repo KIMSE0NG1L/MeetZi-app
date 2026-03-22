@@ -9,7 +9,7 @@ import 'package:nearo_app/shared/utils/token_storage.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/features/settings/screens/customer_support_screen.dart';
 import 'package:nearo_app/features/settings/screens/open_source_licenses_screen.dart';
-import 'package:nearo_app/features/settings/screens/privacy_policy_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// AppDesign SettingsScreen: 로즈 그라데이션 헤더 + 카드형 메뉴 (일반/다크 모드, 로그아웃, 계정 삭제)
 class SettingsScreen extends StatefulWidget {
@@ -332,12 +332,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onSurface: onSurface,
                   onSurfaceVariant: onSurfaceVariant,
                   icon: LucideIcons.shieldCheck,
-                  title: '개인정보 안내',
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (_) => const PrivacyPolicyScreen()),
-                    );
+                  title: '개인정보 처리방침',
+                  onTap: () async {
+                    // TODO: 노션 개인정보 처리방침 링크로 변경
+                    final url = Uri.parse('https://www.notion.so/32a97b83a0ac80f4b7a2ebac146f3113');
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(url, mode: LaunchMode.externalApplication);
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                _SettingsCard(
+                  surface: surface,
+                  onSurface: onSurface,
+                  onSurfaceVariant: onSurfaceVariant,
+                  icon: LucideIcons.fileText,
+                  title: '이용약관',
+                  onTap: () async {
+                    // TODO: 노션 이용약관 링크로 변경
+                    final url = Uri.parse('https://www.notion.so/32a97b83a0ac80d098ccd09e715df3d2');
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(url);
+                    }
                   },
                 ),
                 const SizedBox(height: 12),

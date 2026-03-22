@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/settings/screens/open_source_licenses_screen.dart';
-import 'package:nearo_app/features/settings/screens/privacy_policy_screen.dart';
+// Privacy Policy is opened via external url
 import 'package:nearo_app/shared/utils/app_config.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -36,10 +36,14 @@ class _LoginScreenState extends State<LoginScreen> {
     },
   ];
 
-  void _openPrivacyNotice() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
-    );
+  Future<void> _openPrivacyNotice() async {
+    final url = Uri.parse('https://www.notion.so/32a97b83a0ac80f4b7a2ebac146f3113');
+    if (await canLaunchUrl(url)) await launchUrl(url, mode: LaunchMode.externalApplication);
+  }
+
+  Future<void> _openTermsOfService() async {
+    final url = Uri.parse('https://www.notion.so/32a97b83a0ac80d098ccd09e715df3d2');
+    if (await canLaunchUrl(url)) await launchUrl(url, mode: LaunchMode.externalApplication);
   }
 
   void _openOpenSourceNotice() {
@@ -380,11 +384,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           runSpacing: 4,
                           children: [
                             _LegalLink(
-                              label: '서비스 약관',
-                              onTap: _openPrivacyNotice,
+                              label: '이용약관',
+                              onTap: _openTermsOfService,
                             ),
                             _LegalLink(
-                              label: '개인정보 안내',
+                              label: '개인정보 처리방침',
                               onTap: _openPrivacyNotice,
                             ),
                             _LegalLink(
