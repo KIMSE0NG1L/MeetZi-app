@@ -7,6 +7,7 @@ import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/presentation/widgets/meetzy_profile_card.dart';
 import 'package:nearo_app/presentation/widgets/meetzy_stats_bar.dart';
+import 'package:nearo_app/features/settings/screens/notice_list_screen.dart';
 
 /// 설명 주석
 class MeetzyBoardContent extends StatelessWidget {
@@ -63,6 +64,8 @@ class MeetzyBoardContent extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                _buildNoticeBanner(context),
+                const SizedBox(height: MeetzyDesignTokens.space4),
                 MeetzyStatsBar(
                   nickname: myNickname ?? '나',
                   avatarWidget: myAvatarWidget ?? _defaultAvatar(),
@@ -224,6 +227,66 @@ class MeetzyBoardContent extends StatelessWidget {
     return Container(
       color: UniversityTheme.bgGradientStart,
       child: const Icon(LucideIcons.user, size: 32, color: Colors.grey),
+    );
+  }
+
+  Widget _buildNoticeBanner(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const NoticeListScreen()),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1F2937) /* gray-800 */ : const Color(0xFFF3F4F6) /* gray-100 */,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF374151) : Colors.white,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  LucideIcons.megaphone,
+                  size: 12,
+                  color: Color(0xFFE879F9), // notice accent
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '[공지] Meetzi 업데이트 및 이용 안내',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white : const Color(0xFF111827),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Icon(
+                LucideIcons.chevronRight,
+                size: 14,
+                color: isDark ? Colors.grey.shade400 : Colors.grey.shade500,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
