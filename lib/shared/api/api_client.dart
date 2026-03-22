@@ -7,6 +7,8 @@ import 'package:flutter/foundation.dart';
 import 'package:nearo_app/shared/api/endpoints.dart';
 import 'package:nearo_app/shared/utils/app_config.dart';
 import 'package:nearo_app/shared/utils/token_storage.dart';
+import 'package:nearo_app/main.dart';
+import 'package:nearo_app/app/app_routes.dart';
 
 typedef LogoutCallback = FutureOr<void> Function();
 
@@ -137,6 +139,11 @@ class ApiClient {
     await _tokenStorage.clear();
     if (onLogout != null) {
       await onLogout!();
+    } else {
+      rootNavigatorKey.currentState?.pushNamedAndRemoveUntil(
+        AppRoutes.login,
+        (route) => false,
+      );
     }
   }
 
