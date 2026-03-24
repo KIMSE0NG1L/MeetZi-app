@@ -452,8 +452,18 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       final myGender = (user['gender'] ?? myProfile['gender'])?.toString().trim().toLowerCase();
       if (myGender == 'male') {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('개발자는 남자라서 신청할 수 없어요.')),
+        await showDialog<void>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('매칭 신청 불가'),
+            content: const Text('개발자 매칭은 남성 사용자는 신청할 수 없어요.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('확인'),
+              ),
+            ],
+          ),
         );
         return;
       }
