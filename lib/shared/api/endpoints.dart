@@ -1,4 +1,4 @@
-class ApiEndpoints {
+﻿class ApiEndpoints {
   static const String authKakao = '/auth/kakao';
   static const String authKakaoCallback = '/auth/kakao/callback';
   static const String authProfile = '/auth/profile';
@@ -17,6 +17,10 @@ class ApiEndpoints {
   static String chatsMessages(String roomId) => '/chats/rooms/$roomId/messages';
   static String chatsMessageRead(String roomId, String messageId) =>
       '/chats/rooms/$roomId/messages/$messageId/read';
+  static const String sharedChatPosts = '/shared-chat-posts';
+  static const String sharedChatMine = '/shared-chat-posts/me';
+  static String sharedChatPost(String id) => '/shared-chat-posts/$id';
+  static String sharedChatConsent(String id) => '/shared-chat-posts/$id/consent';
   static const String photos = '/photos';
   static const String photosUpload = '/photos/upload';
   static String photoById(String photoId) => '/photos/$photoId';
@@ -29,7 +33,7 @@ class ApiEndpoints {
       '/environments/$environmentId/email-verifications/confirm';
   static String userBlock(String userId) => '/users/block/$userId';
 
-  // 커뮤니티 (학교별, 누구나 진입 가능)
+  // 而ㅻ??덊떚 (?숆탳蹂? ?꾧뎄??吏꾩엯 媛??
   static String community(String environmentId) => '/communities/$environmentId';
   static String communityPosts(String environmentId) => '/communities/$environmentId/posts';
   static String communityPost(String environmentId, String postId) =>
@@ -47,7 +51,9 @@ class ApiEndpoints {
   static String communityPostVote(String environmentId, String postId) =>
       '/communities/$environmentId/posts/$postId/vote';
 
-  // 신고
+  // ?좉퀬
   static const String reportCommunityPost = '/report/community-post';
   static const String reportCommunityComment = '/report/community-comment';
 }
+
+

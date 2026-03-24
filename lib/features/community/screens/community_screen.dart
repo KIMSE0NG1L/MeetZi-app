@@ -1,9 +1,10 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/community/data/community_repository.dart';
 import 'package:nearo_app/features/community/screens/community_post_detail_screen.dart';
 import 'package:nearo_app/features/community/screens/community_post_write_screen.dart';
+import 'package:nearo_app/features/shared_chat/screens/shared_chat_requests_screen.dart';
 import 'package:nearo_app/features/matching_board/data/matching_board_repository.dart';
 import 'package:nearo_app/features/matching_board/screens/matching_board_screen.dart';
 import 'package:nearo_app/features/matching_board/utils/board_note_sheet_launcher.dart';
@@ -13,7 +14,7 @@ import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/post_time_format.dart';
 import 'package:nearo_app/shared/utils/mention_text_span.dart';
 
-/// 학교별 커뮤니티 피드 화면
+/// ?숆탳蹂?而ㅻ??덊떚 ?쇰뱶 ?붾㈃
 class CommunityScreen extends StatefulWidget {
   final String environmentId;
   final String schoolName;
@@ -25,7 +26,7 @@ class CommunityScreen extends StatefulWidget {
     this.isRootTab = false,
   });
 
-  /// true면 루트 탭으로 사용(뒤로가기 대신 상단 왼쪽 여백).
+  /// true硫?猷⑦듃 ??쑝濡??ъ슜(?ㅻ줈媛湲?????곷떒 ?쇱そ ?щ갚).
   final bool isRootTab;
 
   @override
@@ -50,7 +51,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
   bool _loading = true;
   bool _loadingMore = false;
   String _selectedTag = 'all';
-  String _selectedScope = ''; // 기본: 체크 안 된 전체(태그) 피드
+  String _selectedScope = ''; // 湲곕낯: 泥댄겕 ?????꾩껜(?쒓렇) ?쇰뱶
 
   @override
   void initState() {
@@ -62,7 +63,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
   Future<void> _loadMyUserId() async {
     try {
       final res = await AuthRepository().getProfile();
-      // GET /users/me 는 user 객체를 그대로 반환한다.
+      // GET /users/me ??user 媛앹껜瑜?洹몃?濡?諛섑솚?쒕떎.
       final id = (res['user'] as Map<String, dynamic>?)?['id']?.toString() ?? res['id']?.toString();
       if (mounted) setState(() => _myUserId = id);
     } catch (_) {
@@ -145,7 +146,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
       _load();
       if (deleted == true && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('글을 삭제했어요.')),
+          const SnackBar(content: Text('湲????젣?덉뼱??')),
         );
       }
     });
@@ -156,7 +157,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
     if (userId == null || userId.isEmpty || !mounted) return;
     if (_myUserId != null && _myUserId == userId) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('내 프로필입니다.')),
+        const SnackBar(content: Text('???꾨줈?꾩엯?덈떎.')),
       );
       return;
     }
@@ -181,17 +182,17 @@ class _CommunityScreenState extends State<CommunityScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('글 삭제'),
-        content: const Text('이 글을 삭제할까요? 삭제한 글은 복구할 수 없어요.'),
+        title: const Text('湲 ??젣'),
+        content: const Text('??湲????젣?좉퉴?? ??젣??湲? 蹂듦뎄?????놁뼱??'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('취소'),
+            child: const Text('痍⑥냼'),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('삭제'),
+            child: const Text('??젣'),
           ),
         ],
       ),
@@ -202,7 +203,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
       if (!mounted) return;
       _load();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('글을 삭제했어요.')),
+        const SnackBar(content: Text('湲????젣?덉뼱??')),
       );
     } catch (e) {
       if (mounted) {
@@ -210,8 +211,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
           SnackBar(
             content: Text(
               e.toString().contains('403') || e.toString().contains('Forbidden')
-                  ? '본인 글만 삭제할 수 있어요.'
-                  : '삭제에 실패했어요. 잠시 후 다시 시도해 주세요.',
+                  ? '蹂몄씤 湲留???젣?????덉뼱??'
+                  : '??젣???ㅽ뙣?덉뼱?? ?좎떆 ???ㅼ떆 ?쒕룄??二쇱꽭??',
             ),
           ),
         );
@@ -369,7 +370,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
             selected: selected,
             onSelected: (_) {
               if (_selectedScope == scope.key) {
-                // 같은 칩 다시 탭 → 내글/내댓글 필터 해제 후 하단 탭(태그) 기준 피드로
+                // 媛숈? 移??ㅼ떆 ?????닿?/?대뙎湲 ?꾪꽣 ?댁젣 ???섎떒 ???쒓렇) 湲곗? ?쇰뱶濡?
                 setState(() => _selectedScope = '');
                 _load();
                 return;
@@ -396,7 +397,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    // 전체(태그) 피드일 때만 베스트/HOT 상단 노출 (내 글·내 댓글 필터 중에는 미노출)
+    // ?꾩껜(?쒓렇) ?쇰뱶???뚮쭔 踰좎뒪??HOT ?곷떒 ?몄텧 (??湲쨌???볤? ?꾪꽣 以묒뿉??誘몃끂異?
     final showBest = _selectedScope.isEmpty;
     final sortedByLikes = List<Map<String, dynamic>>.from(_posts)
       ..sort((a, b) => ((b['likeCount'] as int?) ?? 0).compareTo((a['likeCount'] as int?) ?? 0));
@@ -414,7 +415,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
         ),
         child: Column(
           children: [
-          // 헤더: 학교 커뮤니티 타이틀과 랭킹 버튼
+          // ?ㅻ뜑: ?숆탳 而ㅻ??덊떚 ??댄?怨???궧 踰꾪듉
           Container(
             width: double.infinity,
             decoration: const BoxDecoration(
@@ -439,7 +440,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                       ),
                     Expanded(
                       child: Text(
-                        '${widget.schoolName} 커뮤니티',
+                        '${widget.schoolName} 而ㅻ??덊떚',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 20,
@@ -448,7 +449,16 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         textAlign: TextAlign.center,
                       ),
                     ),
-                    const SizedBox(width: 48),
+                    IconButton(
+                      icon: const Icon(LucideIcons.messagesSquare, color: Colors.white),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const SharedChatRequestsScreen(),
+                          ),
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -465,7 +475,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                             Icon(LucideIcons.messageSquare, size: 48, color: Colors.grey.shade400),
                             const SizedBox(height: 16),
                             Text(
-                              '아직 글이 없어요.\n첫 글을 올려보세요.',
+                              '?꾩쭅 湲???놁뼱??\n泥?湲???щ젮蹂댁꽭??',
                               textAlign: TextAlign.center,
                               style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
                             ),
@@ -481,10 +491,10 @@ class _CommunityScreenState extends State<CommunityScreen> {
                             if (bestPosts.isNotEmpty) ...[
                               Row(
                                 children: [
-                                  const Text('🏆', style: TextStyle(fontSize: 22)),
+                                  const Text('?룇', style: TextStyle(fontSize: 22)),
                                   const SizedBox(width: 8),
                                   Text(
-                                    '베스트 글',
+                                    '踰좎뒪??湲',
                                     style: TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
@@ -513,9 +523,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
                             ],
                             Text(
                               _selectedScope == 'my_posts'
-                                  ? '내 글'
+                                  ? '??湲'
                                   : _selectedScope == 'my_comments'
-                                      ? '내 댓글'
+                                      ? '???볤?'
                                       : _tabs.firstWhere((t) => t.key == _selectedTag, orElse: () => _tabs.first).value,
                               style: TextStyle(
                                 fontSize: 18,
@@ -603,7 +613,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
     int? bestRank,
   }) {
     final author = post['author'] as Map<String, dynamic>? ?? {};
-    final nickname = author['nickname']?.toString() ?? '알 수 없음';
+    final nickname = author['nickname']?.toString() ?? '?????놁쓬';
     final authorId = author['id']?.toString();
     final isMe = _myUserId != null && authorId == _myUserId;
     final isDailyBest = post['isDailyBest'] == true;
@@ -673,7 +683,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                         ),
                                       ),
                                       if (isBest) const SizedBox(width: 4),
-                                      if (isBest) const Text('⭐', style: TextStyle(fontSize: 12)),
+                                      if (isBest) const Text('BEST', style: TextStyle(fontSize: 12)),
                                       if (isMe) ...[
                                         const SizedBox(width: 4),
                                         Container(
@@ -910,7 +920,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
   }
 
   Widget _buildPollChip(BuildContext context, Map<String, dynamic> poll, bool dark) {
-    final question = poll['question']?.toString() ?? '투표';
+    final question = poll['question']?.toString() ?? '?ы몴';
     final voteCounts = (poll['voteCounts'] as List<dynamic>?)?.map((e) => (e as num).toInt()).toList() ?? [];
     final total = voteCounts.fold<int>(0, (a, b) => a + b);
     return Container(
@@ -932,7 +942,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
             ),
           ),
           Text(
-            '$total명 참여',
+            '$total紐?李몄뿬',
             style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
           ),
         ],
@@ -940,6 +950,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
     );
   }
 }
+
+
 
 
 
