@@ -156,8 +156,18 @@ class _CommunityScreenState extends State<CommunityScreen> {
     final userId = author['id']?.toString();
     if (userId == null || userId.isEmpty || !mounted) return;
     if (_myUserId != null && _myUserId == userId) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('내 프로필입니다.')),
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('알림'),
+          content: const Text('내 프로필입니다.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('확인'),
+            ),
+          ],
+        ),
       );
       return;
     }
