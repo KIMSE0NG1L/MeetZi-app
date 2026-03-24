@@ -613,6 +613,218 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
     );
   }
 
+  Map<String, dynamic>? _parseMatchingReviewContent(String content) {
+    final normalized = content.replaceAll('\r\n', '\n').trim();
+    if (normalized.isEmpty) return null;
+
+    final lines = normalized
+        .split('\n')
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .toList();
+    if (lines.isEmpty) return null;
+
+    final title = lines.first;
+    final messages = <Map<String, String>>[];
+    String? summary;
+
+    for (final line in lines.skip(1)) {
+      final match = RegExp(r'^([A-Za-z]):\s*(.+)$').firstMatch(line);
+      if (match != null) {
+        messages.add({
+          'senderRole': match.group(1) ?? 'A',
+          'content': match.group(2) ?? '',
+        });
+        continue;
+      }
+      if (summary == null) {
+        summary = line;
+      }
+    }
+
+    if (messages.isEmpty) return null;
+    return {
+      'title': title,
+      'summary': summary,
+      'messages': messages,
+    };
+  }
+
+  Widget _buildMatchingReviewBody(
+    BuildContext context,
+    Map<String, dynamic> parsed,
+    bool dark,
+  ) {
+    final theme = Theme.of(context);
+    final title = parsed['title']?.toString() ?? '공유된 대화';
+    final summary = parsed['summary']?.toString();
+    final messages = (parsed['messages'] as List<dynamic>)
+        .map((e) => Map<String, String>.from(e as Map))
+        .toList();
+    final bubbleOther = dark ? const Color(0xFF374151) : Colors.white;
+    final bubbleMine = theme.colorScheme.primary;
+    final surface = dark ? const Color(0xFF111827) : const Color(0xFFF8FAFC);
+    final border = dark ? Colors.grey.shade800 : const Color(0xFFE5E7EB);
+
+    Widget maskedAvatar(bool isMine) {
+      final bg = isMine
+          ? theme.colorScheme.primary.withValues(alpha: 0.18)
+          : (dark ? Colors.white.withValues(alpha: 0.10) : Colors.grey.shade200);
+      final fg = isMine
+          ? theme.colorScheme.primary
+          : (dark ? Colors.white70 : const Color(0xFF6B7280));
+      return Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: bg,
+          shape: BoxShape.circle,
+          border: Border.all(color: dark ? Colors.white12 : Colors.white, width: 1.5),
+        ),
+        child: Icon(LucideIcons.userRound, size: 15, color: fg),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  gradient: ThemeController.getHeaderGradient(),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(LucideIcons.messagesSquare, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: dark ? Colors.white : const Color(0xFF111827),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '익명 처리된 채팅 기록',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (summary != null && summary.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              summary,
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.45,
+                color: dark ? Colors.grey.shade300 : const Color(0xFF4B5563),
+              ),
+            ),
+          ],
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: dark ? const Color(0xFF0F172A) : const Color(0xFFF3F4F6),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              children: [
+                for (final message in messages) ...[
+                  Builder(
+                    builder: (context) {
+                      final role = (message['senderRole'] ?? 'A').toUpperCase();
+                      final isMine = role == 'A';
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Row(
+                          mainAxisAlignment: isMine ? MainAxisAlignment.end : MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            if (!isMine) ...[
+                              maskedAvatar(false),
+                              const SizedBox(width: 8),
+                            ],
+                            Flexible(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                                decoration: BoxDecoration(
+                                  color: isMine ? bubbleMine : bubbleOther,
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: const Radius.circular(16),
+                                    topRight: const Radius.circular(16),
+                                    bottomLeft: Radius.circular(isMine ? 16 : 4),
+                                    bottomRight: Radius.circular(isMine ? 4 : 16),
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.05),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 1),
+                                    ),
+                                  ],
+                                ),
+                                child: Text(
+                                  message['content'] ?? '',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    height: 1.45,
+                                    color: isMine
+                                        ? Colors.white
+                                        : (dark ? Colors.white : const Color(0xFF111827)),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            if (isMine) ...[
+                              const SizedBox(width: 8),
+                              maskedAvatar(true),
+                            ],
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
@@ -825,23 +1037,33 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
                               ],
                             ),
                           const SizedBox(height: 16),
-                          RichText(
-                            text: TextSpan(
-                              style: const TextStyle(
-                                fontSize: 16,
-                                height: 1.5,
-                                color: Colors.white,
-                              ),
-                              children: buildMentionSpans(
-                                content,
-                                baseStyle: const TextStyle(
-                                  fontSize: 16,
-                                  height: 1.5,
-                                  color: Colors.white,
+                          Builder(
+                            builder: (context) {
+                              final parsedReview = post['tag'] == 'matching_review'
+                                  ? _parseMatchingReviewContent(content)
+                                  : null;
+                              if (parsedReview != null) {
+                                return _buildMatchingReviewBody(context, parsedReview, dark);
+                              }
+                              return RichText(
+                                text: TextSpan(
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    height: 1.5,
+                                    color: dark ? Colors.white : const Color(0xFF111827),
+                                  ),
+                                  children: buildMentionSpans(
+                                    content,
+                                    baseStyle: TextStyle(
+                                      fontSize: 16,
+                                      height: 1.5,
+                                      color: dark ? Colors.white : const Color(0xFF111827),
+                                    ),
+                                    mentionColor: dark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
+                                  ),
                                 ),
-                                mentionColor: const Color(0xFF60A5FA),
-                              ),
-                            ),
+                              );
+                            },
                           ),
                           if (post['poll'] != null) ...[
                             const SizedBox(height: 20),
