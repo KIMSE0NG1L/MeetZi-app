@@ -6,7 +6,6 @@ import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/token_storage.dart';
 import 'package:nearo_app/features/auth/screens/environment_screen.dart';
 import 'package:nearo_app/features/auth/screens/login_screen.dart';
-import 'package:nearo_app/features/auth/screens/onboarding_screen.dart';
 import 'package:nearo_app/presentation/pages/meetzy_onboarding_page.dart';
 import 'package:nearo_app/features/consent/screens/consent_decision_screen.dart';
 import 'package:nearo_app/features/consent/screens/consent_preview_screen.dart';
@@ -22,11 +21,15 @@ import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/auth/data/environment_status_repository.dart';
 import 'package:nearo_app/features/home/screens/home_shell_screen.dart';
 import 'package:nearo_app/features/home/screens/splash_screen.dart';
+import 'package:nearo_app/shared/api/api_client.dart';
+import 'package:nearo_app/shared/auth/auth_service.dart';
 import 'dart:async';
 import 'package:nearo_app/features/profile/screens/avatar_setup_screen.dart';
+import 'package:nearo_app/features/settings/screens/privacy_consent_gate_screen.dart';
 import 'package:nearo_app/features/settings/screens/customer_support_screen.dart';
 import 'package:nearo_app/presentation/pages/meetzy_university_select_page.dart';
 import 'package:nearo_app/presentation/pages/meetzy_email_verification_page.dart';
+import 'package:nearo_app/shared/utils/privacy_consent_storage.dart';
 
 final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
 
@@ -59,6 +62,11 @@ class _NearoAppState extends State<NearoApp> {
   bool _hasAvatarConfigured(Map user) {
     final avatarSeed = user['avatarSeed']?.toString().trim();
     return avatarSeed != null && avatarSeed.isNotEmpty;
+  }
+
+  Future<String> _routeAfterVerified() async {
+    final hasAcceptedPrivacy = await PrivacyConsentStorage.hasAccepted();
+    return hasAcceptedPrivacy ? AppRoutes.home : AppRoutes.privacyConsentGate;
   }
 
   @override
@@ -128,7 +136,7 @@ class _NearoAppState extends State<NearoApp> {
             if (status['environmentId'] == null) {
               route = AppRoutes.environment;
             } else if (status['verified'] == true) {
-              route = AppRoutes.home;
+              route = await _routeAfterVerified();
             } else {
               route = AppRoutes.environment;
             }
@@ -178,8 +186,9 @@ class _NearoAppState extends State<NearoApp> {
             if (status['environmentId'] != null) {
               // 설명 주석
               if (status['verified'] == true) {
+                final nextRoute = await _routeAfterVerified();
                 _navigatorKey.currentState?.pushNamedAndRemoveUntil(
-                  AppRoutes.home,
+                  nextRoute,
                   (route) => false,
                 );
               } else {
@@ -345,10 +354,12 @@ class _NearoAppState extends State<NearoApp> {
             AppRoutes.authProfile: (_) => const ProfileScreen(),
             AppRoutes.users: (_) => const UsersScreen(),
             AppRoutes.profileSetup: (_) => const ProfileSetupScreen(),
-            AppRoutes.avatarSetup: (_) => AvatarSetupScreen(),
+            AppRoutes.avatarSetup: (_) => const AvatarSetupScreen(),
             AppRoutes.partnerProfile: (_) => const PartnerProfileScreen(),
             AppRoutes.home: (_) => const HomeShellScreen(),
             AppRoutes.customerSupport: (_) => const CustomerSupportScreen(),
+            AppRoutes.privacyConsentGate: (_) =>
+                const PrivacyConsentGateScreen(),
           },
           navigatorObservers: [routeObserver],
         );

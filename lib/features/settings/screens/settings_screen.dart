@@ -7,8 +7,9 @@ import 'package:nearo_app/features/auth/data/environment_status_repository.dart'
 import 'package:nearo_app/features/messages/data/chat_history_store.dart';
 import 'package:nearo_app/shared/utils/token_storage.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
-import 'package:nearo_app/core/theme/university_theme.dart';
 import 'package:nearo_app/features/settings/screens/customer_support_screen.dart';
+import 'package:nearo_app/features/settings/screens/open_source_licenses_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// AppDesign SettingsScreen: 로즈 그라데이션 헤더 + 카드형 메뉴 (일반/다크 모드, 로그아웃, 계정 삭제)
 class SettingsScreen extends StatefulWidget {
@@ -35,7 +36,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final profileRes = await AuthRepository().getProfile();
         final user = profileRes['user'] as Map<String, dynamic>?;
         if (user != null) {
-          schoolName = (user['affiliationText'] ?? user['school'])?.toString().trim();
+          schoolName =
+              (user['affiliationText'] ?? user['school'])?.toString().trim();
           if (schoolName != null && schoolName.isEmpty) schoolName = null;
         }
       } catch (e) {
@@ -49,19 +51,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
           if (name != null && name == schoolName) {
             final primaryHex = e['primaryColor']?.toString();
             final primary = ThemeController.parsePrimaryColor(primaryHex);
-            if (mounted && primary != null) setState(() => _schoolColor = primary);
+            if (mounted && primary != null) {
+              setState(() => _schoolColor = primary);
+            }
             return;
           }
         }
       }
-      final status = await EnvironmentStatusRepository().getMyEnvironmentStatus();
-      final primaryHex = (status['environment'] as Map?)?['primaryColor']?.toString();
+      final status =
+          await EnvironmentStatusRepository().getMyEnvironmentStatus();
+      final primaryHex =
+          (status['environment'] as Map?)?['primaryColor']?.toString();
       final primary = ThemeController.parsePrimaryColor(primaryHex);
       if (mounted && primary != null) setState(() => _schoolColor = primary);
     } catch (e) {
       debugPrint('Failed to load school color: $e');
     }
   }
+
   Future<void> _logout(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -160,17 +167,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
             decoration: BoxDecoration(
               gradient: ThemeController.getHeaderGradient(),
               boxShadow: const [
-                BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2)),
+                BoxShadow(
+                    color: Colors.black26, blurRadius: 8, offset: Offset(0, 2)),
               ],
             ),
             child: SafeArea(
               bottom: false,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
                 child: Row(
                   children: [
                     IconButton(
-                      icon: const Icon(LucideIcons.arrowLeft, color: Colors.white, size: 22),
+                      icon: const Icon(LucideIcons.arrowLeft,
+                          color: Colors.white, size: 22),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                     const Expanded(
@@ -199,7 +209,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   valueListenable: ThemeController.themeColorMode,
                   builder: (context, colorMode, _) {
                     // 교색 행의 원은 로딩 전에는 회색, 로드되면 해당 학교 교색 표시 (빨강 플래시 방지)
-                    final schoolColorForDisplay = _schoolColor ?? (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF6B7280) : const Color(0xFF9CA3AF));
+                    final schoolColorForDisplay = _schoolColor ??
+                        (Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF6B7280)
+                            : const Color(0xFF9CA3AF));
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -233,20 +246,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           selected: colorMode == 'school',
                           onTap: () async {
                             if (_schoolColor != null && context.mounted) {
-                              await ThemeController.setThemeColorModeSchool(_schoolColor!);
+                              await ThemeController.setThemeColorModeSchool(
+                                  _schoolColor!);
                               return;
                             }
                             try {
-                              final status = await EnvironmentStatusRepository().getMyEnvironmentStatus();
-                              final primaryHex = (status['environment'] as Map?)?['primaryColor']?.toString();
-                              final primary = ThemeController.parsePrimaryColor(primaryHex);
+                              final status = await EnvironmentStatusRepository()
+                                  .getMyEnvironmentStatus();
+                              final primaryHex = (status['environment']
+                                      as Map?)?['primaryColor']
+                                  ?.toString();
+                              final primary =
+                                  ThemeController.parsePrimaryColor(primaryHex);
                               if (primary != null && context.mounted) {
-                                await ThemeController.setThemeColorModeSchool(primary);
+                                await ThemeController.setThemeColorModeSchool(
+                                    primary);
                               }
                             } catch (e) {
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('교색을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')),
+                                  const SnackBar(
+                                      content: Text(
+                                          '교색을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')),
                                 );
                               }
                             }
@@ -300,7 +321,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: '고객센터 문의',
                   onTap: () {
                     Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const CustomerSupportScreen()),
+                      MaterialPageRoute(
+                          builder: (_) => const CustomerSupportScreen()),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                _SettingsCard(
+                  surface: surface,
+                  onSurface: onSurface,
+                  onSurfaceVariant: onSurfaceVariant,
+                  icon: LucideIcons.shieldCheck,
+                  title: '개인정보 처리방침',
+                  onTap: () async {
+                    // TODO: 노션 개인정보 처리방침 링크로 변경
+                    final url = Uri.parse('https://www.notion.so/32a97b83a0ac80f4b7a2ebac146f3113');
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(url, mode: LaunchMode.externalApplication);
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                _SettingsCard(
+                  surface: surface,
+                  onSurface: onSurface,
+                  onSurfaceVariant: onSurfaceVariant,
+                  icon: LucideIcons.fileText,
+                  title: '이용약관',
+                  onTap: () async {
+                    // TODO: 노션 이용약관 링크로 변경
+                    final url = Uri.parse('https://www.notion.so/32a97b83a0ac80d098ccd09e715df3d2');
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(url);
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                _SettingsCard(
+                  surface: surface,
+                  onSurface: onSurface,
+                  onSurfaceVariant: onSurfaceVariant,
+                  icon: LucideIcons.badgeInfo,
+                  title: '오픈소스 라이선스',
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => const OpenSourceLicensesScreen()),
                     );
                   },
                 ),
@@ -316,7 +382,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Divider(height: 1, color: dark ? const Color(0xFF374151) : Colors.grey.shade300),
+                Divider(
+                    height: 1,
+                    color:
+                        dark ? const Color(0xFF374151) : Colors.grey.shade300),
                 const SizedBox(height: 16),
                 _SettingsCard(
                   surface: surface,
@@ -371,7 +440,6 @@ class _ThemeModeRow extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
-
   @override
   Widget build(BuildContext context) {
     return Material(
@@ -384,8 +452,21 @@ class _ThemeModeRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: selected ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2) : null,
-            boxShadow: selected ? [BoxShadow(color: Theme.of(context).colorScheme.primary.withOpacity(0.2), blurRadius: 8, spreadRadius: 0)] : null,
+            border: selected
+                ? Border.all(
+                    color: Theme.of(context).colorScheme.primary, width: 2)
+                : null,
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.2),
+                        blurRadius: 8,
+                        spreadRadius: 0)
+                  ]
+                : null,
           ),
           child: Row(
             children: [
@@ -394,7 +475,10 @@ class _ThemeModeRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: onSurface),
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: onSurface),
                 ),
               ),
               // 라디오 스타일: 선택 시 로즈 원 + 흰 점, 미선택 시 테두리만
@@ -404,10 +488,15 @@ class _ThemeModeRow extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: selected ? Theme.of(context).colorScheme.primary : (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF4B5563) : const Color(0xFFD1D5DB)),
+                    color: selected
+                        ? Theme.of(context).colorScheme.primary
+                        : (Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF4B5563)
+                            : const Color(0xFFD1D5DB)),
                     width: 2,
                   ),
-                  color: selected ? Theme.of(context).colorScheme.primary : null,
+                  color:
+                      selected ? Theme.of(context).colorScheme.primary : null,
                 ),
                 child: selected
                     ? const Center(
@@ -415,7 +504,8 @@ class _ThemeModeRow extends StatelessWidget {
                           width: 10,
                           height: 10,
                           child: DecoratedBox(
-                            decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
+                            decoration: BoxDecoration(
+                                shape: BoxShape.circle, color: Colors.white),
                           ),
                         ),
                       )
@@ -460,7 +550,14 @@ class _ThemeColorRow extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             border: selected ? Border.all(color: color, width: 2) : null,
-            boxShadow: selected ? [BoxShadow(color: color.withOpacity(0.2), blurRadius: 8, spreadRadius: 0)] : null,
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                        color: color.withValues(alpha: 0.2),
+                        blurRadius: 8,
+                        spreadRadius: 0)
+                  ]
+                : null,
           ),
           child: Row(
             children: [
@@ -471,14 +568,22 @@ class _ThemeColorRow extends StatelessWidget {
                   shape: BoxShape.circle,
                   color: color,
                   border: Border.all(color: Colors.white, width: 2),
-                  boxShadow: [BoxShadow(color: color.withOpacity(0.4), blurRadius: 6)],
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.4),
+                      blurRadius: 6,
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   label,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: onSurface),
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: onSurface),
                 ),
               ),
               Container(
@@ -487,7 +592,11 @@ class _ThemeColorRow extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: selected ? color : (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF4B5563) : const Color(0xFFD1D5DB)),
+                    color: selected
+                        ? color
+                        : (Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF4B5563)
+                            : const Color(0xFFD1D5DB)),
                     width: 2,
                   ),
                   color: selected ? color : null,
@@ -498,7 +607,8 @@ class _ThemeColorRow extends StatelessWidget {
                           width: 10,
                           height: 10,
                           child: DecoratedBox(
-                            decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white),
+                            decoration: BoxDecoration(
+                                shape: BoxShape.circle, color: Colors.white),
                           ),
                         ),
                       )
@@ -520,7 +630,6 @@ class _SettingsCard extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.onTap,
-    this.selected = false,
     this.titleColor,
     this.iconColor,
   });
@@ -531,7 +640,6 @@ class _SettingsCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final VoidCallback onTap;
-  final bool selected;
   final Color? titleColor;
   final Color? iconColor;
 
@@ -543,16 +651,13 @@ class _SettingsCard extends StatelessWidget {
       color: surface,
       borderRadius: BorderRadius.circular(16),
       elevation: 2,
-      shadowColor: Colors.black.withOpacity(0.06),
+      shadowColor: Colors.black.withValues(alpha: 0.06),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: selected ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2) : null,
-          ),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(16)),
           child: Row(
             children: [
               Icon(icon, size: 24, color: useIconColor),
@@ -567,10 +672,7 @@ class _SettingsCard extends StatelessWidget {
                   ),
                 ),
               ),
-              if (selected)
-                Icon(LucideIcons.circleCheck, color: Theme.of(context).colorScheme.primary, size: 24)
-              else
-                Icon(LucideIcons.chevronRight, color: onSurfaceVariant, size: 24),
+              Icon(LucideIcons.chevronRight, color: onSurfaceVariant, size: 24),
             ],
           ),
         ),

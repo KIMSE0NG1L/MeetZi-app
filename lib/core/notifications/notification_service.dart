@@ -8,6 +8,7 @@ import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/features/community/screens/community_post_detail_screen.dart';
 import 'package:nearo_app/features/matching_board/screens/mailbox_screen.dart';
 import 'package:nearo_app/features/notifications/data/notification_history_store.dart';
+import 'package:nearo_app/features/notifications/data/pending_match_accept_store.dart';
 import 'package:nearo_app/features/notifications/data/pending_take_note_store.dart';
 import 'package:nearo_app/shared/api/api_client.dart';
 
@@ -24,8 +25,9 @@ class NotificationService {
 
   NotificationService._internal();
 
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
-  
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+
   static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
     'high_importance_channel',
     '중요 알림',
@@ -53,7 +55,8 @@ class NotificationService {
     );
 
     await flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(_channel);
 
     final token = await messaging.getToken();
@@ -79,6 +82,16 @@ class NotificationService {
           if (rp is Map) requesterProfile = Map<String, dynamic>.from(rp);
           PendingTakeNoteStore.instance.setPending(requestId, requesterProfile);
         }
+      } else if (type == 'take_note_accepted') {
+        final requestId = initialMessage.data['requestId']?.toString();
+        if (requestId != null && requestId.isNotEmpty) {
+          PendingMatchAcceptStore.instance.setPending(
+            requestId: requestId,
+            roomId: initialMessage.data['roomId']?.toString(),
+            matchId: initialMessage.data['matchId']?.toString(),
+          );
+        }
+        saveNotificationToHistory(initialMessage);
       } else {
         saveNotificationToHistory(initialMessage);
       }
@@ -105,6 +118,14 @@ class NotificationService {
       }
 
       if (type == 'take_note_accepted') {
+        final requestId = message.data['requestId']?.toString();
+        if (requestId != null && requestId.isNotEmpty) {
+          PendingMatchAcceptStore.instance.setPending(
+            requestId: requestId,
+            roomId: message.data['roomId']?.toString(),
+            matchId: message.data['matchId']?.toString(),
+          );
+        }
         saveNotificationToHistory(message);
         await showForegroundLocalNotification(
           message: message,
@@ -146,14 +167,27 @@ class NotificationService {
           PendingTakeNoteStore.instance.setPending(requestId, requesterProfile);
         }
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          handleNotificationNavigation(navigatorKey, Map<String, dynamic>.from(message.data));
+          handleNotificationNavigation(
+              navigatorKey, Map<String, dynamic>.from(message.data));
         });
         return;
       }
 
+      if (type == 'take_note_accepted') {
+        final requestId = message.data['requestId']?.toString();
+        if (requestId != null && requestId.isNotEmpty) {
+          PendingMatchAcceptStore.instance.setPending(
+            requestId: requestId,
+            roomId: message.data['roomId']?.toString(),
+            matchId: message.data['matchId']?.toString(),
+          );
+        }
+      }
+
       saveNotificationToHistory(message);
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        handleNotificationNavigation(navigatorKey, Map<String, dynamic>.from(message.data));
+        handleNotificationNavigation(
+            navigatorKey, Map<String, dynamic>.from(message.data));
       });
     });
 
@@ -161,7 +195,8 @@ class NotificationService {
   }
 
   void saveNotificationToHistory(RemoteMessage message) {
-    final id = message.messageId ?? '${message.hashCode}_${DateTime.now().millisecondsSinceEpoch}';
+    final id = message.messageId ??
+        '${message.hashCode}_${DateTime.now().millisecondsSinceEpoch}';
     NotificationHistoryStore.instance.add(
       id: id,
       title: message.notification?.title,
@@ -205,7 +240,8 @@ class NotificationService {
     } catch (_) {}
   }
 
-  void handleNotificationNavigation(GlobalKey<NavigatorState> navigatorKey, Map<String, dynamic> data) {
+  void handleNotificationNavigation(
+      GlobalKey<NavigatorState> navigatorKey, Map<String, dynamic> data) {
     final navigator = navigatorKey.currentState;
     if (navigator == null) return;
 
@@ -218,7 +254,10 @@ class NotificationService {
       final environmentId = data['environmentId']?.toString();
       final postId = data['postId']?.toString();
       final schoolName = data['schoolName']?.toString() ?? '커뮤니티';
-      if (environmentId != null && environmentId.isNotEmpty && postId != null && postId.isNotEmpty) {
+      if (environmentId != null &&
+          environmentId.isNotEmpty &&
+          postId != null &&
+          postId.isNotEmpty) {
         navigator.push(
           MaterialPageRoute<void>(
             builder: (_) => CommunityPostDetailScreen(
@@ -237,6 +276,22 @@ class NotificationService {
           builder: (_) => const MailboxScreen(),
         ),
       );
+      return;
+    }
+    if (type == 'take_note_accepted') {
+      final acceptedRoomId = data['roomId']?.toString();
+      if (acceptedRoomId != null && acceptedRoomId.isNotEmpty) {
+        navigator.pushNamed(
+          AppRoutes.chatRoom,
+          arguments: {'roomId': acceptedRoomId, 'partnerNickname': '상대'},
+        );
+      } else {
+        navigator.push(
+          MaterialPageRoute<void>(
+            builder: (_) => const MailboxScreen(),
+          ),
+        );
+      }
       return;
     }
     final roomId = data['roomId']?.toString();

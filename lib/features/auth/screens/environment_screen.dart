@@ -5,6 +5,7 @@ import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/auth/data/environment_repository.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
+import 'package:nearo_app/shared/utils/privacy_consent_storage.dart';
 
 /// last EmailVerification 1:1 UI + 기존 API 연동 (학교 메일 인증)
 class EnvironmentScreen extends StatefulWidget {
@@ -55,7 +56,8 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
       final items = await _environmentsFuture;
       if (!mounted) return;
       final universities = items
-          .where((item) => item is Map && item['type']?.toString() == 'university')
+          .where(
+              (item) => item is Map && item['type']?.toString() == 'university')
           .map((item) => Map<String, dynamic>.from(item as Map))
           .toList();
 
@@ -142,8 +144,8 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
       return;
     }
     if (!_isValidEmail(email)) {
-      setState(() => _error =
-          '${_selectedEnvironmentName ?? "해당 학교"} 메일 주소를 입력해주세요');
+      setState(() =>
+          _error = '${_selectedEnvironmentName ?? "해당 학교"} 메일 주소를 입력해주세요');
       return;
     }
 
@@ -176,8 +178,11 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
       await Future.delayed(const Duration(seconds: 1));
       if (!mounted) return false;
       setState(() {
-        if (_timer <= 1) _timer = 0;
-        else _timer--;
+        if (_timer <= 1) {
+          _timer = 0;
+        } else {
+          _timer--;
+        }
       });
       return _timer > 0;
     });
@@ -227,8 +232,10 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
       if (!mounted) return;
       await Future.delayed(const Duration(milliseconds: 800));
       if (!mounted) return;
+      final hasAcceptedPrivacy = await PrivacyConsentStorage.hasAccepted();
+      if (!mounted) return;
       Navigator.of(context).pushNamedAndRemoveUntil(
-        AppRoutes.home,
+        hasAcceptedPrivacy ? AppRoutes.home : AppRoutes.privacyConsentGate,
         (route) => false,
       );
     } on DioException catch (e) {
@@ -287,228 +294,135 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
           children: [
             // Header (last: gradient, 뒤로 / 학생 인증 / 3-step progress)
             Container(
-            padding: EdgeInsets.only(
-              left: 20,
-              right: 20,
-              top: MediaQuery.of(context).padding.top + 16,
-              bottom: 24,
-            ),
-            decoration: const BoxDecoration(
-              gradient: gradient,
-              boxShadow: [
-                BoxShadow(
-                  color: Color(0x26000000),
-                  blurRadius: 4,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    IconButton(
-                      onPressed: () => Navigator.of(context).maybePop(),
-                      icon: const Icon(
-                        LucideIcons.arrowLeft,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.white.withValues(alpha: 0.1),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    ),
-                    const Text(
-                      '학생 인증',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(width: 40),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                // 3-step: 프로필 — 메일 인증 — 완료
-                Row(
-                  children: [
-                    _progressStep(
-                      icon: LucideIcons.check,
-                      label: '프로필',
-                      active: false,
-                    ),
-                    Expanded(
-                      child: Container(
-                        height: 2,
-                        color: Colors.white.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    _progressStep(
-                      icon: LucideIcons.mail,
-                      label: '메일 인증',
-                      active: true,
-                    ),
-                    Expanded(
-                      child: Container(
-                        height: 2,
-                        color: Colors.white.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    _progressStep(
-                      icon: null,
-                      label: '완료',
-                      active: false,
-                      text: '3',
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: MediaQuery.of(context).padding.top + 16,
+                bottom: 24,
+              ),
+              decoration: const BoxDecoration(
+                gradient: gradient,
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0x26000000),
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '학생 메일 인증이\n필요해요 📧',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: dark ? Colors.white : const Color(0xFF111827),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _selectedEnvironmentName != null
-                        ? '$_selectedEnvironmentName 학생 메일로 인증해주세요'
-                        : '학교 학생 메일로 인증해주세요',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: dark
-                          ? const Color(0xFF9CA3AF)
-                          : const Color(0xFF6B7280),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  Text(
-                    '학생 메일',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: dark ? Colors.white : const Color(0xFF111827),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _emailController,
-                    readOnly: _isCodeSent,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
-                      hintText: _emailHint,
-                      filled: true,
-                      fillColor: dark ? const Color(0xFF1F2937) : Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(
-                          color: dark
-                              ? const Color(0xFF374151)
-                              : const Color(0xFFE5E7EB),
-                          width: 2,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.of(context).maybePop(),
+                        icon: const Icon(
+                          LucideIcons.arrowLeft,
+                          color: Colors.white,
+                          size: 24,
                         ),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 16,
-                      ),
-                      suffixIcon: _isCodeSent
-                          ? null
-                          : Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: TextButton(
-                                onPressed: (_isRequesting ||
-                                        _emailController.text.trim().isEmpty)
-                                    ? null
-                                    : _requestCode,
-                                child: _isRequesting
-                                    ? const SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: Colors.white,
-                                        ),
-                                      )
-                                    : const Text('전송'),
-                              ),
-                            ),
-                    ),
-                    style: TextStyle(
-                      color: dark ? Colors.white : const Color(0xFF111827),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _emailHelpText,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: dark
-                          ? const Color(0xFF6B7280)
-                          : const Color(0xFF6B7280),
-                    ),
-                  ),
-                  if (_isCodeSent) ...[
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '인증번호',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: dark
-                                ? Colors.white
-                                : const Color(0xFF111827),
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.white.withValues(alpha: 0.1),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        if (_timer > 0)
-                          Text(
-                            _formatTimer(_timer),
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFFEC4899),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _codeController,
-                      keyboardType: TextInputType.number,
-                      maxLength: 6,
-                      textAlign: TextAlign.center,
+                      ),
+                      const Text(
+                        '학생 인증',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 40),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  // 3-step: 프로필 — 메일 인증 — 완료
+                  Row(
+                    children: [
+                      _progressStep(
+                        icon: LucideIcons.check,
+                        label: '프로필',
+                        active: false,
+                      ),
+                      Expanded(
+                        child: Container(
+                          height: 2,
+                          color: Colors.white.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      _progressStep(
+                        icon: LucideIcons.mail,
+                        label: '메일 인증',
+                        active: true,
+                      ),
+                      Expanded(
+                        child: Container(
+                          height: 2,
+                          color: Colors.white.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      _progressStep(
+                        icon: null,
+                        label: '완료',
+                        active: false,
+                        text: '3',
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '학생 메일 인증이\n필요해요 📧',
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        letterSpacing: 8,
                         color: dark ? Colors.white : const Color(0xFF111827),
                       ),
-                      cursorColor: dark ? Colors.white : const Color(0xFF111827),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _selectedEnvironmentName != null
+                          ? '$_selectedEnvironmentName 학생 메일로 인증해주세요'
+                          : '학교 학생 메일로 인증해주세요',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: dark
+                            ? const Color(0xFF9CA3AF)
+                            : const Color(0xFF6B7280),
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    Text(
+                      '학생 메일',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: dark ? Colors.white : const Color(0xFF111827),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _emailController,
+                      readOnly: _isCodeSent,
+                      keyboardType: TextInputType.emailAddress,
                       decoration: InputDecoration(
-                        hintText: '',
-                        counterText: '',
+                        hintText: _emailHint,
                         filled: true,
-                        fillColor: dark
-                            ? const Color(0xFF1F2937)
-                            : Colors.white,
+                        fillColor:
+                            dark ? const Color(0xFF1F2937) : Colors.white,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                           borderSide: BorderSide(
@@ -522,252 +436,359 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
                           horizontal: 16,
                           vertical: 16,
                         ),
+                        suffixIcon: _isCodeSent
+                            ? null
+                            : Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: TextButton(
+                                  onPressed: (_isRequesting ||
+                                          _emailController.text.trim().isEmpty)
+                                      ? null
+                                      : _requestCode,
+                                  child: _isRequesting
+                                      ? const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : const Text('전송'),
+                                ),
+                              ),
                       ),
-                      onChanged: (_) => setState(() {}),
+                      style: TextStyle(
+                        color: dark ? Colors.white : const Color(0xFF111827),
+                      ),
                     ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '메일로 전송된 6자리 숫자를 입력하세요',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: dark
-                                ? const Color(0xFF6B7280)
-                                : const Color(0xFF6B7280),
+                    const SizedBox(height: 8),
+                    Text(
+                      _emailHelpText,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: dark
+                            ? const Color(0xFF6B7280)
+                            : const Color(0xFF6B7280),
+                      ),
+                    ),
+                    if (_isCodeSent) ...[
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '인증번호',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color:
+                                  dark ? Colors.white : const Color(0xFF111827),
+                            ),
+                          ),
+                          if (_timer > 0)
+                            Text(
+                              _formatTimer(_timer),
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFEC4899),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _codeController,
+                        keyboardType: TextInputType.number,
+                        maxLength: 6,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 8,
+                          color: dark ? Colors.white : const Color(0xFF111827),
+                        ),
+                        cursorColor:
+                            dark ? Colors.white : const Color(0xFF111827),
+                        decoration: InputDecoration(
+                          hintText: '',
+                          counterText: '',
+                          filled: true,
+                          fillColor:
+                              dark ? const Color(0xFF1F2937) : Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(
+                              color: dark
+                                  ? const Color(0xFF374151)
+                                  : const Color(0xFFE5E7EB),
+                              width: 2,
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 16,
                           ),
                         ),
-                        TextButton(
-                          onPressed: _isCodeSent ? _requestCode : null,
-                          child: Text(
-                            '재전송',
+                        onChanged: (_) => setState(() {}),
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '메일로 전송된 6자리 숫자를 입력하세요',
                             style: TextStyle(
                               fontSize: 12,
-                              fontWeight: FontWeight.w500,
                               color: dark
-                                  ? const Color(0xFFF472B6)
-                                  : const Color(0xFFEC4899),
+                                  ? const Color(0xFF6B7280)
+                                  : const Color(0xFF6B7280),
                             ),
                           ),
+                          TextButton(
+                            onPressed: _isCodeSent ? _requestCode : null,
+                            child: Text(
+                              '재전송',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: dark
+                                    ? const Color(0xFFF472B6)
+                                    : const Color(0xFFEC4899),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (_error.isNotEmpty) ...[
+                      const SizedBox(height: 24),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEE2E2),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFFECACA)),
                         ),
-                      ],
-                    ),
-                  ],
-                  if (_error.isNotEmpty) ...[
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              LucideIcons.circleAlert,
+                              color: Color(0xFFEF4444),
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                _error,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFFEF4444),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    if (_success.isNotEmpty) ...[
+                      const SizedBox(height: 24),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD1FAE5),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFA7F3D0)),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              LucideIcons.check,
+                              color: Color(0xFF10B981),
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                _success,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFF10B981),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 24),
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFEE2E2),
+                        color: dark
+                            ? const Color(0xFF1F2937).withValues(alpha: 0.5)
+                            : Colors.white.withValues(alpha: 0.6),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFFECACA)),
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(
-                            LucideIcons.circleAlert,
-                            color: Color(0xFFEF4444),
-                            size: 20,
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Color(0xFFEC4899),
+                                  Color(0xFF8B5CF6),
+                                ],
+                              ),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              LucideIcons.mail,
+                              color: Colors.white,
+                              size: 16,
+                            ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: Text(
-                              _error,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Color(0xFFEF4444),
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                  if (_success.isNotEmpty) ...[
-                    const SizedBox(height: 24),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFD1FAE5),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFA7F3D0)),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Icon(
-                            LucideIcons.check,
-                            color: Color(0xFF10B981),
-                            size: 20,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              _success,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Color(0xFF10B981),
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 24),
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: dark
-                          ? const Color(0xFF1F2937).withValues(alpha: 0.5)
-                          : Colors.white.withValues(alpha: 0.6),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Color(0xFFEC4899),
-                                Color(0xFF8B5CF6),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '인증 안내',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: dark
+                                        ? Colors.white
+                                        : const Color(0xFF111827),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '• 학교 학생 메일만 인증 가능합니다\n• 인증번호는 3분간 유효합니다\n• 메일이 오지 않으면 스팸함을 확인해주세요\n• 재전송은 여러 번 가능합니다',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: dark
+                                        ? const Color(0xFF9CA3AF)
+                                        : const Color(0xFF6B7280),
+                                    height: 1.5,
+                                  ),
+                                ),
                               ],
                             ),
-                            shape: BoxShape.circle,
                           ),
-                          child: const Icon(
-                            LucideIcons.mail,
-                            color: Colors.white,
-                            size: 16,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '인증 안내',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: dark
-                                      ? Colors.white
-                                      : const Color(0xFF111827),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '• 학교 학생 메일만 인증 가능합니다\n• 인증번호는 3분간 유효합니다\n• 메일이 오지 않으면 스팸함을 확인해주세요\n• 재전송은 여러 번 가능합니다',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: dark
-                                      ? const Color(0xFF9CA3AF)
-                                      : const Color(0xFF6B7280),
-                                  height: 1.5,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // Bottom button: 전체 너비, 캡슐형 둥근 모서리, 비활성 시 연한 회색 + 은은한 그림자
-          Container(
-            padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-            decoration: BoxDecoration(
-              color: dark
-                  ? const Color(0xFF1F2937).withValues(alpha: 0.5)
-                  : Colors.white.withValues(alpha: 0.8),
-              border: Border(
-                top: BorderSide(
-                  color: dark
-                      ? const Color(0xFF374151)
-                      : const Color(0xFFE5E7EB),
+                  ],
                 ),
               ),
             ),
-            child: SafeArea(
-              top: false,
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: (_isCodeSent &&
-                              _codeController.text.length == 6 &&
-                              !_isConfirming)
-                      ? _confirmCode
-                      : null,
-                  borderRadius: BorderRadius.circular(999),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    decoration: BoxDecoration(
-                      color: _isCodeSent && _codeController.text.length == 6 && !_isConfirming
-                          ? null
-                          : (dark ? const Color(0xFF374151) : const Color(0xFFE5E7EB)),
-                      gradient: _isCodeSent && _codeController.text.length == 6 && !_isConfirming
-                          ? const LinearGradient(
-                              begin: Alignment.centerLeft,
-                              end: Alignment.centerRight,
-                              colors: [
-                                Color(0xFFFDA4AF),
-                                Color(0xFFF9A8D4),
-                                Color(0xFFFB7185),
+            // Bottom button: 전체 너비, 캡슐형 둥근 모서리, 비활성 시 연한 회색 + 은은한 그림자
+            Container(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+              decoration: BoxDecoration(
+                color: dark
+                    ? const Color(0xFF1F2937).withValues(alpha: 0.5)
+                    : Colors.white.withValues(alpha: 0.8),
+                border: Border(
+                  top: BorderSide(
+                    color: dark
+                        ? const Color(0xFF374151)
+                        : const Color(0xFFE5E7EB),
+                  ),
+                ),
+              ),
+              child: SafeArea(
+                top: false,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: (_isCodeSent &&
+                            _codeController.text.length == 6 &&
+                            !_isConfirming)
+                        ? _confirmCode
+                        : null,
+                    borderRadius: BorderRadius.circular(999),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      decoration: BoxDecoration(
+                        color: _isCodeSent &&
+                                _codeController.text.length == 6 &&
+                                !_isConfirming
+                            ? null
+                            : (dark
+                                ? const Color(0xFF374151)
+                                : const Color(0xFFE5E7EB)),
+                        gradient: _isCodeSent &&
+                                _codeController.text.length == 6 &&
+                                !_isConfirming
+                            ? const LinearGradient(
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                                colors: [
+                                  Color(0xFFFDA4AF),
+                                  Color(0xFFF9A8D4),
+                                  Color(0xFFFB7185),
+                                ],
+                              )
+                            : null,
+                        borderRadius: BorderRadius.circular(999),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.06),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: _isConfirming
+                          ? const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Text('인증 중...',
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold)),
                               ],
                             )
-                          : null,
-                      borderRadius: BorderRadius.circular(999),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.06),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: _isConfirming
-                        ? const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
+                          : Text(
+                              '인증 완료',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: _isCodeSent &&
+                                        _codeController.text.length == 6 &&
+                                        !_isConfirming
+                                    ? Colors.white
+                                    : (dark
+                                        ? const Color(0xFF9CA3AF)
+                                        : const Color(0xFF6B7280)),
                               ),
-                              SizedBox(width: 8),
-                              Text('인증 중...', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                            ],
-                          )
-                        : Text(
-                            '인증 완료',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: _isCodeSent && _codeController.text.length == 6 && !_isConfirming
-                                  ? Colors.white
-                                  : (dark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280)),
                             ),
-                          ),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
           ],
         ),
       ),
@@ -823,4 +844,3 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
     );
   }
 }
- 

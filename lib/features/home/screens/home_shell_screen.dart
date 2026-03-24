@@ -12,6 +12,7 @@ import 'package:nearo_app/features/matching_board/screens/mailbox_screen.dart';
 import 'package:nearo_app/features/matching_board/widgets/match_card_avatar.dart';
 import 'package:nearo_app/features/messages/screens/messages_screen.dart';
 import 'package:nearo_app/features/notifications/screens/notifications_screen.dart';
+import 'package:nearo_app/features/notifications/data/pending_match_accept_store.dart';
 import 'package:nearo_app/features/notifications/data/pending_take_note_store.dart';
 import 'package:nearo_app/features/profile/screens/my_profile_screen.dart';
 import 'package:nearo_app/features/ratings/screens/ratings_screen.dart';
@@ -19,10 +20,10 @@ import 'package:nearo_app/features/settings/screens/settings_screen.dart';
 import 'package:nearo_app/features/matching_board/utils/board_note_sheet_launcher.dart';
 import 'package:nearo_app/shared/api/api_client.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
-import 'package:nearo_app/shared/theme/nearo_theme.dart';
-import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/features/auth/data/environment_status_repository.dart';
 import 'package:nearo_app/presentation/widgets/meetzy_coach_mark.dart';
+import 'package:nearo_app/features/matching/data/matching_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// 설명 주석
 class HomeShellScreen extends StatefulWidget {
@@ -36,23 +37,25 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
   int _currentIndex = 2;
   final PageController _pageController = PageController(initialPage: 2);
   final _authRepository = AuthRepository();
-  final MatchingBoardRepository _matchingBoardRepository = MatchingBoardRepository();
+  final MatchingBoardRepository _matchingBoardRepository =
+      MatchingBoardRepository();
   Map<String, dynamic>? _profile;
-  bool _profileLoading = true;
   final ValueNotifier<int> _boardRefreshTrigger = ValueNotifier<int>(0);
   bool _routeObserverSubscribed = false;
   bool _takeNoteDialogShown = false;
+  bool _matchAcceptedDialogShown = false;
   bool _showCoachMark = false;
   bool _randomMatchLoading = false;
   final List<String> _recentRandomUserIds = <String>[];
+  final MatchingRepository _matchingRepository = MatchingRepository();
 
   List<Widget> get _pages => [
-    const CommunityTabScreen(),
-    const MessagesScreen(),
-    MatchingBoardScreen(refreshTrigger: _boardRefreshTrigger),
-    const MyProfileScreen(),
-    RatingsScreen(),
-  ];
+        const CommunityTabScreen(),
+        const MessagesScreen(),
+        MatchingBoardScreen(refreshTrigger: _boardRefreshTrigger),
+        const MyProfileScreen(),
+        RatingsScreen(),
+      ];
 
   static const _purpleGradient = LinearGradient(
     begin: Alignment.centerLeft,
@@ -66,7 +69,10 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
     _loadThemeAndProfile();
     _registerPushTokenIfNeeded();
     PendingTakeNoteStore.instance.pending.addListener(_onPendingTakeNote);
+    PendingMatchAcceptStore.instance.pending
+        .addListener(_onPendingMatchAccepted);
     _checkCoachMark();
+    _checkAcceptedMatchesOnLaunch();
   }
 
   /// 로그인 후 홈 진입 시 FCM 토큰을 서버에 등록 (매칭 요청 등 알림 수신용)
@@ -101,6 +107,136 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
     });
   }
 
+  void _onPendingMatchAccepted() {
+    final accepted = PendingMatchAcceptStore.instance.pending.value;
+    if (accepted == null || _matchAcceptedDialogShown || !mounted) return;
+    PendingMatchAcceptStore.instance.clear();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _showAcceptedMatchDialog(
+        count: 1,
+        roomId: accepted.roomId,
+        requestIds: [accepted.requestId],
+      );
+    });
+  }
+
+  Future<List<String>> _getSeenAcceptedRequestIds() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList('seen_accepted_take_note_request_ids') ??
+        <String>[];
+  }
+
+  Future<void> _markAcceptedRequestIdsSeen(List<String> requestIds) async {
+    final prefs = await SharedPreferences.getInstance();
+    final current =
+        prefs.getStringList('seen_accepted_take_note_request_ids') ??
+            <String>[];
+    final merged = <String>{
+      ...current,
+      ...requestIds.where((id) => id.isNotEmpty)
+    };
+    await prefs.setStringList(
+        'seen_accepted_take_note_request_ids', merged.toList());
+  }
+
+  Future<void> _checkAcceptedMatchesOnLaunch() async {
+    try {
+      final seenIds = await _getSeenAcceptedRequestIds();
+      final requests =
+          await _matchingBoardRepository.fetchMySentTakeNoteRequests();
+      final accepted = requests.where((request) {
+        final requestId = request['id']?.toString() ?? '';
+        return request['status']?.toString() == 'accepted' &&
+            requestId.isNotEmpty &&
+            !seenIds.contains(requestId);
+      }).toList();
+
+      if (accepted.isEmpty || !mounted) return;
+
+      final firstRoomId = accepted.first['roomId']?.toString();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _showAcceptedMatchDialog(
+          count: accepted.length,
+          roomId: firstRoomId,
+          requestIds: accepted
+              .map((request) => request['id']?.toString() ?? '')
+              .toList(),
+        );
+      });
+    } catch (e) {
+      debugPrint('Failed to check accepted matches on launch: $e');
+    }
+  }
+
+  Future<void> _openAcceptedMatchChat({String? roomId}) async {
+    String? targetRoomId = roomId;
+    if (targetRoomId == null || targetRoomId.isEmpty) {
+      try {
+        final activeMatch = await _matchingRepository.getActiveMatch();
+        targetRoomId = activeMatch['roomId']?.toString() ??
+            (activeMatch['chatRoom'] as Map?)?['id']?.toString();
+      } catch (e) {
+        debugPrint('Failed to resolve active match room: $e');
+      }
+    }
+
+    if (!mounted) return;
+
+    if (targetRoomId != null && targetRoomId.isNotEmpty) {
+      Navigator.of(context).pushNamed(
+        AppRoutes.chatRoom,
+        arguments: {'roomId': targetRoomId, 'partnerNickname': '상대'},
+      );
+      return;
+    }
+
+    _openMatchingInboxModal();
+  }
+
+  void _showAcceptedMatchDialog({
+    required int count,
+    String? roomId,
+    required List<String> requestIds,
+  }) {
+    if (_matchAcceptedDialogShown || !mounted) return;
+    _matchAcceptedDialogShown = true;
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        final title = count > 1 ? '$count명과 매칭되었어요!' : '매칭이 성사되었어요!';
+        final body =
+            count > 1 ? '지금 바로 채팅을 시작해보세요.' : '상대가 요청을 수락했어요. 바로 채팅방으로 이동할까요?';
+        return AlertDialog(
+          title: Text(title),
+          content: Text(body),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                await _markAcceptedRequestIdsSeen(requestIds);
+                if (!ctx.mounted) return;
+                Navigator.of(ctx).pop();
+              },
+              child: const Text('나중에'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                await _markAcceptedRequestIdsSeen(requestIds);
+                if (!ctx.mounted) return;
+                Navigator.of(ctx).pop();
+                await _openAcceptedMatchChat(roomId: roomId);
+              },
+              child: const Text('확인'),
+            ),
+          ],
+        );
+      },
+    ).then((_) {
+      _matchAcceptedDialogShown = false;
+    });
+  }
 
   Future<void> _openMatchingInboxModal() async {
     final size = MediaQuery.of(context).size;
@@ -129,7 +265,10 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
                     : Colors.white,
                 borderRadius: BorderRadius.circular(32),
                 boxShadow: const [
-                  BoxShadow(color: Color(0x40000000), blurRadius: 24, offset: Offset(0, 8)),
+                  BoxShadow(
+                      color: Color(0x40000000),
+                      blurRadius: 24,
+                      offset: Offset(0, 8)),
                 ],
               ),
               clipBehavior: Clip.antiAlias,
@@ -186,6 +325,8 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
   @override
   void dispose() {
     PendingTakeNoteStore.instance.pending.removeListener(_onPendingTakeNote);
+    PendingMatchAcceptStore.instance.pending
+        .removeListener(_onPendingMatchAccepted);
     routeObserver.unsubscribe(this);
     _boardRefreshTrigger.dispose();
     _pageController.dispose();
@@ -203,8 +344,10 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
       await ThemeController.loadThemeColorMode();
       if (ThemeController.themeColorMode.value == 'school') {
         try {
-          final status = await EnvironmentStatusRepository().getMyEnvironmentStatus();
-          final primaryHex = (status['environment'] as Map?)?['primaryColor']?.toString();
+          final status =
+              await EnvironmentStatusRepository().getMyEnvironmentStatus();
+          final primaryHex =
+              (status['environment'] as Map?)?['primaryColor']?.toString();
           final primary = ThemeController.parsePrimaryColor(primaryHex);
           if (primary != null) ThemeController.setSeedColor(primary);
         } catch (e) {
@@ -212,14 +355,13 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
         }
       }
       final result = await _authRepository.getProfile();
-      final user = (result['user'] as Map?)?.cast<String, dynamic>() ?? result as Map<String, dynamic>;
+      final user = (result['user'] as Map?)?.cast<String, dynamic>() ??
+          result as Map<String, dynamic>;
       setState(() {
         _profile = user;
-        _profileLoading = false;
       });
     } catch (e) {
       debugPrint('Failed to load theme and profile: $e');
-      setState(() => _profileLoading = false);
     }
   }
 
@@ -233,7 +375,8 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
 
   Widget _buildTopBar() {
     final isRanking = _currentIndex == 0;
-    final gradient = isRanking ? _purpleGradient : ThemeController.getHeaderGradient();
+    final gradient =
+        isRanking ? _purpleGradient : ThemeController.getHeaderGradient();
     String title = '';
     String? subtitle;
     switch (_currentIndex) {
@@ -270,71 +413,76 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
       height: pt + 20 + 36,
       width: double.infinity,
       decoration: BoxDecoration(gradient: gradient, boxShadow: [
-        BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 8, offset: const Offset(0, 2)),
+        BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 8,
+            offset: const Offset(0, 2)),
       ]),
       child: Padding(
-          padding: EdgeInsets.only(left: 20, right: 20, top: pt, bottom: 20),
-          child: Row(
-            children: [
-              Expanded(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (subtitle != null) ...[
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 24,
+        padding: EdgeInsets.only(left: 20, right: 20, top: pt, bottom: 20),
+        child: Row(
+          children: [
+            Expanded(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (subtitle != null) ...[
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 24,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        subtitle,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 14,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(width: 6),
-                      Flexible(
-                        child: Text(
-                          subtitle,
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: 14,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                    ),
+                  ] else
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 24,
                       ),
-                    ] else
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 24,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                  ],
-                ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                ],
               ),
-              IconButton(
-                icon: const Icon(LucideIcons.bell, color: Colors.white, size: 26),
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const NotificationsScreen()),
-                  );
-                },
-                tooltip: '알림',
-              ),
-              IconButton(
-                icon: const Icon(LucideIcons.settings, color: Colors.white, size: 26),
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                  );
-                },
-                tooltip: '설정',
-              ),
-            ],
-          ),
+            ),
+            IconButton(
+              icon: const Icon(LucideIcons.bell, color: Colors.white, size: 26),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                      builder: (_) => const NotificationsScreen()),
+                );
+              },
+              tooltip: '알림',
+            ),
+            IconButton(
+              icon: const Icon(LucideIcons.settings,
+                  color: Colors.white, size: 26),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                );
+              },
+              tooltip: '설정',
+            ),
+          ],
         ),
+      ),
     );
   }
 
@@ -357,7 +505,10 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
         color: dark ? const Color(0xFF1F2937) : Colors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8, offset: const Offset(0, -2)),
+          BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 8,
+              offset: const Offset(0, -2)),
         ],
       ),
       child: SafeArea(
@@ -392,7 +543,14 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
                         gradient: active ? activeGradient : null,
                         color: active ? null : Colors.transparent,
                         borderRadius: BorderRadius.circular(16),
-                        boxShadow: active ? [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 8, offset: const Offset(0, 2))] : null,
+                        boxShadow: active
+                            ? [
+                                BoxShadow(
+                                    color: Colors.black.withOpacity(0.15),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2))
+                              ]
+                            : null,
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -408,7 +566,8 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
                             labels[i],
                             style: TextStyle(
                               fontSize: 11,
-                              fontWeight: active ? FontWeight.bold : FontWeight.w500,
+                              fontWeight:
+                                  active ? FontWeight.bold : FontWeight.w500,
                               color: active ? Colors.white : inactiveColor,
                             ),
                             overflow: TextOverflow.ellipsis,
@@ -500,55 +659,57 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
       color: bgColor,
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
       child: SizedBox(
-          width: double.infinity,
-          height: 48,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: ThemeController.getActiveAccentGradient(),
+        width: double.infinity,
+        height: 48,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: ThemeController.getActiveAccentGradient(),
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.16),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
               borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.16),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(14),
-                onTap: _randomMatchLoading ? null : _onTapRandomMatch,
-                child: Center(
-                  child: _randomMatchLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(LucideIcons.shuffle, color: Colors.white, size: 18),
-                            SizedBox(width: 8),
-                            Text(
-                              '\uB79C\uB364 \uB9E4\uCE6D',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ],
+              onTap: _randomMatchLoading ? null : _onTapRandomMatch,
+              child: Center(
+                child: _randomMatchLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
-                ),
+                      )
+                    : const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(LucideIcons.shuffle,
+                              color: Colors.white, size: 18),
+                          SizedBox(width: 8),
+                          Text(
+                            '\uB79C\uB364 \uB9E4\uCE6D',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ],
+                      ),
               ),
             ),
           ),
         ),
+      ),
     );
   }
 
@@ -569,7 +730,8 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
                 child: PageView.builder(
                   controller: _pageController,
                   itemCount: _pages.length,
-                  onPageChanged: (index) => setState(() => _currentIndex = index),
+                  onPageChanged: (index) =>
+                      setState(() => _currentIndex = index),
                   itemBuilder: (_, index) => _pages[index],
                 ),
               ),
@@ -587,5 +749,3 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
     );
   }
 }
-
-

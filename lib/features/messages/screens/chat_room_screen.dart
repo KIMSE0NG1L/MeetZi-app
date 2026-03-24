@@ -10,7 +10,6 @@ import 'package:nearo_app/features/messages/data/partner_profile_repository.dart
 import 'package:nearo_app/shared/notification_utils.dart';
 import 'package:nearo_app/shared/utils/app_config.dart';
 import 'package:nearo_app/shared/utils/photo_url.dart';
-import 'package:nearo_app/shared/utils/app_config.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/shared/utils/token_storage.dart';
 import 'package:nearo_app/core/auth/auth_repository.dart';
@@ -27,6 +26,7 @@ class _ChatMessage {
   final String text;
   final bool isMine;
   final bool isSystem;
+  final bool isPending;
   final DateTime? readAt;
   final DateTime? createdAt;
   final String senderId;
@@ -37,6 +37,7 @@ class _ChatMessage {
     required this.isMine,
     required this.senderId,
     this.isSystem = false,
+    this.isPending = false,
     this.readAt,
     this.createdAt,
   });
@@ -58,7 +59,8 @@ class ChatRoomScreen extends StatefulWidget {
   State<ChatRoomScreen> createState() => _ChatRoomScreenState();
 }
 
-class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObserver {
+class _ChatRoomScreenState extends State<ChatRoomScreen>
+    with WidgetsBindingObserver {
   bool _isMuted = false;
   final _authRepository = AuthRepository();
   final _tokenStorage = TokenStorage();
@@ -86,6 +88,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
       SnackBar(content: Text(_isMuted ? '채팅방 알림이 꺼졌습니다.' : '채팅방 알림이 켜졌습니다.')),
     );
   }
+
   Future<void> _loadMuteStatus() async {
     if (_roomId == null) return;
     try {
@@ -105,6 +108,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
     final dt = dateTime ?? DateTime.now();
     return "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
   }
+
   IO.Socket? _socket;
   String? _myUserId;
   final _partnerProfileRepository = PartnerProfileRepository();
@@ -113,6 +117,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
   final _reportRepository = ReportRepository();
   final _blockRepository = BlockRepository();
   final _controller = TextEditingController();
+  bool _isReconnecting = false;
   String? _partnerId;
   final List<_ChatMessage> _messages = [];
   bool _loading = true;
@@ -130,6 +135,41 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
   String? _matchId;
 
   final ScrollController _scrollController = ScrollController();
+
+  void _scheduleMessageSync() {
+    Future<void>.delayed(const Duration(milliseconds: 900), () async {
+      if (!mounted || _roomId == null) return;
+      _repository.clearRoomCache(_roomId!);
+      await _loadMessages();
+      if (!mounted) return;
+      _sendReadReceipts();
+      _scrollToBottom();
+    });
+  }
+
+  void _appendOrMergeIncomingMessage(_ChatMessage incoming) {
+    final existingIndex =
+        _messages.indexWhere((message) => message.id == incoming.id);
+    if (existingIndex >= 0) {
+      _messages[existingIndex] = incoming;
+      return;
+    }
+
+    if (incoming.isMine) {
+      final pendingIndex = _messages.indexWhere(
+        (message) =>
+            message.isMine &&
+            message.isPending &&
+            message.text == incoming.text,
+      );
+      if (pendingIndex >= 0) {
+        _messages[pendingIndex] = incoming;
+        return;
+      }
+    }
+
+    _messages.add(incoming);
+  }
 
   /// 채팅방에서 내가 직접 한 번이라도 메시지를 보냈으면 아이스브레이커 문구 숨김
   bool get _shouldHideIceBreakers => _messages.any((m) => m.isMine);
@@ -195,12 +235,50 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
   }
 
   /// getRoom 응답의 messageReadAts로 '1' 갱신 (listMessages 대신 가벼운 getRoom 사용)
+  void _disposeSocketConnection({bool emitOutRoom = false}) {
+    final socket = _socket;
+    if (socket == null) return;
+    if (emitOutRoom && socket.connected && _roomId != null) {
+      socket.emit('outRoom', {'roomId': _roomId});
+    }
+    socket.dispose();
+    socket.destroy();
+    _socket = null;
+  }
+
+  Future<void> _restoreRoomConnection() async {
+    if (!mounted || _roomId == null || _myUserId == null || _isReconnecting) {
+      return;
+    }
+    _isReconnecting = true;
+    try {
+      final socket = _socket;
+      if (socket == null || !socket.connected) {
+        _disposeSocketConnection();
+        await _initSocket();
+      } else {
+        socket.emit('joinRoom', {'roomId': _roomId});
+      }
+      await _loadMessages();
+      await _syncReadAt();
+      if (!mounted) return;
+      _sendReadReceipts();
+      _scrollToBottom();
+    } catch (e) {
+      debugPrint('[restoreRoomConnection] failed: $e');
+    } finally {
+      _isReconnecting = false;
+    }
+  }
+
   void _applyMessageReadAts(List<dynamic>? messageReadAts) {
     if (messageReadAts == null || messageReadAts.isEmpty || !mounted) return;
     final serverReadAt = <String, DateTime>{};
     for (final m in messageReadAts) {
       final id = m['id']?.toString();
-      final readAt = m['readAt'] != null ? DateTime.tryParse(m['readAt'].toString()) : null;
+      final readAt = m['readAt'] != null
+          ? DateTime.tryParse(m['readAt'].toString())
+          : null;
       if (id != null && readAt != null) {
         serverReadAt[id] = readAt;
       }
@@ -237,7 +315,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
       }
       // 매칭 취소 시 서버에서 isActive=false로 오므로 주기적으로 반영해 입력 막기
       final isActiveFromServer = room['isActive'] == true;
-      final partnerInRoom = room['partnerInRoom'] == true;
+      final partnerInRoom =
+          room['partnerOnline'] == true || room['partnerInRoom'] == true;
       if (!isActiveFromServer && _isActive) {
         setState(() => _isActive = false);
       }
@@ -253,7 +332,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
 
   // 읽지 않은 메시지에 대해 소켓으로 읽음 이벤트 전송
   void _sendReadReceipts() {
-    if (_socket == null || !_socket!.connected || _roomId == null || _myUserId == null) return;
+    if (_socket == null ||
+        !_socket!.connected ||
+        _roomId == null ||
+        _myUserId == null) return;
     for (final msg in _messages) {
       if (!msg.isMine && msg.readAt == null) {
         final payload = {
@@ -281,15 +363,20 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
           ..addAll(result.map((m) {
             final senderId = m['senderId']?.toString();
             final isMine = senderId == _myUserId;
-            print('[isMine 판별] senderId=$senderId, _myUserId=$_myUserId, isMine=$isMine, text=${m['content']}');
+            print(
+                '[isMine 판별] senderId=$senderId, _myUserId=$_myUserId, isMine=$isMine, text=${m['content']}');
             return _ChatMessage(
               id: m['id']?.toString() ?? '',
               text: m['content']?.toString() ?? '',
               isMine: isMine,
               senderId: senderId ?? '',
               isSystem: m['isSystem'] == true,
-              readAt: m['readAt'] != null ? DateTime.tryParse(m['readAt'].toString()) : null,
-              createdAt: m['createdAt'] != null ? DateTime.tryParse(m['createdAt'].toString()) : null,
+              readAt: m['readAt'] != null
+                  ? DateTime.tryParse(m['readAt'].toString())
+                  : null,
+              createdAt: m['createdAt'] != null
+                  ? DateTime.tryParse(m['createdAt'].toString())
+                  : null,
             );
           }));
         _loading = false;
@@ -341,15 +428,16 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
       }
       return;
     }
+    _disposeSocketConnection();
     final completer = Completer<void>();
     print('[소켓 연결 시도] roomId=$_roomId, myUserId=$_myUserId');
     _socket = IO.io(
-        '${AppConfig.baseUrl}/chat',
-        IO.OptionBuilder()
-            .setTransports(['websocket'])
-            .setAuth({'accessToken': accessToken})
-            .disableAutoConnect()
-            .build(),
+      '${AppConfig.baseUrl}/chat',
+      IO.OptionBuilder()
+          .setTransports(['websocket'])
+          .setAuth({'accessToken': accessToken})
+          .disableAutoConnect()
+          .build(),
     );
     _socket!.onConnect((_) {
       print('[소켓 연결 성공]');
@@ -357,25 +445,44 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
       if (!completer.isCompleted) completer.complete();
       print('[소켓 joinRoom emit] roomId=$_roomId');
     });
+    _socket!.onDisconnect((reason) {
+      debugPrint('[chat socket disconnected] $reason');
+    });
+    _socket!.onConnectError((error) {
+      debugPrint('[chat socket connect error] $error');
+      if (!completer.isCompleted) {
+        completer.completeError(error ?? 'connect error');
+      }
+    });
+    _socket!.onError((error) {
+      debugPrint('[chat socket error] $error');
+    });
     _socket!.on('newMessage', (data) {
       print('[소켓 newMessage 핸들러 등록됨] data=$data');
       if (!mounted) return;
       final messageId = data['id']?.toString() ?? '';
       final isMine = data['senderId']?.toString() == _myUserId;
       setState(() {
-        _messages.add(_ChatMessage(
+        _appendOrMergeIncomingMessage(_ChatMessage(
           id: messageId,
           text: data['content'] ?? '',
           isMine: isMine,
           senderId: data['senderId']?.toString() ?? '',
           isSystem: false,
-          readAt: data['readAt'] != null ? DateTime.tryParse(data['readAt'].toString()) : null,
-          createdAt: data['createdAt'] != null ? DateTime.tryParse(data['createdAt'].toString()) : null,
+          readAt: data['readAt'] != null
+              ? DateTime.tryParse(data['readAt'].toString())
+              : null,
+          createdAt: data['createdAt'] != null
+              ? DateTime.tryParse(data['createdAt'].toString())
+              : null,
         ));
       });
       _scrollToBottom();
       // 상대가 보낸 메시지면 읽음 처리 + 소켓 읽음 전송 → 보낸 사람 화면에서 "1" 사라짐
-      if (!isMine && messageId.isNotEmpty && _roomId != null && _myUserId != null) {
+      if (!isMine &&
+          messageId.isNotEmpty &&
+          _roomId != null &&
+          _myUserId != null) {
         final now = DateTime.now();
         _repository.readMessage(roomId: _roomId!, messageId: messageId);
         if (_socket != null && _socket!.connected) {
@@ -406,11 +513,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
     print('[소켓 read 핸들러 등록됨]');
     // 읽음 이벤트 처리: 해당 메시지의 readAt 갱신
     _socket!.on('read', (data) {
-      debugPrint('[read 이벤트 수신] messageId=${data['messageId']}, userId=${data['userId']}, 내 메시지 수=${_messages.where((m) => m.isMine && m.readAt == null).length}');
+      debugPrint(
+          '[read 이벤트 수신] messageId=${data['messageId']}, userId=${data['userId']}, 내 메시지 수=${_messages.where((m) => m.isMine && m.readAt == null).length}');
       if (!mounted) return;
       final String? messageId = data['messageId']?.toString();
       final String? userId = data['userId']?.toString();
-      final DateTime? readAt = data['readAt'] != null ? DateTime.tryParse(data['readAt'].toString()) : null;
+      final DateTime? readAt = data['readAt'] != null
+          ? DateTime.tryParse(data['readAt'].toString())
+          : null;
       if (messageId == null || userId == null || readAt == null) return;
       // 내가 보낸 메시지가 상대에게 읽혔을 때만 갱신 (userId = 읽은 사람 = 상대)
       setState(() {
@@ -437,7 +547,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
     });
     _socket!.connect();
     print('[소켓 connect 호출됨]');
-    await completer.future;
+    await completer.future.timeout(const Duration(seconds: 10));
   }
 
   Future<void> _loadRoomState() async {
@@ -447,7 +557,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
       if (!mounted) return;
       _isActive = room['isActive'] == true;
       _isProfileRevealed = room['isProfileRevealed'] == true;
-      _partnerInRoom = room['partnerInRoom'] == true;
+      _partnerInRoom =
+          room['partnerOnline'] == true || room['partnerInRoom'] == true;
       _partnerConsentStatus = room['partnerConsentStatus']?.toString();
       final roomPhotoKey = room['partnerPhotoStorageKey']?.toString();
       if (roomPhotoKey != null && roomPhotoKey.trim().isNotEmpty) {
@@ -465,20 +576,28 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
       _partnerId = room['partnerId']?.toString();
       _matchId = room['matchId']?.toString();
       // room에 partnerPhotoStorageKey 없으면 room.partner 또는 room.partnerUser에서 추출 (백엔드 구조 다양성 대응)
-      if ((_partnerPhotoStorageKey == null || _partnerPhotoStorageKey!.trim().isEmpty)) {
+      if ((_partnerPhotoStorageKey == null ||
+          _partnerPhotoStorageKey!.trim().isEmpty)) {
         final partner = room['partner'] as Map<String, dynamic>?;
         final partnerUser = room['partnerUser'] as Map<String, dynamic>?;
         final p = partner ?? partnerUser;
         if (p != null) {
-          final displayType = (p['boardDisplayType'] ?? (p['user'] as Map?)?['boardDisplayType'])?.toString().trim().toLowerCase();
+          final displayType = (p['boardDisplayType'] ??
+                  (p['user'] as Map?)?['boardDisplayType'])
+              ?.toString()
+              .trim()
+              .toLowerCase();
           if (displayType == 'photo') {
             dynamic photos = (p['user'] as Map?)?['photos'] ?? p['photos'];
             if (photos is List && photos.isNotEmpty && photos[0] is Map) {
               final key = (photos[0] as Map)['storageKey']?.toString();
               if (key != null && key.isNotEmpty) _partnerPhotoStorageKey = key;
             } else {
-              final singleKey = p['photoStorageKey'] ?? p['partnerPhotoStorageKey'] ?? (p['user'] as Map?)?['photoStorageKey'];
-              if (singleKey != null && singleKey.toString().trim().isNotEmpty) _partnerPhotoStorageKey = singleKey.toString().trim();
+              final singleKey = p['photoStorageKey'] ??
+                  p['partnerPhotoStorageKey'] ??
+                  (p['user'] as Map?)?['photoStorageKey'];
+              if (singleKey != null && singleKey.toString().trim().isNotEmpty)
+                _partnerPhotoStorageKey = singleKey.toString().trim();
             }
           }
         }
@@ -488,12 +607,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
       // 동의 여부와 관계없이 상대 프로필 로드 (아바타 탭 시 바로 정보 보기)
       if (_matchId != null) {
         try {
-          final profile = await _partnerProfileRepository.getPartnerProfile(matchId: _matchId!);
+          final profile = await _partnerProfileRepository.getPartnerProfile(
+              matchId: _matchId!);
           if (!mounted) return;
           setState(() {
             _partnerProfile = profile;
             // room에 상대 사진 키가 없으면 프로필에서 채움 (사진 선택 시 채팅에서도 사진 노출)
-            if ((_partnerPhotoStorageKey == null || _partnerPhotoStorageKey!.trim().isEmpty)) {
+            if ((_partnerPhotoStorageKey == null ||
+                _partnerPhotoStorageKey!.trim().isEmpty)) {
               _partnerPhotoStorageKey = _photoStorageKeyFromProfile(profile);
             }
           });
@@ -507,8 +628,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
               final normalized = _normalizePartnerMap(p);
               setState(() {
                 _partnerProfile = normalized;
-                if ((_partnerPhotoStorageKey == null || _partnerPhotoStorageKey!.trim().isEmpty)) {
-                  _partnerPhotoStorageKey = _photoStorageKeyFromProfile(normalized);
+                if ((_partnerPhotoStorageKey == null ||
+                    _partnerPhotoStorageKey!.trim().isEmpty)) {
+                  _partnerPhotoStorageKey =
+                      _photoStorageKeyFromProfile(normalized);
                 }
               });
             } else {
@@ -523,8 +646,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
         final p = partner ?? partnerUser;
         setState(() {
           _partnerProfile = p != null ? _normalizePartnerMap(p) : null;
-          if (p != null && (_partnerPhotoStorageKey == null || _partnerPhotoStorageKey!.trim().isEmpty)) {
-            _partnerPhotoStorageKey = _photoStorageKeyFromProfile(_partnerProfile);
+          if (p != null &&
+              (_partnerPhotoStorageKey == null ||
+                  _partnerPhotoStorageKey!.trim().isEmpty)) {
+            _partnerPhotoStorageKey =
+                _photoStorageKeyFromProfile(_partnerProfile);
           }
         });
       }
@@ -540,20 +666,42 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
     final text = _controller.text.trim();
     if (text.isEmpty || _roomId == null) return;
     _controller.clear();
+    final tempId = 'pending_${DateTime.now().microsecondsSinceEpoch}';
+    setState(() {
+      _messages.add(_ChatMessage(
+        id: tempId,
+        text: text,
+        isMine: true,
+        isPending: true,
+        senderId: _myUserId ?? '',
+        createdAt: DateTime.now(),
+      ));
+    });
+    _scrollToBottom();
     if (_socket != null && _socket!.connected) {
       _socket!.emit('sendMessage', {'roomId': _roomId, 'content': text});
+      _scheduleMessageSync();
     } else {
-      setState(() {
-        _messages.add(_ChatMessage(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          text: text,
-          isMine: true,
-          senderId: _myUserId ?? '',
-          createdAt: DateTime.now(),
-        ));
-      });
       try {
-        await _repository.sendMessage(roomId: _roomId!, content: text);
+        final response =
+            await _repository.sendMessage(roomId: _roomId!, content: text);
+        final message = response['message'] as Map<String, dynamic>?;
+        if (!mounted) return;
+        if (message != null) {
+          setState(() {
+            _appendOrMergeIncomingMessage(_ChatMessage(
+              id: message['id']?.toString() ?? tempId,
+              text: message['content']?.toString() ?? text,
+              isMine: true,
+              senderId: message['senderId']?.toString() ?? (_myUserId ?? ''),
+              createdAt: message['createdAt'] != null
+                  ? DateTime.tryParse(message['createdAt'].toString())
+                  : DateTime.now(),
+            ));
+          });
+        } else {
+          _scheduleMessageSync();
+        }
       } catch (e) {
         debugPrint('[sendMessage HTTP fallback] failed: $e');
         if (!mounted) return;
@@ -652,20 +800,20 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (_socket == null || !_socket!.connected || _roomId == null) return;
     if (state == AppLifecycleState.resumed) {
-      _socket!.emit('joinRoom', {'roomId': _roomId});
+      unawaited(_restoreRoomConnection());
     } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
-      _socket!.emit('outRoom', {'roomId': _roomId});
+      final socket = _socket;
+      if (socket != null && socket.connected && _roomId != null) {
+        socket.emit('outRoom', {'roomId': _roomId});
+      }
     }
   }
 
   @override
   void dispose() {
-    if (_socket != null && _socket!.connected && _roomId != null) {
-      _socket!.emit('outRoom', {'roomId': _roomId});
-    }
+    _disposeSocketConnection(emitOutRoom: true);
     WidgetsBinding.instance.removeObserver(this);
     _controller.dispose();
     super.dispose();
@@ -679,14 +827,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
     return '$ampm ${hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 
-
   void _insertIceBreaker(String phrase) {
     _controller.text = phrase;
     _controller.selection = TextSelection.collapsed(offset: phrase.length);
     setState(() {});
   }
 
-  Widget _buildEmptyStateWithIceBreakers(BuildContext context, bool dark, Color timeColor) {
+  Widget _buildEmptyStateWithIceBreakers(
+      BuildContext context, bool dark, Color timeColor) {
     if (IceBreakingPhrases.phrases.isEmpty) {
       return Center(
         child: Text(
@@ -724,7 +872,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                 label: Text(phrase, style: const TextStyle(fontSize: 12)),
                 onPressed: () => _insertIceBreaker(phrase),
                 backgroundColor: dark ? Colors.grey.shade800 : Colors.white,
-                side: BorderSide(color: dark ? Colors.grey.shade600 : Colors.grey.shade300),
+                side: BorderSide(
+                    color: dark ? Colors.grey.shade600 : Colors.grey.shade300),
               );
             }).toList(),
           ),
@@ -750,7 +899,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
             label: Text(phrase, style: const TextStyle(fontSize: 11)),
             onPressed: () => _insertIceBreaker(phrase),
             backgroundColor: dark ? Colors.grey.shade800 : Colors.white,
-            side: BorderSide(color: dark ? Colors.grey.shade600 : Colors.grey.shade300),
+            side: BorderSide(
+                color: dark ? Colors.grey.shade600 : Colors.grey.shade300),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
           );
@@ -786,7 +936,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
               ),
               decoration: BoxDecoration(
                 gradient: ThemeController.getHeaderGradient(),
-                boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2))],
+                boxShadow: const [
+                  BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 8,
+                      offset: Offset(0, 2))
+                ],
               ),
               child: Row(
                 children: [
@@ -798,7 +953,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                       borderRadius: BorderRadius.circular(8),
                       child: const Padding(
                         padding: EdgeInsets.all(10),
-                        child: Icon(LucideIcons.arrowLeft, color: Colors.white, size: 24),
+                        child: Icon(LucideIcons.arrowLeft,
+                            color: Colors.white, size: 24),
                       ),
                     ),
                   ),
@@ -808,13 +964,16 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                       onTap: _openPartnerProfile,
                       borderRadius: BorderRadius.circular(12),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 6, horizontal: 8),
                         child: Row(
                           children: [
                             Container(
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+                                border: Border.all(
+                                    color: Colors.white.withOpacity(0.3),
+                                    width: 2),
                               ),
                               child: _buildPartnerAvatar(context),
                             ),
@@ -849,7 +1008,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(LucideIcons.flag, color: Colors.white, size: 22),
+                    icon: const Icon(LucideIcons.flag,
+                        color: Colors.white, size: 22),
                     tooltip: '신고',
                     onPressed: _openReportSheet,
                   ),
@@ -859,14 +1019,16 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                     onPressed: _partnerId != null ? _openBlockConfirm : null,
                   ),
                   PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_vert, color: Colors.white, size: 24),
+                    icon: const Icon(Icons.more_vert,
+                        color: Colors.white, size: 24),
                     color: theme.colorScheme.surface,
                     onSelected: (value) {
                       if (value == 'cancel') _cancelMatch();
                       if (value == 'mute') _toggleMute();
                     },
                     itemBuilder: (_) => [
-                      const PopupMenuItem(value: 'cancel', child: Text('매칭 취소')),
+                      const PopupMenuItem(
+                          value: 'cancel', child: Text('매칭 취소')),
                       PopupMenuItem(
                         value: 'mute',
                         child: Text(_isMuted ? '채팅방 알람 켜기' : '채팅방 알람 끄기'),
@@ -879,51 +1041,70 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
             if (!_isActive)
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
                 child: Text(
                   '매칭이 취소되어 비활성화되었습니다.',
-                  style: TextStyle(color: dark ? Colors.grey.shade300 : Colors.grey.shade700),
+                  style: TextStyle(
+                      color:
+                          dark ? Colors.grey.shade300 : Colors.grey.shade700),
                 ),
               ),
             Expanded(
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
                   : _messages.isEmpty
-                      ? _buildEmptyStateWithIceBreakers(context, dark, timeColor)
+                      ? _buildEmptyStateWithIceBreakers(
+                          context, dark, timeColor)
                       : ListView.separated(
                           controller: _scrollController,
                           reverse: true,
-                          padding: const EdgeInsets.only(left: 20, right: 12, top: 16, bottom: 16),
+                          padding: const EdgeInsets.only(
+                              left: 20, right: 12, top: 16, bottom: 16),
                           itemCount: _messages.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 12),
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 12),
                           itemBuilder: (context, index) {
-                            final message = _messages[_messages.length - 1 - index];
-                            final messageDate = message.createdAt ?? message.readAt ?? DateTime.now();
+                            final message =
+                                _messages[_messages.length - 1 - index];
+                            final messageDate = message.createdAt ??
+                                message.readAt ??
+                                DateTime.now();
                             DateTime? prevDate;
                             if (index < _messages.length - 1) {
-                              final prev = _messages[_messages.length - 1 - (index + 1)];
-                              prevDate = prev.createdAt ?? prev.readAt ?? DateTime.now();
+                              final prev =
+                                  _messages[_messages.length - 1 - (index + 1)];
+                              prevDate = prev.createdAt ??
+                                  prev.readAt ??
+                                  DateTime.now();
                             }
                             final isNewDate = prevDate == null ||
                                 messageDate.year != prevDate.year ||
                                 messageDate.month != prevDate.month ||
                                 messageDate.day != prevDate.day;
-                            final dateStr = '${messageDate.year}년 ${messageDate.month}월 ${messageDate.day}일';
+                            final dateStr =
+                                '${messageDate.year}년 ${messageDate.month}월 ${messageDate.day}일';
                             final List<Widget> children = [];
                             if (isNewDate) {
                               children.add(
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 12),
                                   child: Center(
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16, vertical: 6),
                                       decoration: BoxDecoration(
-                                        color: dark ? Colors.grey.shade800 : Colors.white,
-                                        borderRadius: BorderRadius.circular(999),
+                                        color: dark
+                                            ? Colors.grey.shade800
+                                            : Colors.white,
+                                        borderRadius:
+                                            BorderRadius.circular(999),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: Colors.black.withOpacity(0.06),
+                                            color:
+                                                Colors.black.withOpacity(0.06),
                                             blurRadius: 4,
                                             offset: const Offset(0, 1),
                                           ),
@@ -931,7 +1112,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                                       ),
                                       child: Text(
                                         dateStr,
-                                        style: TextStyle(fontSize: 12, color: timeColor),
+                                        style: TextStyle(
+                                            fontSize: 12, color: timeColor),
                                       ),
                                     ),
                                   ),
@@ -942,14 +1124,20 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                               children.add(
                                 Center(
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 10),
                                     decoration: BoxDecoration(
-                                      color: dark ? Colors.grey.shade700 : Colors.grey.shade200,
+                                      color: dark
+                                          ? Colors.grey.shade700
+                                          : Colors.grey.shade200,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
                                       message.text,
-                                      style: TextStyle(color: dark ? Colors.grey.shade300 : Colors.grey.shade700),
+                                      style: TextStyle(
+                                          color: dark
+                                              ? Colors.grey.shade300
+                                              : Colors.grey.shade700),
                                     ),
                                   ),
                                 ),
@@ -957,25 +1145,33 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                             } else {
                               children.add(
                                 Row(
-                                  key: ValueKey('${message.id}_${message.readAt?.millisecondsSinceEpoch ?? 0}'),
-                                  mainAxisAlignment: message.isMine ? MainAxisAlignment.end : MainAxisAlignment.start,
+                                  key: ValueKey(
+                                      '${message.id}_${message.readAt?.millisecondsSinceEpoch ?? 0}'),
+                                  mainAxisAlignment: message.isMine
+                                      ? MainAxisAlignment.end
+                                      : MainAxisAlignment.start,
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
                                     if (message.isMine)
                                       Padding(
-                                        padding: const EdgeInsets.only(right: 6, bottom: 2),
+                                        padding: const EdgeInsets.only(
+                                            right: 6, bottom: 2),
                                         child: message.readAt == null
                                             ? Text(
                                                 '안읽음',
                                                 style: TextStyle(
                                                   fontSize: 11,
-                                                  color: dark ? Colors.grey.shade500 : Colors.grey.shade600,
+                                                  color: dark
+                                                      ? Colors.grey.shade500
+                                                      : Colors.grey.shade600,
                                                 ),
                                               )
                                             : Icon(
                                                 LucideIcons.check,
                                                 size: 14,
-                                                color: Theme.of(context).colorScheme.primary,
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .primary,
                                               ),
                                       ),
                                     if (!message.isMine) ...[
@@ -985,34 +1181,53 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                                     Flexible(
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
-                                        mainAxisAlignment: message.isMine ? MainAxisAlignment.end : MainAxisAlignment.start,
-                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                        mainAxisAlignment: message.isMine
+                                            ? MainAxisAlignment.end
+                                            : MainAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
                                         children: message.isMine
                                             ? [
                                                 Padding(
-                                                  padding: const EdgeInsets.only(bottom: 2),
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                          bottom: 2),
                                                   child: Text(
                                                     _messageTime(message),
-                                                    style: TextStyle(fontSize: 11, color: timeColor),
+                                                    style: TextStyle(
+                                                        fontSize: 11,
+                                                        color: timeColor),
                                                   ),
                                                 ),
                                                 const SizedBox(width: 6),
                                                 Flexible(
                                                   child: Container(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 16,
+                                                        vertical: 12),
                                                     decoration: BoxDecoration(
                                                       color: bubbleMine,
-                                                      borderRadius: const BorderRadius.only(
-                                                        topLeft: Radius.circular(16),
-                                                        topRight: Radius.circular(16),
-                                                        bottomLeft: Radius.circular(16),
-                                                        bottomRight: Radius.circular(4),
+                                                      borderRadius:
+                                                          const BorderRadius
+                                                              .only(
+                                                        topLeft:
+                                                            Radius.circular(16),
+                                                        topRight:
+                                                            Radius.circular(16),
+                                                        bottomLeft:
+                                                            Radius.circular(16),
+                                                        bottomRight:
+                                                            Radius.circular(4),
                                                       ),
                                                       boxShadow: [
                                                         BoxShadow(
-                                                          color: Colors.black.withOpacity(0.06),
+                                                          color: Colors.black
+                                                              .withOpacity(
+                                                                  0.06),
                                                           blurRadius: 4,
-                                                          offset: const Offset(0, 1),
+                                                          offset: const Offset(
+                                                              0, 1),
                                                         ),
                                                       ],
                                                     ),
@@ -1030,27 +1245,41 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                                             : [
                                                 Flexible(
                                                   child: Container(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 16,
+                                                        vertical: 12),
                                                     decoration: BoxDecoration(
                                                       color: bubbleOther,
-                                                      borderRadius: BorderRadius.only(
-                                                        topLeft: const Radius.circular(16),
-                                                        topRight: const Radius.circular(16),
-                                                        bottomLeft: const Radius.circular(4),
-                                                        bottomRight: Radius.circular(16),
+                                                      borderRadius:
+                                                          BorderRadius.only(
+                                                        topLeft: const Radius
+                                                            .circular(16),
+                                                        topRight: const Radius
+                                                            .circular(16),
+                                                        bottomLeft: const Radius
+                                                            .circular(4),
+                                                        bottomRight:
+                                                            Radius.circular(16),
                                                       ),
                                                       boxShadow: [
                                                         BoxShadow(
-                                                          color: Colors.black.withOpacity(0.06),
+                                                          color: Colors.black
+                                                              .withOpacity(
+                                                                  0.06),
                                                           blurRadius: 4,
-                                                          offset: const Offset(0, 1),
+                                                          offset: const Offset(
+                                                              0, 1),
                                                         ),
                                                       ],
                                                     ),
                                                     child: Text(
                                                       message.text,
                                                       style: TextStyle(
-                                                        color: dark ? Colors.white : const Color(0xFF111827),
+                                                        color: dark
+                                                            ? Colors.white
+                                                            : const Color(
+                                                                0xFF111827),
                                                         fontSize: 14,
                                                         height: 1.4,
                                                       ),
@@ -1059,19 +1288,28 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                                                 ),
                                                 const SizedBox(width: 6),
                                                 Padding(
-                                                  padding: const EdgeInsets.only(bottom: 2),
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                          bottom: 2),
                                                   child: Text(
                                                     _messageTime(message),
-                                                    style: TextStyle(fontSize: 11, color: timeColor),
+                                                    style: TextStyle(
+                                                        fontSize: 11,
+                                                        color: timeColor),
                                                   ),
                                                 ),
                                               ],
                                       ),
                                     ),
-                                    if (!message.isMine && message.readAt == null)
+                                    if (!message.isMine &&
+                                        message.readAt == null)
                                       Padding(
                                         padding: const EdgeInsets.only(left: 6),
-                                        child: Text('1', style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
+                                        child: Text('1',
+                                            style: TextStyle(
+                                                color: Colors.red,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold)),
                                       ),
                                   ],
                                 ),
@@ -1084,7 +1322,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                           },
                         ),
             ),
-            if (_isActive && _messages.isNotEmpty && _messages.length <= 3 && !_shouldHideIceBreakers)
+            if (_isActive &&
+                _messages.isNotEmpty &&
+                _messages.length <= 3 &&
+                !_shouldHideIceBreakers)
               _buildIceBreakerChipsRow(dark, hintColor),
             if (_isActive)
               Container(
@@ -1099,7 +1340,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                     Expanded(
                       child: Container(
                         constraints: const BoxConstraints(maxHeight: 96),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
                         decoration: BoxDecoration(
                           color: inputBg,
                           borderRadius: BorderRadius.circular(20),
@@ -1111,7 +1353,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                           textInputAction: TextInputAction.send,
                           decoration: InputDecoration(
                             hintText: '메시지를 입력하세요...',
-                            hintStyle: TextStyle(color: hintColor, fontSize: 14),
+                            hintStyle:
+                                TextStyle(color: hintColor, fontSize: 14),
                             border: InputBorder.none,
                             isDense: true,
                             contentPadding: EdgeInsets.zero,
@@ -1125,7 +1368,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                       builder: (context, value, _) {
                         final hasText = value.text.trim().isNotEmpty;
                         return Material(
-                          color: hasText ? bubbleMine : (dark ? Colors.grey.shade700 : Colors.grey.shade300),
+                          color: hasText
+                              ? bubbleMine
+                              : (dark
+                                  ? Colors.grey.shade700
+                                  : Colors.grey.shade300),
                           borderRadius: BorderRadius.circular(999),
                           elevation: 2,
                           shadowColor: Colors.black26,
@@ -1137,7 +1384,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
                               child: Icon(
                                 LucideIcons.send,
                                 size: 22,
-                                color: hasText ? Colors.white : (dark ? Colors.grey.shade500 : Colors.grey.shade600),
+                                color: hasText
+                                    ? Colors.white
+                                    : (dark
+                                        ? Colors.grey.shade500
+                                        : Colors.grey.shade600),
                               ),
                             ),
                           ),
@@ -1193,7 +1444,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
           _reportedMatchIds.add(matchId);
           Navigator.of(ctx).pop();
         },
-        onError: (msg) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg))),
+        onError: (msg) => ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(msg))),
       ),
     );
   }
@@ -1202,7 +1454,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
     Future<Widget> avatarBuilder(Map<String, dynamic> profile) async {
       // 프로필에서 사진을 골랐으면 사진 우선, 없으면 채팅방에 쓰는 _partnerPhotoStorageKey 사용
       String? photoUrl = _photoUrlFromProfile(profile);
-      if ((photoUrl == null || photoUrl.isEmpty) && _partnerPhotoStorageKey != null && _partnerPhotoStorageKey!.trim().isNotEmpty) {
+      if ((photoUrl == null || photoUrl.isEmpty) &&
+          _partnerPhotoStorageKey != null &&
+          _partnerPhotoStorageKey!.trim().isNotEmpty) {
         photoUrl = photoUrlFromStorageKey(_partnerPhotoStorageKey);
       }
       if (photoUrl != null && photoUrl.isNotEmpty) {
@@ -1215,22 +1469,31 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
               fit: BoxFit.cover,
               width: 80,
               height: 80,
-              errorBuilder: (_, __, ___) => Icon(LucideIcons.user, size: 40, color: Colors.grey.shade600),
+              errorBuilder: (_, __, ___) =>
+                  Icon(LucideIcons.user, size: 40, color: Colors.grey.shade600),
             ),
           ),
         );
       }
-      final seed = profile['avatarSeed']?.toString() ?? (profile['user'] as Map?)?['avatarSeed']?.toString() ?? profile['userId']?.toString() ?? _partnerAvatarSeed;
-      final raw = (profile['user'] as Map?)?['avatarOptions']?.toString() ?? profile['avatarOptions']?.toString() ?? _partnerAvatarOptions;
+      final seed = profile['avatarSeed']?.toString() ??
+          (profile['user'] as Map?)?['avatarSeed']?.toString() ??
+          profile['userId']?.toString() ??
+          _partnerAvatarSeed;
+      final raw = (profile['user'] as Map?)?['avatarOptions']?.toString() ??
+          profile['avatarOptions']?.toString() ??
+          _partnerAvatarOptions;
       Map<String, String> opts = {};
       if (raw != null && raw.isNotEmpty) {
         try {
           final decoded = jsonDecode(raw);
-          if (decoded is Map<String, dynamic>) opts = decoded.map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
+          if (decoded is Map<String, dynamic>)
+            opts = decoded
+                .map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
         } catch (_) {}
       }
       if (seed != null && seed.isNotEmpty) {
-        final url = diceBearAvatarUrl(seed, options: opts.isNotEmpty ? opts : null);
+        final url =
+            diceBearAvatarUrl(seed, options: opts.isNotEmpty ? opts : null);
         return CircleAvatar(
           radius: 40,
           backgroundColor: Colors.grey.shade300,
@@ -1240,12 +1503,16 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
               fit: BoxFit.cover,
               width: 80,
               height: 80,
-              placeholderBuilder: (_) => Icon(LucideIcons.user, size: 40, color: Colors.grey.shade600),
+              placeholderBuilder: (_) =>
+                  Icon(LucideIcons.user, size: 40, color: Colors.grey.shade600),
             ),
           ),
         );
       }
-      return CircleAvatar(radius: 40, backgroundColor: Colors.grey.shade300, child: Icon(LucideIcons.user, size: 40, color: Colors.grey.shade600));
+      return CircleAvatar(
+          radius: 40,
+          backgroundColor: Colors.grey.shade300,
+          child: Icon(LucideIcons.user, size: 40, color: Colors.grey.shade600));
     }
 
     // room 정보만으로 최소 프로필 맵 구성 (API 실패/ matchId 없을 때 사용)
@@ -1254,9 +1521,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
         'avatarSeed': _partnerAvatarSeed,
         'avatarOptions': _partnerAvatarOptions,
       };
-      if (_partnerPhotoStorageKey != null && _partnerPhotoStorageKey!.trim().isNotEmpty) {
+      if (_partnerPhotoStorageKey != null &&
+          _partnerPhotoStorageKey!.trim().isNotEmpty) {
         user['boardDisplayType'] = 'photo';
-        user['photos'] = [{'storageKey': _partnerPhotoStorageKey}];
+        user['photos'] = [
+          {'storageKey': _partnerPhotoStorageKey}
+        ];
       }
       return {
         'nickname': _partnerNickname ?? '상대방',
@@ -1274,7 +1544,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
         profile: _partnerProfile!,
         buildAvatar: (ctx, profile) => FutureBuilder<Widget>(
           future: avatarBuilder(profile),
-          builder: (ctx, snap) => snap.hasData ? snap.data! : const SizedBox.shrink(),
+          builder: (ctx, snap) =>
+              snap.hasData ? snap.data! : const SizedBox.shrink(),
         ),
         hideMatchButton: true,
         overridePhotoUrlForEnlarge: photoForEnlarge,
@@ -1283,16 +1554,20 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
     }
     if (_matchId != null) {
       try {
-        final profile = await _partnerProfileRepository.getPartnerProfile(matchId: _matchId!);
+        final profile = await _partnerProfileRepository.getPartnerProfile(
+            matchId: _matchId!);
         if (!mounted) return;
         setState(() => _partnerProfile = profile);
-        final photoForEnlarge = photoUrlFromStorageKey(_partnerPhotoStorageKey) ?? _photoUrlFromProfile(profile);
+        final photoForEnlarge =
+            photoUrlFromStorageKey(_partnerPhotoStorageKey) ??
+                _photoUrlFromProfile(profile);
         await showProfileDetailSheet(
           context,
           profile: profile,
           buildAvatar: (ctx, profile) => FutureBuilder<Widget>(
             future: avatarBuilder(profile),
-            builder: (ctx, snap) => snap.hasData ? snap.data! : const SizedBox.shrink(),
+            builder: (ctx, snap) =>
+                snap.hasData ? snap.data! : const SizedBox.shrink(),
           ),
           hideMatchButton: true,
           overridePhotoUrlForEnlarge: photoForEnlarge,
@@ -1306,7 +1581,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
           profile: _minimalProfileFromRoom(),
           buildAvatar: (ctx, profile) => FutureBuilder<Widget>(
             future: avatarBuilder(profile),
-            builder: (ctx, snap) => snap.hasData ? snap.data! : const SizedBox.shrink(),
+            builder: (ctx, snap) =>
+                snap.hasData ? snap.data! : const SizedBox.shrink(),
           ),
           hideMatchButton: true,
           overridePhotoUrlForEnlarge: photoForEnlarge,
@@ -1321,7 +1597,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
       profile: _minimalProfileFromRoom(),
       buildAvatar: (ctx, profile) => FutureBuilder<Widget>(
         future: avatarBuilder(profile),
-        builder: (ctx, snap) => snap.hasData ? snap.data! : const SizedBox.shrink(),
+        builder: (ctx, snap) =>
+            snap.hasData ? snap.data! : const SizedBox.shrink(),
       ),
       hideMatchButton: true,
       overridePhotoUrlForEnlarge: photoForEnlarge,
@@ -1333,11 +1610,15 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
     final user = p['user'] as Map<String, dynamic>?;
     final flat = <String, dynamic>{
       'nickname': p['nickname'] ?? user?['nickname'] ?? '상대방',
-      'avatarSeed': p['avatarSeed'] ?? user?['avatarSeed'] ?? _partnerAvatarSeed,
-      'avatarOptions': p['avatarOptions'] ?? user?['avatarOptions'] ?? _partnerAvatarOptions,
+      'avatarSeed':
+          p['avatarSeed'] ?? user?['avatarSeed'] ?? _partnerAvatarSeed,
+      'avatarOptions':
+          p['avatarOptions'] ?? user?['avatarOptions'] ?? _partnerAvatarOptions,
       'boardDisplayType': p['boardDisplayType'] ?? user?['boardDisplayType'],
       'photos': p['photos'] ?? user?['photos'],
-      'photoStorageKey': p['photoStorageKey'] ?? p['partnerPhotoStorageKey'] ?? user?['photoStorageKey'],
+      'photoStorageKey': p['photoStorageKey'] ??
+          p['partnerPhotoStorageKey'] ??
+          user?['photoStorageKey'],
     };
     return {
       'nickname': flat['nickname'],
@@ -1354,10 +1635,17 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
     if (profile == null) return null;
     final user = profile['user'] as Map<String, dynamic>?;
     final partner = profile['partner'] as Map<String, dynamic>?;
-    final displayType = (profile['boardDisplayType'] ?? user?['boardDisplayType'] ?? partner?['boardDisplayType'])?.toString().trim().toLowerCase();
+    final displayType = (profile['boardDisplayType'] ??
+            user?['boardDisplayType'] ??
+            partner?['boardDisplayType'])
+        ?.toString()
+        .trim()
+        .toLowerCase();
     // displayType이 'photo'이거나, 없는데 photos가 있으면( getPartnerProfile flat 응답) 사진 사용
     if (displayType == 'avatar') return null;
-    final singleKey = profile['partnerPhotoStorageKey'] ?? profile['photoStorageKey'] ?? user?['photoStorageKey'];
+    final singleKey = profile['partnerPhotoStorageKey'] ??
+        profile['photoStorageKey'] ??
+        user?['photoStorageKey'];
     if (singleKey != null) {
       final s = singleKey.toString().trim();
       if (s.isNotEmpty) return s;
@@ -1384,12 +1672,21 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
     if (profile == null) return null;
     final user = profile['user'] as Map<String, dynamic>?;
     final partner = profile['partner'] as Map<String, dynamic>?;
-    final displayType = (profile['boardDisplayType'] ?? user?['boardDisplayType'] ?? partner?['boardDisplayType'])?.toString().trim().toLowerCase();
+    final displayType = (profile['boardDisplayType'] ??
+            user?['boardDisplayType'] ??
+            partner?['boardDisplayType'])
+        ?.toString()
+        .trim()
+        .toLowerCase();
     if (displayType == 'avatar') return null;
 
     // 단일 storageKey 필드 (일부 API는 첫 사진 키만 내려줌)
-    final singleKey = profile['partnerPhotoStorageKey'] ?? profile['photoStorageKey'] ?? profile['primaryPhotoStorageKey']
-        ?? user?['partnerPhotoStorageKey'] ?? user?['photoStorageKey'] ?? user?['primaryPhotoStorageKey'];
+    final singleKey = profile['partnerPhotoStorageKey'] ??
+        profile['photoStorageKey'] ??
+        profile['primaryPhotoStorageKey'] ??
+        user?['partnerPhotoStorageKey'] ??
+        user?['photoStorageKey'] ??
+        user?['primaryPhotoStorageKey'];
     if (singleKey != null) {
       final s = singleKey.toString().trim();
       if (s.isNotEmpty) return photoUrlFromStorageKey(s);
@@ -1416,7 +1713,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
     Widget avatar;
     // room API의 partnerPhotoStorageKey 우선, 없으면 partnerProfile에서 boardDisplayType:photo일 때 추출
     String? partnerPhotoUrl = photoUrlFromStorageKey(_partnerPhotoStorageKey);
-    if ((partnerPhotoUrl == null || partnerPhotoUrl.isEmpty) && _partnerProfile != null) {
+    if ((partnerPhotoUrl == null || partnerPhotoUrl.isEmpty) &&
+        _partnerProfile != null) {
       partnerPhotoUrl = _photoUrlFromProfile(_partnerProfile);
     }
     if (partnerPhotoUrl != null && partnerPhotoUrl.isNotEmpty) {
@@ -1425,20 +1723,29 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
         backgroundImage: NetworkImage(partnerPhotoUrl),
       );
     } else {
-      final userMap = _partnerProfile != null ? (_partnerProfile!['user'] as Map<String, dynamic>?) : null;
-      final seed = userMap?['avatarSeed']?.toString() ?? _partnerProfile?['avatarSeed']?.toString() ?? _partnerProfile?['userId']?.toString() ?? _partnerAvatarSeed;
+      final userMap = _partnerProfile != null
+          ? (_partnerProfile!['user'] as Map<String, dynamic>?)
+          : null;
+      final seed = userMap?['avatarSeed']?.toString() ??
+          _partnerProfile?['avatarSeed']?.toString() ??
+          _partnerProfile?['userId']?.toString() ??
+          _partnerAvatarSeed;
       if (seed != null && seed.isNotEmpty) {
         Map<String, String> opts = {};
-        final raw = userMap?['avatarOptions']?.toString() ?? _partnerProfile?['avatarOptions']?.toString() ?? _partnerAvatarOptions;
+        final raw = userMap?['avatarOptions']?.toString() ??
+            _partnerProfile?['avatarOptions']?.toString() ??
+            _partnerAvatarOptions;
         if (raw != null && raw.isNotEmpty) {
           try {
             final decoded = jsonDecode(raw);
             if (decoded is Map<String, dynamic>) {
-              opts = decoded.map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
+              opts = decoded
+                  .map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
             }
           } catch (_) {}
         }
-        final url = diceBearAvatarUrl(seed, options: opts.isNotEmpty ? opts : null);
+        final url =
+            diceBearAvatarUrl(seed, options: opts.isNotEmpty ? opts : null);
         avatar = CircleAvatar(
           radius: _partnerAvatarRadius,
           backgroundColor: Colors.grey.shade300,
@@ -1448,7 +1755,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
               fit: BoxFit.cover,
               width: _partnerAvatarRadius * 2,
               height: _partnerAvatarRadius * 2,
-              placeholderBuilder: (_) => Icon(LucideIcons.user, size: _partnerAvatarRadius, color: Colors.grey.shade600),
+              placeholderBuilder: (_) => Icon(LucideIcons.user,
+                  size: _partnerAvatarRadius, color: Colors.grey.shade600),
             ),
           ),
         );
@@ -1456,7 +1764,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> with WidgetsBindingObse
         avatar = CircleAvatar(
           radius: _partnerAvatarRadius,
           backgroundColor: Colors.grey.shade300,
-          child: Icon(LucideIcons.user, size: _partnerAvatarRadius, color: Colors.grey.shade600),
+          child: Icon(LucideIcons.user,
+              size: _partnerAvatarRadius, color: Colors.grey.shade600),
         );
       }
     }
@@ -1579,10 +1888,13 @@ class _ReportSheetContentState extends State<_ReportSheetContent> {
       await widget.reportRepository.report(
         matchId: widget.matchId,
         reason: _reason,
-        detail: _detailController.text.trim().isEmpty ? null : _detailController.text.trim(),
+        detail: _detailController.text.trim().isEmpty
+            ? null
+            : _detailController.text.trim(),
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('신고가 접수되었습니다.')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('신고가 접수되었습니다.')));
       widget.onSubmitted();
     } on DioException catch (e) {
       if (!mounted) return;
@@ -1633,11 +1945,13 @@ class _ReportSheetContentState extends State<_ReportSheetContent> {
               ),
             ),
             const SizedBox(height: 32),
-            Icon(LucideIcons.circleCheck, size: 56, color: Colors.green.shade600),
+            Icon(LucideIcons.circleCheck,
+                size: 56, color: Colors.green.shade600),
             const SizedBox(height: 16),
             Text(
               '신고완료',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: onSurface),
+              style: TextStyle(
+                  fontSize: 22, fontWeight: FontWeight.bold, color: onSurface),
             ),
             const SizedBox(height: 8),
             Text(
@@ -1691,7 +2005,10 @@ class _ReportSheetContentState extends State<_ReportSheetContent> {
                 const SizedBox(width: 8),
                 Text(
                   '상대방 신고',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: onSurface),
+                  style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: onSurface),
                 ),
               ],
             ),
@@ -1701,7 +2018,11 @@ class _ReportSheetContentState extends State<_ReportSheetContent> {
               style: TextStyle(fontSize: 13, color: onSurfaceVariant),
             ),
             const SizedBox(height: 20),
-            Text('신고 사유', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: onSurface)),
+            Text('신고 사유',
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: onSurface)),
             const SizedBox(height: 8),
             _ReportReasonGrid(
               reasons: ChatRoomScreen._reportReasons,
@@ -1711,7 +2032,11 @@ class _ReportSheetContentState extends State<_ReportSheetContent> {
               onSelected: (value) => setState(() => _reason = value),
             ),
             const SizedBox(height: 16),
-            Text('상세 내용 (선택)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: onSurface)),
+            Text('상세 내용 (선택)',
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: onSurface)),
             const SizedBox(height: 8),
             TextField(
               controller: _detailController,
@@ -1720,8 +2045,11 @@ class _ReportSheetContentState extends State<_ReportSheetContent> {
                 hintText: '구체적인 상황을 적어 주시면 검토에 도움이 됩니다.',
                 filled: true,
                 fillColor: dark ? Colors.grey.shade800 : Colors.grey.shade100,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
               style: TextStyle(color: onSurface, fontSize: 14),
             ),
@@ -1734,10 +2062,15 @@ class _ReportSheetContentState extends State<_ReportSheetContent> {
                   backgroundColor: Colors.red.shade600,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 child: _sending
-                    ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    ? const SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
                     : const Text('신고하기'),
               ),
             ),
