@@ -117,6 +117,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   final _reportRepository = ReportRepository();
   final _blockRepository = BlockRepository();
   final _controller = TextEditingController();
+  bool _isReconnecting = false;
   String? _partnerId;
   final List<_ChatMessage> _messages = [];
   bool _loading = true;
@@ -234,6 +235,42 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   }
 
   /// getRoom 응답의 messageReadAts로 '1' 갱신 (listMessages 대신 가벼운 getRoom 사용)
+  void _disposeSocketConnection({bool emitOutRoom = false}) {
+    final socket = _socket;
+    if (socket == null) return;
+    if (emitOutRoom && socket.connected && _roomId != null) {
+      socket.emit('outRoom', {'roomId': _roomId});
+    }
+    socket.dispose();
+    socket.destroy();
+    _socket = null;
+  }
+
+  Future<void> _restoreRoomConnection() async {
+    if (!mounted || _roomId == null || _myUserId == null || _isReconnecting) {
+      return;
+    }
+    _isReconnecting = true;
+    try {
+      final socket = _socket;
+      if (socket == null || !socket.connected) {
+        _disposeSocketConnection();
+        await _initSocket();
+      } else {
+        socket.emit('joinRoom', {'roomId': _roomId});
+      }
+      await _loadMessages();
+      await _syncReadAt();
+      if (!mounted) return;
+      _sendReadReceipts();
+      _scrollToBottom();
+    } catch (e) {
+      debugPrint('[restoreRoomConnection] failed: $e');
+    } finally {
+      _isReconnecting = false;
+    }
+  }
+
   void _applyMessageReadAts(List<dynamic>? messageReadAts) {
     if (messageReadAts == null || messageReadAts.isEmpty || !mounted) return;
     final serverReadAt = <String, DateTime>{};
@@ -391,6 +428,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       }
       return;
     }
+    _disposeSocketConnection();
     final completer = Completer<void>();
     print('[소켓 연결 시도] roomId=$_roomId, myUserId=$_myUserId');
     _socket = IO.io(
@@ -406,6 +444,18 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       _socket!.emit('joinRoom', {'roomId': _roomId});
       if (!completer.isCompleted) completer.complete();
       print('[소켓 joinRoom emit] roomId=$_roomId');
+    });
+    _socket!.onDisconnect((reason) {
+      debugPrint('[chat socket disconnected] $reason');
+    });
+    _socket!.onConnectError((error) {
+      debugPrint('[chat socket connect error] $error');
+      if (!completer.isCompleted) {
+        completer.completeError(error ?? 'connect error');
+      }
+    });
+    _socket!.onError((error) {
+      debugPrint('[chat socket error] $error');
     });
     _socket!.on('newMessage', (data) {
       print('[소켓 newMessage 핸들러 등록됨] data=$data');
@@ -497,7 +547,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     });
     _socket!.connect();
     print('[소켓 connect 호출됨]');
-    await completer.future;
+    await completer.future.timeout(const Duration(seconds: 10));
   }
 
   Future<void> _loadRoomState() async {
@@ -750,20 +800,20 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (_socket == null || !_socket!.connected || _roomId == null) return;
     if (state == AppLifecycleState.resumed) {
-      _socket!.emit('joinRoom', {'roomId': _roomId});
+      unawaited(_restoreRoomConnection());
     } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
-      _socket!.emit('outRoom', {'roomId': _roomId});
+      final socket = _socket;
+      if (socket != null && socket.connected && _roomId != null) {
+        socket.emit('outRoom', {'roomId': _roomId});
+      }
     }
   }
 
   @override
   void dispose() {
-    if (_socket != null && _socket!.connected && _roomId != null) {
-      _socket!.emit('outRoom', {'roomId': _roomId});
-    }
+    _disposeSocketConnection(emitOutRoom: true);
     WidgetsBinding.instance.removeObserver(this);
     _controller.dispose();
     super.dispose();
