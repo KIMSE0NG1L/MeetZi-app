@@ -654,100 +654,100 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () => _onAuthorTap(author),
-                        child: Row(
-                          children: [
-                            SizedBox(
+                      Row(
+                        children: [
+                          GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () => _onAuthorTap(author),
+                            child: SizedBox(
                               width: 34,
                               height: 34,
                               child: buildMatchCardAvatar(author, size: 34),
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Flexible(
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        nickname,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          color: dark ? Colors.white : const Color(0xFF111827),
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    if (isBest) const SizedBox(width: 4),
+                                    if (isBest) const Text('BEST', style: TextStyle(fontSize: 12)),
+                                    if (isMe) ...[
+                                      const SizedBox(width: 4),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                        decoration: BoxDecoration(
+                                          color: primary.withOpacity(0.2),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
                                         child: Text(
-                                          nickname,
+                                          '작성자',
                                           style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                            color: dark ? Colors.white : const Color(0xFF111827),
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
+                                            color: primary,
                                           ),
-                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
-                                      if (isBest) const SizedBox(width: 4),
-                                      if (isBest) const Text('BEST', style: TextStyle(fontSize: 12)),
-                                      if (isMe) ...[
-                                        const SizedBox(width: 4),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                          decoration: BoxDecoration(
-                                            color: primary.withOpacity(0.2),
-                                            borderRadius: BorderRadius.circular(4),
-                                          ),
-                                          child: Text(
-                                            '작성자',
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w600,
-                                              color: primary,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                      if (isDailyBest) ...[
-                                        const SizedBox(width: 4),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                          decoration: BoxDecoration(
-                                            color: Colors.amber.withOpacity(0.3),
-                                            borderRadius: BorderRadius.circular(4),
-                                          ),
-                                          child: const Text(
-                                            'HOT',
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w600,
-                                              color: Color(0xFFB45309),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
                                     ],
-                                  ),
-                                  const SizedBox(height: 1),
-                                  Text(
-                                    formatPostTime(post['createdAt']),
-                                    style: TextStyle(fontSize: 11, color: dark ? Colors.grey.shade500 : Colors.grey.shade400),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: dark ? Colors.grey.shade700 : Colors.grey.shade100,
-                                      borderRadius: BorderRadius.circular(999),
-                                    ),
-                                    child: Text(
-                                      tagLabel,
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w700,
-                                        color: dark ? Colors.grey.shade200 : Colors.grey.shade600,
+                                    if (isDailyBest) ...[
+                                      const SizedBox(width: 4),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                        decoration: BoxDecoration(
+                                          color: Colors.amber.withOpacity(0.3),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: const Text(
+                                          'HOT',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFFB45309),
+                                          ),
+                                        ),
                                       ),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 1),
+                                Text(
+                                  formatPostTime(post['createdAt']),
+                                  style: TextStyle(fontSize: 11, color: dark ? Colors.grey.shade500 : Colors.grey.shade400),
+                                ),
+                                const SizedBox(height: 2),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: dark ? Colors.grey.shade700 : Colors.grey.shade100,
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: Text(
+                                    tagLabel,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: dark ? Colors.grey.shade200 : Colors.grey.shade600,
                                     ),
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 6),
                       RichText(

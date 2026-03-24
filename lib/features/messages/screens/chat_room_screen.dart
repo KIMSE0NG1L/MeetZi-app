@@ -121,6 +121,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   final _sharedChatRepository = SharedChatRepository();
   final _controller = TextEditingController();
   bool _isReconnecting = false;
+  final Map<String, Map<String, dynamic>> _sharedChatRequestDetails = {};
+  final Set<String> _sharedChatRequestLoadingIds = {};
   String? _partnerId;
   final List<_ChatMessage> _messages = [];
   bool _loading = true;
@@ -414,6 +416,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       }
       // ?뚮┝/諭껋? ?대━??
       await clearAllNotifications();
+      unawaited(_prefetchSharedChatRequestDetails());
       await _loadRoomState();
     } catch (e) {
       debugPrint('[loadMessages] failed: $e');
@@ -1457,6 +1460,86 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     return null;
   }
 
+  Future<void> _prefetchSharedChatRequestDetails() async {
+    final ids = _messages
+        .map((message) => _parseSharedChatRequestMessage(message.text))
+        .whereType<Map<String, dynamic>>()
+        .map((payload) => payload['sharedChatPostId']?.toString())
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toSet();
+
+    for (final id in ids) {
+      await _ensureSharedChatRequestDetailLoaded(id);
+    }
+  }
+
+  Future<void> _ensureSharedChatRequestDetailLoaded(String sharedChatPostId) async {
+    if (_sharedChatRequestDetails.containsKey(sharedChatPostId) ||
+        _sharedChatRequestLoadingIds.contains(sharedChatPostId)) {
+      return;
+    }
+    _sharedChatRequestLoadingIds.add(sharedChatPostId);
+    try {
+      final detail = await _sharedChatRepository.getDetail(sharedChatPostId);
+      if (!mounted) return;
+      setState(() {
+        _sharedChatRequestDetails[sharedChatPostId] = detail;
+      });
+    } catch (_) {
+      // The card can still render with payload-only fallback text.
+    } finally {
+      _sharedChatRequestLoadingIds.remove(sharedChatPostId);
+    }
+  }
+
+  String _sharedChatRequestStatusLabel(
+    Map<String, dynamic> payload,
+    Map<String, dynamic>? detail,
+  ) {
+    final status = detail?['status']?.toString();
+    final isRequester = payload['requesterUserId']?.toString() == _myUserId;
+    final myConsent = detail?['myConsent']?.toString();
+    final partnerConsent = detail?['partnerConsent']?.toString();
+
+    if (status == 'rejected') {
+      if (isRequester) {
+        return '상대방이 거절했어요.';
+      }
+      return myConsent == 'no' ? '공유 요청을 거절했어요.' : '상대방이 거절했어요.';
+    }
+    if (status == 'published') {
+      return '동의가 완료되어 커뮤니티에 게시됐어요.';
+    }
+    if (partnerConsent == 'yes' && isRequester) {
+      return '상대방이 동의했어요.';
+    }
+    if (myConsent == 'yes' && !isRequester) {
+      return '동의 완료. 게시를 준비 중이에요.';
+    }
+    return isRequester ? '상대방의 응답을 기다리는 중이에요.' : '채팅 구간을 커뮤니티 후기 글로 올리기 전에 동의를 받는 요청입니다.';
+  }
+
+  String _sharedChatRequestButtonLabel(
+    Map<String, dynamic> payload,
+    Map<String, dynamic>? detail,
+  ) {
+    final status = detail?['status']?.toString();
+    final isRequester = payload['requesterUserId']?.toString() == _myUserId;
+    final myConsent = detail?['myConsent']?.toString();
+
+    if (status == 'rejected') {
+      return isRequester ? '거절됨' : (myConsent == 'no' ? '거절 완료' : '결과 보기');
+    }
+    if (status == 'published') {
+      return '게시 완료';
+    }
+    if (myConsent == 'pending') {
+      return '내용 보고 결정하기';
+    }
+    return isRequester ? '응답 기다리는 중' : '상세 보기';
+  }
+
   Future<void> _openSharedChatRequestSheet(String sharedChatPostId) async {
     Map<String, dynamic> detail;
     try {
@@ -1621,8 +1704,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
     if (action == 'yes' || action == 'no') {
       try {
-        await _sharedChatRepository.decideConsent(sharedChatPostId, action!);
+        final updatedDetail = await _sharedChatRepository.decideConsent(sharedChatPostId, action!);
         if (!mounted) return;
+        setState(() {
+          _sharedChatRequestDetails[sharedChatPostId] = updatedDetail;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(action == 'yes' ? '공유 요청에 동의했어요.' : '공유 요청을 거절했어요.')),
         );
@@ -1643,7 +1729,19 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     bool dark,
   ) {
     final sharedChatPostId = payload['sharedChatPostId']?.toString();
+    if (sharedChatPostId != null && sharedChatPostId.isNotEmpty) {
+      unawaited(_ensureSharedChatRequestDetailLoaded(sharedChatPostId));
+    }
+    final detail = sharedChatPostId == null ? null : _sharedChatRequestDetails[sharedChatPostId];
     final title = payload['title']?.toString() ?? '대화 공유 요청';
+    final status = detail?['status']?.toString();
+    final buttonLabel = _sharedChatRequestButtonLabel(payload, detail);
+    final statusLabel = _sharedChatRequestStatusLabel(payload, detail);
+    final statusTone = status == 'rejected'
+        ? Colors.red
+        : status == 'published'
+            ? Colors.green
+            : Colors.orange;
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 320),
@@ -1682,13 +1780,39 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          '대화 공유 요청',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            color: dark ? Colors.white : const Color(0xFF111827),
-                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '대화 공유 요청',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                  color: dark ? Colors.white : const Color(0xFF111827),
+                                ),
+                              ),
+                            ),
+                            if (detail != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: statusTone.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  status == 'rejected'
+                                      ? '거절됨'
+                                      : status == 'published'
+                                          ? '게시됨'
+                                          : '대기중',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    color: statusTone.shade700,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                         Text(
                           title,
@@ -1706,7 +1830,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
               ),
               const SizedBox(height: 12),
               Text(
-                '채팅 구간을 커뮤니티 후기 글로 올리기 전에 동의를 받는 요청입니다.',
+                statusLabel,
                 style: TextStyle(
                   fontSize: 12,
                   height: 1.45,
@@ -1718,7 +1842,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: sharedChatPostId == null ? null : () => _openSharedChatRequestSheet(sharedChatPostId),
-                  child: const Text('내용 보고 결정하기'),
+                  child: Text(buttonLabel),
                 ),
               ),
             ],
