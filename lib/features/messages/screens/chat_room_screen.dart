@@ -1175,7 +1175,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                                             right: 6, bottom: 2),
                                         child: message.readAt == null
                                             ? Text(
-                                                '읽음',
+                                                '안읽음',
                                                 style: TextStyle(
                                                   fontSize: 11,
                                                   color: dark
