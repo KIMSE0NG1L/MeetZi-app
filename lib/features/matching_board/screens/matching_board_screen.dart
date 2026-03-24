@@ -13,6 +13,7 @@ import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
+import 'package:nearo_app/shared/widgets/app_top_notice.dart';
 import 'package:nearo_app/core/theme/university_theme.dart';
 import 'package:nearo_app/core/theme/meetzy_design_tokens.dart';
 import 'package:nearo_app/shared/utils/photo_url.dart';
@@ -1897,12 +1898,10 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
       final nextProfile = await widget.onRequestNextProfile!(List<String>.from(_seenUserIds));
       if (!mounted) return;
       if (nextProfile == null) {
-        // 다음 프로필 없음 → 시트 닫지 않고 안내만
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('다음에 볼 수 있는 프로필이 없어요. 같은 학교에 더 많은 친구가 올라오면 볼 수 있어요.'),
-            behavior: SnackBarBehavior.floating,
-          ),
+        AppTopNotice.show(
+          context,
+          message: '마지막 프로필이에요!',
+          icon: Icons.auto_awesome_rounded,
         );
         return;
       }
