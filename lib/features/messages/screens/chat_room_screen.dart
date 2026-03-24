@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -17,6 +17,7 @@ import 'package:nearo_app/features/matching_board/profile_detail_sheet.dart';
 import 'package:nearo_app/features/messages/data/ice_breaking_phrases.dart';
 import 'package:nearo_app/features/messages/data/report_repository.dart';
 import 'package:nearo_app/features/users/data/block_repository.dart';
+import 'package:nearo_app/features/shared_chat/screens/shared_chat_compose_screen.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
@@ -47,12 +48,12 @@ class ChatRoomScreen extends StatefulWidget {
   const ChatRoomScreen({super.key});
 
   static const _reportReasons = [
-    {'value': 'spam', 'label': '스팸/허위'},
-    {'value': 'harassment', 'label': '욕설·혐오'},
-    {'value': 'impersonation', 'label': '사칭'},
-    {'value': 'sexual', 'label': '성희롱·음란'},
-    {'value': 'scam', 'label': '사기'},
-    {'value': 'other', 'label': '기타'},
+    {'value': 'spam', 'label': '?ㅽ뙵/?덉쐞'},
+    {'value': 'harassment', 'label': '?뺤꽕쨌?먯삤'},
+    {'value': 'impersonation', 'label': '?ъ묶'},
+    {'value': 'sexual', 'label': '?깊씗濡굿룹쓬?'},
+    {'value': 'scam', 'label': '?ш린'},
+    {'value': 'other', 'label': '湲고?'},
   ];
 
   @override
@@ -72,7 +73,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('알림 설정에 실패했어요. 다시 시도해 주세요.')),
+          const SnackBar(content: Text('?뚮┝ ?ㅼ젙???ㅽ뙣?덉뼱?? ?ㅼ떆 ?쒕룄??二쇱꽭??')),
         );
       }
       return;
@@ -85,7 +86,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       _isMuted = newMute;
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(_isMuted ? '채팅방 알림이 꺼졌습니다.' : '채팅방 알림이 켜졌습니다.')),
+      SnackBar(content: Text(_isMuted ? '梨꾪똿諛??뚮┝??爰쇱죱?듬땲??' : '梨꾪똿諛??뚮┝??耳쒖죱?듬땲??')),
     );
   }
 
@@ -125,8 +126,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   String? _roomId;
   bool _isActive = true;
   bool _isProfileRevealed = false;
-  String? _partnerConsentStatus; // 'yes' | 'pending' | 'no' - 상대방 동의 여부
-  bool _partnerInRoom = false; // 상대가 이 채팅방 화면에 있는지(서버 presence)
+  String? _partnerConsentStatus; // 'yes' | 'pending' | 'no' - ?곷?諛??숈쓽 ?щ?
+  bool _partnerInRoom = false; // ?곷?媛 ??梨꾪똿諛??붾㈃???덈뒗吏(?쒕쾭 presence)
   String? _partnerPhotoStorageKey;
   String? _partnerNickname;
   String? _partnerAvatarSeed;
@@ -171,7 +172,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     _messages.add(incoming);
   }
 
-  /// 채팅방에서 내가 직접 한 번이라도 메시지를 보냈으면 아이스브레이커 문구 숨김
+  /// 梨꾪똿諛⑹뿉???닿? 吏곸젒 ??踰덉씠?쇰룄 硫붿떆吏瑜?蹂대깉?쇰㈃ ?꾩씠?ㅻ툕?덉씠而?臾멸뎄 ?④?
   bool get _shouldHideIceBreakers => _messages.any((m) => m.isMine);
 
   @override
@@ -191,7 +192,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       if (args.containsKey('isActive')) {
         _isActive = args['isActive'] == true;
       }
-      // 목록에서 전달한 프로필 데이터로 즉시 표시 (getRoom 응답 전에도 목록과 동일하게)
+      // 紐⑸줉?먯꽌 ?꾨떖???꾨줈???곗씠?곕줈 利됱떆 ?쒖떆 (getRoom ?묐떟 ?꾩뿉??紐⑸줉怨??숈씪?섍쾶)
       final passedPhotoKey = args['partnerPhotoStorageKey']?.toString();
       if (passedPhotoKey != null && passedPhotoKey.trim().isNotEmpty) {
         _partnerPhotoStorageKey = passedPhotoKey.trim();
@@ -234,7 +235,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     }
   }
 
-  /// getRoom 응답의 messageReadAts로 '1' 갱신 (listMessages 대신 가벼운 getRoom 사용)
+  /// getRoom ?묐떟??messageReadAts濡?'1' 媛깆떊 (listMessages ???媛踰쇱슫 getRoom ?ъ슜)
   void _disposeSocketConnection({bool emitOutRoom = false}) {
     final socket = _socket;
     if (socket == null) return;
@@ -303,17 +304,17 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     });
   }
 
-  /// 채팅방에 있는 동안 getRoom으로 readAt 갱신 + 매칭 취소 시 isActive 반영
+  /// 梨꾪똿諛⑹뿉 ?덈뒗 ?숈븞 getRoom?쇰줈 readAt 媛깆떊 + 留ㅼ묶 痍⑥냼 ??isActive 諛섏쁺
   Future<void> _syncReadAt() async {
     if (_roomId == null || !mounted) return;
     try {
       final room = await _repository.getRoom(roomId: _roomId!);
       if (!mounted) return;
-      // 서버의 알림 끔 상태 동기화
+      // ?쒕쾭???뚮┝ ???곹깭 ?숆린??
       if (room['muted'] != null && (room['muted'] == true) != _isMuted) {
         setState(() => _isMuted = room['muted'] == true);
       }
-      // 매칭 취소 시 서버에서 isActive=false로 오므로 주기적으로 반영해 입력 막기
+      // 留ㅼ묶 痍⑥냼 ???쒕쾭?먯꽌 isActive=false濡??ㅻ?濡?二쇨린?곸쑝濡?諛섏쁺???낅젰 留됯린
       final isActiveFromServer = room['isActive'] == true;
       final partnerInRoom =
           room['partnerOnline'] == true || room['partnerInRoom'] == true;
@@ -330,7 +331,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     }
   }
 
-  // 읽지 않은 메시지에 대해 소켓으로 읽음 이벤트 전송
+  // ?쎌? ?딆? 硫붿떆吏??????뚯폆?쇰줈 ?쎌쓬 ?대깽???꾩넚
   void _sendReadReceipts() {
     if (_socket == null ||
         !_socket!.connected ||
@@ -344,7 +345,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           'userId': _myUserId,
           'readAt': DateTime.now().toIso8601String(),
         };
-        print('[소켓 읽음 emit] $payload');
+        print('[?뚯폆 ?쎌쓬 emit] $payload');
         _socket!.emit('read', payload);
       }
     }
@@ -364,7 +365,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
             final senderId = m['senderId']?.toString();
             final isMine = senderId == _myUserId;
             print(
-                '[isMine 판별] senderId=$senderId, _myUserId=$_myUserId, isMine=$isMine, text=${m['content']}');
+                '[isMine ?먮퀎] senderId=$senderId, _myUserId=$_myUserId, isMine=$isMine, text=${m['content']}');
             return _ChatMessage(
               id: m['id']?.toString() ?? '',
               text: m['content']?.toString() ?? '',
@@ -381,13 +382,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           }));
         _loading = false;
       });
-      // 읽지 않은 상대 메시지 읽음 처리
+      // ?쎌? ?딆? ?곷? 硫붿떆吏 ?쎌쓬 泥섎━
       for (int i = 0; i < _messages.length; i++) {
         final msg = _messages[i];
         if (!msg.isMine && msg.readAt == null) {
           await _repository.readMessage(roomId: _roomId!, messageId: msg.id);
           final now = DateTime.now();
-          // 읽음 처리 후 readAt을 즉시 갱신하여 UI에서 뱃지 사라지게
+          // ?쎌쓬 泥섎━ ??readAt??利됱떆 媛깆떊?섏뿬 UI?먯꽌 諭껋? ?щ씪吏寃?
           setState(() {
             _messages[i] = _ChatMessage(
               id: msg.id,
@@ -398,7 +399,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
               readAt: now,
             );
           });
-          // 소켓으로 읽음 이벤트도 같이 전송
+          // ?뚯폆?쇰줈 ?쎌쓬 ?대깽?몃룄 媛숈씠 ?꾩넚
           if (_socket != null && _socket!.connected) {
             _socket!.emit('read', {
               'roomId': _roomId,
@@ -409,7 +410,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           }
         }
       }
-      // 알림/뱃지 클리어
+      // ?뚮┝/諭껋? ?대━??
       await clearAllNotifications();
       await _loadRoomState();
     } catch (e) {
@@ -430,7 +431,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     }
     _disposeSocketConnection();
     final completer = Completer<void>();
-    print('[소켓 연결 시도] roomId=$_roomId, myUserId=$_myUserId');
+    print('[?뚯폆 ?곌껐 ?쒕룄] roomId=$_roomId, myUserId=$_myUserId');
     _socket = IO.io(
       '${AppConfig.baseUrl}/chat',
       IO.OptionBuilder()
@@ -440,10 +441,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           .build(),
     );
     _socket!.onConnect((_) {
-      print('[소켓 연결 성공]');
+      print('[?뚯폆 ?곌껐 ?깃났]');
       _socket!.emit('joinRoom', {'roomId': _roomId});
       if (!completer.isCompleted) completer.complete();
-      print('[소켓 joinRoom emit] roomId=$_roomId');
+      print('[?뚯폆 joinRoom emit] roomId=$_roomId');
     });
     _socket!.onDisconnect((reason) {
       debugPrint('[chat socket disconnected] $reason');
@@ -458,7 +459,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       debugPrint('[chat socket error] $error');
     });
     _socket!.on('newMessage', (data) {
-      print('[소켓 newMessage 핸들러 등록됨] data=$data');
+      print('[?뚯폆 newMessage ?몃뱾???깅줉?? data=$data');
       if (!mounted) return;
       final messageId = data['id']?.toString() ?? '';
       final isMine = data['senderId']?.toString() == _myUserId;
@@ -478,7 +479,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         ));
       });
       _scrollToBottom();
-      // 상대가 보낸 메시지면 읽음 처리 + 소켓 읽음 전송 → 보낸 사람 화면에서 "1" 사라짐
+      // ?곷?媛 蹂대궦 硫붿떆吏硫??쎌쓬 泥섎━ + ?뚯폆 ?쎌쓬 ?꾩넚 ??蹂대궦 ?щ엺 ?붾㈃?먯꽌 "1" ?щ씪吏?
       if (!isMine &&
           messageId.isNotEmpty &&
           _roomId != null &&
@@ -510,11 +511,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         });
       }
     });
-    print('[소켓 read 핸들러 등록됨]');
-    // 읽음 이벤트 처리: 해당 메시지의 readAt 갱신
+    print('[?뚯폆 read ?몃뱾???깅줉??');
+    // ?쎌쓬 ?대깽??泥섎━: ?대떦 硫붿떆吏??readAt 媛깆떊
     _socket!.on('read', (data) {
       debugPrint(
-          '[read 이벤트 수신] messageId=${data['messageId']}, userId=${data['userId']}, 내 메시지 수=${_messages.where((m) => m.isMine && m.readAt == null).length}');
+          '[read ?대깽???섏떊] messageId=${data['messageId']}, userId=${data['userId']}, ??硫붿떆吏 ??${_messages.where((m) => m.isMine && m.readAt == null).length}');
       if (!mounted) return;
       final String? messageId = data['messageId']?.toString();
       final String? userId = data['userId']?.toString();
@@ -522,7 +523,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           ? DateTime.tryParse(data['readAt'].toString())
           : null;
       if (messageId == null || userId == null || readAt == null) return;
-      // 내가 보낸 메시지가 상대에게 읽혔을 때만 갱신 (userId = 읽은 사람 = 상대)
+      // ?닿? 蹂대궦 硫붿떆吏媛 ?곷??먭쾶 ?쏀삍???뚮쭔 媛깆떊 (userId = ?쎌? ?щ엺 = ?곷?)
       setState(() {
         final newList = <_ChatMessage>[];
         for (final msg in _messages) {
@@ -546,7 +547,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       });
     });
     _socket!.connect();
-    print('[소켓 connect 호출됨]');
+    print('[?뚯폆 connect ?몄텧??');
     await completer.future.timeout(const Duration(seconds: 10));
   }
 
@@ -575,7 +576,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       }
       _partnerId = room['partnerId']?.toString();
       _matchId = room['matchId']?.toString();
-      // room에 partnerPhotoStorageKey 없으면 room.partner 또는 room.partnerUser에서 추출 (백엔드 구조 다양성 대응)
+      // room??partnerPhotoStorageKey ?놁쑝硫?room.partner ?먮뒗 room.partnerUser?먯꽌 異붿텧 (諛깆뿏??援ъ“ ?ㅼ뼇?????
       if ((_partnerPhotoStorageKey == null ||
           _partnerPhotoStorageKey!.trim().isEmpty)) {
         final partner = room['partner'] as Map<String, dynamic>?;
@@ -604,7 +605,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       }
       final list = room['messageReadAts'];
       if (list is List) _applyMessageReadAts(list);
-      // 동의 여부와 관계없이 상대 프로필 로드 (아바타 탭 시 바로 정보 보기)
+      // ?숈쓽 ?щ?? 愿怨꾩뾾???곷? ?꾨줈??濡쒕뱶 (?꾨컮? ????諛붾줈 ?뺣낫 蹂닿린)
       if (_matchId != null) {
         try {
           final profile = await _partnerProfileRepository.getPartnerProfile(
@@ -612,7 +613,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           if (!mounted) return;
           setState(() {
             _partnerProfile = profile;
-            // room에 상대 사진 키가 없으면 프로필에서 채움 (사진 선택 시 채팅에서도 사진 노출)
+            // room???곷? ?ъ쭊 ?ㅺ? ?놁쑝硫??꾨줈?꾩뿉??梨꾩? (?ъ쭊 ?좏깮 ??梨꾪똿?먯꽌???ъ쭊 ?몄텧)
             if ((_partnerPhotoStorageKey == null ||
                 _partnerPhotoStorageKey!.trim().isEmpty)) {
               _partnerPhotoStorageKey = _photoStorageKeyFromProfile(profile);
@@ -620,7 +621,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           });
         } catch (_) {
           if (mounted) {
-            // API 실패 시 room.partner가 있으면 그걸로 최소 프로필 구성 (사진 표시용)
+            // API ?ㅽ뙣 ??room.partner媛 ?덉쑝硫?洹멸구濡?理쒖냼 ?꾨줈??援ъ꽦 (?ъ쭊 ?쒖떆??
             final partner = room['partner'] as Map<String, dynamic>?;
             final partnerUser = room['partnerUser'] as Map<String, dynamic>?;
             final p = partner ?? partnerUser;
@@ -640,7 +641,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           }
         }
       } else {
-        // matchId 없어도 room.partner가 있으면 프로필/사진 표시용으로 사용
+        // matchId ?놁뼱??room.partner媛 ?덉쑝硫??꾨줈???ъ쭊 ?쒖떆?⑹쑝濡??ъ슜
         final partner = room['partner'] as Map<String, dynamic>?;
         final partnerUser = room['partnerUser'] as Map<String, dynamic>?;
         final p = partner ?? partnerUser;
@@ -708,7 +709,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         setState(() {
           _messages.add(_ChatMessage(
             id: DateTime.now().millisecondsSinceEpoch.toString(),
-            text: '메시지 전송 실패',
+            text: '硫붿떆吏 ?꾩넚 ?ㅽ뙣',
             isMine: false,
             senderId: _myUserId ?? '',
             createdAt: DateTime.now(),
@@ -722,18 +723,18 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     final shouldCancel = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('매칭 취소'),
+        title: const Text('留ㅼ묶 痍⑥냼'),
         content: const Text(
-          '정말로 취소하시겠습니까? 취소하면 상대방과의 대화창은 비활성화 됩니다.',
+          '?뺣쭚濡?痍⑥냼?섏떆寃좎뒿?덇퉴? 痍⑥냼?섎㈃ ?곷?諛⑷낵????붿갹? 鍮꾪솢?깊솕 ?⑸땲??',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('취소'),
+            child: const Text('痍⑥냼'),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('확인'),
+            child: const Text('?뺤씤'),
           ),
         ],
       ),
@@ -751,7 +752,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       debugPrint('[cancelMatch] failed: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('매칭 취소에 실패했습니다.')),
+        const SnackBar(content: Text('留ㅼ묶 痍⑥냼???ㅽ뙣?덉뒿?덈떎.')),
       );
     }
   }
@@ -763,18 +764,18 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('사용자 차단'),
+        title: const Text('?ъ슜??李⑤떒'),
         content: Text(
-          '$partnerName님을 차단하시겠어요? 차단하면 대화가 비활성화되고 목록에서 숨겨질 수 있어요.',
+          '$partnerName?섏쓣 李⑤떒?섏떆寃좎뼱?? 李⑤떒?섎㈃ ??붽? 鍮꾪솢?깊솕?섍퀬 紐⑸줉?먯꽌 ?④꺼吏????덉뼱??',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('취소'),
+            child: const Text('痍⑥냼'),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text('차단', style: TextStyle(color: Colors.red.shade600)),
+            child: Text('李⑤떒', style: TextStyle(color: Colors.red.shade600)),
           ),
         ],
       ),
@@ -784,12 +785,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       await _blockRepository.blockUser(partnerId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('차단되었습니다.')),
+        const SnackBar(content: Text('李⑤떒?섏뿀?듬땲??')),
       );
       Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
-      String msg = '차단에 실패했어요.';
+      String msg = '李⑤떒???ㅽ뙣?덉뼱??';
       if (e is DioException && e.response?.data is Map) {
         final d = e.response!.data as Map<String, dynamic>;
         if (d['message'] != null) msg = d['message'].toString();
@@ -819,11 +820,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     super.dispose();
   }
 
-  // AppDesign: 메시지 전송/수신 시각 (createdAt 우선)
+  // AppDesign: 硫붿떆吏 ?꾩넚/?섏떊 ?쒓컖 (createdAt ?곗꽑)
   String _messageTime(_ChatMessage message) {
     final dt = message.createdAt ?? message.readAt ?? DateTime.now();
     final hour = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
-    final ampm = dt.hour >= 12 ? '오후' : '오전';
+    final ampm = dt.hour >= 12 ? '?ㅽ썑' : '?ㅼ쟾';
     return '$ampm ${hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 
@@ -838,7 +839,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     if (IceBreakingPhrases.phrases.isEmpty) {
       return Center(
         child: Text(
-          '첫 메시지를 보내 보세요.',
+          '泥?硫붿떆吏瑜?蹂대궡 蹂댁꽭??',
           style: TextStyle(color: timeColor, fontSize: 15),
         ),
       );
@@ -850,12 +851,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         children: [
           const SizedBox(height: 40),
           Text(
-            '첫 메시지를 보내 보세요.',
+            '泥?硫붿떆吏瑜?蹂대궡 蹂댁꽭??',
             style: TextStyle(color: timeColor, fontSize: 15),
           ),
           const SizedBox(height: 16),
           Text(
-            '어색한 분위기가 걱정된다면?',
+            '?댁깋??遺꾩쐞湲곌? 嫄깆젙?쒕떎硫?',
             style: TextStyle(
               color: timeColor,
               fontSize: 13,
@@ -926,7 +927,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       body: SafeArea(
         child: Column(
           children: [
-            // AppDesign: 로즈 그라데이션 헤더, 뒤로가기, 아바타+이름+온라인, 더보기
+            // AppDesign: 濡쒖쫰 洹몃씪?곗씠???ㅻ뜑, ?ㅻ줈媛湲? ?꾨컮?+?대쫫+?⑤씪?? ?붾낫湲?
             Container(
               padding: EdgeInsets.only(
                 left: 20,
@@ -1010,12 +1011,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                   IconButton(
                     icon: const Icon(LucideIcons.flag,
                         color: Colors.white, size: 22),
-                    tooltip: '신고',
+                    tooltip: '?좉퀬',
                     onPressed: _openReportSheet,
                   ),
                   IconButton(
                     icon: Icon(LucideIcons.ban, color: Colors.white, size: 22),
-                    tooltip: '차단',
+                    tooltip: '李⑤떒',
                     onPressed: _partnerId != null ? _openBlockConfirm : null,
                   ),
                   PopupMenuButton<String>(
@@ -1025,13 +1026,19 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                     onSelected: (value) {
                       if (value == 'cancel') _cancelMatch();
                       if (value == 'mute') _toggleMute();
+                      if (value == 'share') _openSharedChatComposer();
                     },
                     itemBuilder: (_) => [
                       const PopupMenuItem(
                           value: 'cancel', child: Text('매칭 취소')),
+                      if (!_isActive)
+                        const PopupMenuItem(
+                          value: 'share',
+                          child: Text('대화 구간 공유'),
+                        ),
                       PopupMenuItem(
                         value: 'mute',
-                        child: Text(_isMuted ? '채팅방 알람 켜기' : '채팅방 알람 끄기'),
+                        child: Text(_isMuted ? '梨꾪똿諛??뚮엺 耳쒓린' : '梨꾪똿諛??뚮엺 ?꾧린'),
                       ),
                     ],
                   ),
@@ -1045,7 +1052,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
                 child: Text(
-                  '매칭이 취소되어 비활성화되었습니다.',
+                  '留ㅼ묶??痍⑥냼?섏뼱 鍮꾪솢?깊솕?섏뿀?듬땲??',
                   style: TextStyle(
                       color:
                           dark ? Colors.grey.shade300 : Colors.grey.shade700),
@@ -1158,7 +1165,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                                             right: 6, bottom: 2),
                                         child: message.readAt == null
                                             ? Text(
-                                                '안읽음',
+                                                '읽음',
                                                 style: TextStyle(
                                                   fontSize: 11,
                                                   color: dark
@@ -1352,7 +1359,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                           maxLines: null,
                           textInputAction: TextInputAction.send,
                           decoration: InputDecoration(
-                            hintText: '메시지를 입력하세요...',
+                            hintText: '硫붿떆吏瑜??낅젰?섏꽭??..',
                             hintStyle:
                                 TextStyle(color: hintColor, fontSize: 14),
                             border: InputBorder.none,
@@ -1417,13 +1424,48 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   static const double _partnerAvatarRadius = 18;
   static final Set<String> _reportedMatchIds = {};
 
+  Future<void> _openSharedChatComposer() async {
+    if (_roomId == null) return;
+    final shareableMessages = _messages
+        .where((message) => !message.isSystem)
+        .map((message) => {
+              'id': message.id,
+              'text': message.text,
+              'isMine': message.isMine,
+              'isSystem': message.isSystem,
+              'createdAt': message.createdAt?.toIso8601String(),
+            })
+        .toList();
+    if (shareableMessages.length < 2) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('공유할 대화가 아직 부족해요.')),
+      );
+      return;
+    }
+
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => SharedChatComposeScreen(
+          roomId: _roomId!,
+          partnerName: _title,
+          messages: shareableMessages,
+        ),
+      ),
+    );
+    if (result == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('상대 동의 대기함으로 보냈어요.')),
+      );
+    }
+  }
   void _openReportSheet() async {
     if (_matchId == null) {
       await _loadRoomState();
       if (!mounted) return;
       if (_matchId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('잠시 후 다시 시도해 주세요.')),
+          const SnackBar(content: Text('?좎떆 ???ㅼ떆 ?쒕룄??二쇱꽭??')),
         );
         return;
       }
@@ -1452,7 +1494,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
   Future<void> _openPartnerProfile() async {
     Future<Widget> avatarBuilder(Map<String, dynamic> profile) async {
-      // 프로필에서 사진을 골랐으면 사진 우선, 없으면 채팅방에 쓰는 _partnerPhotoStorageKey 사용
+      // ?꾨줈?꾩뿉???ъ쭊??怨⑤옄?쇰㈃ ?ъ쭊 ?곗꽑, ?놁쑝硫?梨꾪똿諛⑹뿉 ?곕뒗 _partnerPhotoStorageKey ?ъ슜
       String? photoUrl = _photoUrlFromProfile(profile);
       if ((photoUrl == null || photoUrl.isEmpty) &&
           _partnerPhotoStorageKey != null &&
@@ -1515,7 +1557,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           child: Icon(LucideIcons.user, size: 40, color: Colors.grey.shade600));
     }
 
-    // room 정보만으로 최소 프로필 맵 구성 (API 실패/ matchId 없을 때 사용)
+    // room ?뺣낫留뚯쑝濡?理쒖냼 ?꾨줈??留?援ъ꽦 (API ?ㅽ뙣/ matchId ?놁쓣 ???ъ슜)
     Map<String, dynamic> _minimalProfileFromRoom() {
       final user = <String, dynamic>{
         'avatarSeed': _partnerAvatarSeed,
@@ -1574,7 +1616,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         );
       } catch (_) {
         if (!mounted) return;
-        // API 실패 시 room 정보로 최소 프로필 표시
+        // API ?ㅽ뙣 ??room ?뺣낫濡?理쒖냼 ?꾨줈???쒖떆
         final photoForEnlarge = photoUrlFromStorageKey(_partnerPhotoStorageKey);
         await showProfileDetailSheet(
           context,
@@ -1590,7 +1632,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       }
       return;
     }
-    // matchId 없음 — room 정보만으로 프로필 표시
+    // matchId ?놁쓬 ??room ?뺣낫留뚯쑝濡??꾨줈???쒖떆
     final photoForEnlarge = photoUrlFromStorageKey(_partnerPhotoStorageKey);
     await showProfileDetailSheet(
       context,
@@ -1605,7 +1647,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     );
   }
 
-  /// room.partner / room.partnerUser를 프로필 형식으로 변환 (_photoUrlFromProfile 등에서 사용)
+  /// room.partner / room.partnerUser瑜??꾨줈???뺤떇?쇰줈 蹂??(_photoUrlFromProfile ?깆뿉???ъ슜)
   Map<String, dynamic> _normalizePartnerMap(Map<String, dynamic> p) {
     final user = p['user'] as Map<String, dynamic>?;
     final flat = <String, dynamic>{
@@ -1630,7 +1672,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     };
   }
 
-  /// 프로필에서 사진(boardDisplayType:'photo')일 때 첫 번째 사진의 storageKey 추출 (room에 키가 없을 때 채움용)
+  /// ?꾨줈?꾩뿉???ъ쭊(boardDisplayType:'photo')????泥?踰덉㎏ ?ъ쭊??storageKey 異붿텧 (room???ㅺ? ?놁쓣 ??梨꾩???
   String? _photoStorageKeyFromProfile(Map<String, dynamic>? profile) {
     if (profile == null) return null;
     final user = profile['user'] as Map<String, dynamic>?;
@@ -1641,7 +1683,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         ?.toString()
         .trim()
         .toLowerCase();
-    // displayType이 'photo'이거나, 없는데 photos가 있으면( getPartnerProfile flat 응답) 사진 사용
+    // displayType??'photo'?닿굅?? ?녿뒗??photos媛 ?덉쑝硫? getPartnerProfile flat ?묐떟) ?ъ쭊 ?ъ슜
     if (displayType == 'avatar') return null;
     final singleKey = profile['partnerPhotoStorageKey'] ??
         profile['photoStorageKey'] ??
@@ -1666,8 +1708,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     return null;
   }
 
-  /// 프로필에서 사진(boardDisplayType:'photo')을 골랐을 때 사진 URL 추출
-  /// API 응답 형태: { user: { boardDisplayType, photos: [{storageKey}] } } 또는 { boardDisplayType, photos } 등
+  /// ?꾨줈?꾩뿉???ъ쭊(boardDisplayType:'photo')??怨⑤옄?????ъ쭊 URL 異붿텧
+  /// API ?묐떟 ?뺥깭: { user: { boardDisplayType, photos: [{storageKey}] } } ?먮뒗 { boardDisplayType, photos } ??
   String? _photoUrlFromProfile(Map<String, dynamic>? profile) {
     if (profile == null) return null;
     final user = profile['user'] as Map<String, dynamic>?;
@@ -1680,7 +1722,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         .toLowerCase();
     if (displayType == 'avatar') return null;
 
-    // 단일 storageKey 필드 (일부 API는 첫 사진 키만 내려줌)
+    // ?⑥씪 storageKey ?꾨뱶 (?쇰? API??泥??ъ쭊 ?ㅻ쭔 ?대젮以?
     final singleKey = profile['partnerPhotoStorageKey'] ??
         profile['photoStorageKey'] ??
         profile['primaryPhotoStorageKey'] ??
@@ -1711,7 +1753,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
   Widget _buildPartnerAvatar(BuildContext context) {
     Widget avatar;
-    // room API의 partnerPhotoStorageKey 우선, 없으면 partnerProfile에서 boardDisplayType:photo일 때 추출
+    // room API??partnerPhotoStorageKey ?곗꽑, ?놁쑝硫?partnerProfile?먯꽌 boardDisplayType:photo????異붿텧
     String? partnerPhotoUrl = photoUrlFromStorageKey(_partnerPhotoStorageKey);
     if ((partnerPhotoUrl == null || partnerPhotoUrl.isEmpty) &&
         _partnerProfile != null) {
@@ -1894,17 +1936,17 @@ class _ReportSheetContentState extends State<_ReportSheetContent> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('신고가 접수되었습니다.')));
+          .showSnackBar(const SnackBar(content: Text('?좉퀬媛 ?묒닔?섏뿀?듬땲??')));
       widget.onSubmitted();
     } on DioException catch (e) {
       if (!mounted) return;
       final msg = e.response?.data is Map && e.response!.data['message'] != null
           ? e.response!.data['message'].toString()
-          : '신고 접수에 실패했어요.';
+          : '?좉퀬 ?묒닔???ㅽ뙣?덉뼱??';
       widget.onError(msg);
     } catch (_) {
       if (!mounted) return;
-      widget.onError('신고 접수에 실패했어요.');
+      widget.onError('?좉퀬 ?묒닔???ㅽ뙣?덉뼱??');
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -1949,13 +1991,13 @@ class _ReportSheetContentState extends State<_ReportSheetContent> {
                 size: 56, color: Colors.green.shade600),
             const SizedBox(height: 16),
             Text(
-              '신고완료',
+              '?좉퀬?꾨즺',
               style: TextStyle(
                   fontSize: 22, fontWeight: FontWeight.bold, color: onSurface),
             ),
             const SizedBox(height: 8),
             Text(
-              '이미 신고가 접수된 대화입니다.',
+              '?대? ?좉퀬媛 ?묒닔????붿엯?덈떎.',
               style: TextStyle(fontSize: 14, color: onSurfaceVariant),
               textAlign: TextAlign.center,
             ),
@@ -1964,7 +2006,7 @@ class _ReportSheetContentState extends State<_ReportSheetContent> {
               width: double.infinity,
               child: TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('닫기'),
+                child: const Text('?リ린'),
               ),
             ),
           ],
@@ -2004,7 +2046,7 @@ class _ReportSheetContentState extends State<_ReportSheetContent> {
                 Icon(LucideIcons.flag, size: 24, color: Colors.red.shade400),
                 const SizedBox(width: 8),
                 Text(
-                  '상대방 신고',
+                  '?곷?諛??좉퀬',
                   style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -2014,11 +2056,11 @@ class _ReportSheetContentState extends State<_ReportSheetContent> {
             ),
             const SizedBox(height: 8),
             Text(
-              '${widget.partnerName}님을 신고합니다. 사유와 내용을 입력해 주세요.',
+              '${widget.partnerName}?섏쓣 ?좉퀬?⑸땲?? ?ъ쑀? ?댁슜???낅젰??二쇱꽭??',
               style: TextStyle(fontSize: 13, color: onSurfaceVariant),
             ),
             const SizedBox(height: 20),
-            Text('신고 사유',
+            Text('?좉퀬 ?ъ쑀',
                 style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -2032,7 +2074,7 @@ class _ReportSheetContentState extends State<_ReportSheetContent> {
               onSelected: (value) => setState(() => _reason = value),
             ),
             const SizedBox(height: 16),
-            Text('상세 내용 (선택)',
+            Text('?곸꽭 ?댁슜 (?좏깮)',
                 style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -2042,7 +2084,7 @@ class _ReportSheetContentState extends State<_ReportSheetContent> {
               controller: _detailController,
               maxLines: 4,
               decoration: InputDecoration(
-                hintText: '구체적인 상황을 적어 주시면 검토에 도움이 됩니다.',
+                hintText: '援ъ껜?곸씤 ?곹솴???곸뼱 二쇱떆硫?寃?좎뿉 ?꾩????⑸땲??',
                 filled: true,
                 fillColor: dark ? Colors.grey.shade800 : Colors.grey.shade100,
                 border: OutlineInputBorder(
@@ -2071,7 +2113,7 @@ class _ReportSheetContentState extends State<_ReportSheetContent> {
                         width: 22,
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: Colors.white))
-                    : const Text('신고하기'),
+                    : const Text('?좉퀬?섍린'),
               ),
             ),
           ],
@@ -2080,3 +2122,6 @@ class _ReportSheetContentState extends State<_ReportSheetContent> {
     );
   }
 }
+
+
+

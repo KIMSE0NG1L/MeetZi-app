@@ -65,3 +65,61 @@ flutter build apk
 - `lib/features/`: 도메인별 기능
 - `lib/shared/`: 공통 API, 테마, 유틸
 - `assets/`: 이미지, 아이콘, 애니메이션
+
+## Android Build Guide (Current Local Setup)
+
+Recommended project path:
+- `C:\develop\MeetZi\MeetZi-app`
+
+Recommended Flutter SDK path:
+- `C:\Users\t8928\dev\flutter`
+
+Important:
+- On Windows, Flutter/Gradle builds can fail if the project path contains non-ASCII characters.
+- Build from an ASCII-only path such as `C:\develop\MeetZi\MeetZi-app`.
+
+### 1. Open PowerShell and set local build environment
+
+```powershell
+$env:JAVA_HOME='C:\Program Files\Microsoft\jdk-17.0.18.8-hotspot'
+$sdk='C:\Users\t8928\AppData\Local\Android\Sdk'
+$env:ANDROID_HOME=$sdk
+$env:ANDROID_SDK_ROOT=$sdk
+$env:PATH='C:\Users\t8928\dev\flutter\bin;C:\Program Files\Git\cmd;C:\Program Files\Microsoft\jdk-17.0.18.8-hotspot\bin;'+$sdk+'\platform-tools;'+$sdk+'\cmdline-tools\latest\bin;'+$env:PATH
+```
+
+### 2. Install packages
+
+```powershell
+flutter pub get
+```
+
+### 3. Build APK
+
+Debug APK:
+
+```powershell
+flutter build apk --debug
+```
+
+Release APK:
+
+```powershell
+flutter build apk
+```
+
+Faster release build for most Android devices (arm64 only):
+
+```powershell
+flutter build apk --release --target-platform android-arm64
+```
+
+### 4. Output files
+
+- `build\app\outputs\flutter-apk\app-debug.apk`
+- `build\app\outputs\flutter-apk\app-release.apk`
+
+### 5. Notes
+
+- If `flutter` commands feel stuck on Windows, confirm that the Flutter SDK is installed in a user-owned ASCII path.
+- If Android Gradle reports a path-character issue, make sure the repository itself is not under a Korean or other non-ASCII directory name.
