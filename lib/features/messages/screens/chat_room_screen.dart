@@ -17,6 +17,7 @@ import 'package:nearo_app/features/matching_board/profile_detail_sheet.dart';
 import 'package:nearo_app/features/messages/data/ice_breaking_phrases.dart';
 import 'package:nearo_app/features/messages/data/report_repository.dart';
 import 'package:nearo_app/features/users/data/block_repository.dart';
+import 'package:nearo_app/features/shared_chat/data/shared_chat_repository.dart';
 import 'package:nearo_app/features/shared_chat/screens/shared_chat_compose_screen.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -117,6 +118,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   final _matchingRepository = MatchingRepository();
   final _reportRepository = ReportRepository();
   final _blockRepository = BlockRepository();
+  final _sharedChatRepository = SharedChatRepository();
   final _controller = TextEditingController();
   bool _isReconnecting = false;
   String? _partnerId;
@@ -371,7 +373,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
               text: m['content']?.toString() ?? '',
               isMine: isMine,
               senderId: senderId ?? '',
-              isSystem: m['isSystem'] == true,
+              isSystem: m['isSystem'] == true || _isSystemContent(m['content']?.toString() ?? ''),
               readAt: m['readAt'] != null
                   ? DateTime.tryParse(m['readAt'].toString())
                   : null,
@@ -469,7 +471,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           text: data['content'] ?? '',
           isMine: isMine,
           senderId: data['senderId']?.toString() ?? '',
-          isSystem: false,
+          isSystem: data['isSystem'] == true || _isSystemContent(data['content']?.toString() ?? ''),
           readAt: data['readAt'] != null
               ? DateTime.tryParse(data['readAt'].toString())
               : null,
@@ -1031,11 +1033,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                     itemBuilder: (_) => [
                       const PopupMenuItem(
                           value: 'cancel', child: Text('매칭 취소')),
-                      if (!_isActive)
-                        const PopupMenuItem(
-                          value: 'share',
-                          child: Text('대화 구간 공유'),
-                        ),
+                      const PopupMenuItem(
+                        value: 'share',
+                        child: Text('대화 구간 공유'),
+                      ),
                       PopupMenuItem(
                         value: 'mute',
                         child: Text(_isMuted ? '채팅방 알림 켜기' : '채팅방 알림 끄기'),
@@ -1128,26 +1129,35 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                               );
                             }
                             if (message.isSystem) {
+                              final sharedChatRequest =
+                                  _parseSharedChatRequestMessage(message.text);
                               children.add(
-                                Center(
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 10),
-                                    decoration: BoxDecoration(
-                                      color: dark
-                                          ? Colors.grey.shade700
-                                          : Colors.grey.shade200,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      message.text,
-                                      style: TextStyle(
-                                          color: dark
-                                              ? Colors.grey.shade300
-                                              : Colors.grey.shade700),
-                                    ),
-                                  ),
-                                ),
+                                sharedChatRequest != null
+                                    ? _buildSharedChatRequestCard(
+                                        context,
+                                        sharedChatRequest,
+                                        dark,
+                                      )
+                                    : Center(
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 16, vertical: 10),
+                                          decoration: BoxDecoration(
+                                            color: dark
+                                                ? Colors.grey.shade700
+                                                : Colors.grey.shade200,
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                          child: Text(
+                                            _displaySystemText(message.text),
+                                            style: TextStyle(
+                                                color: dark
+                                                    ? Colors.grey.shade300
+                                                    : Colors.grey.shade700),
+                                          ),
+                                        ),
+                                      ),
                               );
                             } else {
                               children.add(
@@ -1421,6 +1431,303 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     }
   }
 
+  bool _isSystemContent(String text) {
+    return text.startsWith('[system]') || text.startsWith('[shared_chat_request]');
+  }
+
+  String _displaySystemText(String text) {
+    if (text.startsWith('[system]')) {
+      return text.replaceFirst('[system]', '').trim();
+    }
+    return text;
+  }
+
+  Map<String, dynamic>? _parseSharedChatRequestMessage(String text) {
+    const prefix = '[shared_chat_request]';
+    if (!text.startsWith(prefix)) return null;
+    final payload = text.substring(prefix.length).trim();
+    if (payload.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(payload);
+      if (decoded is Map<String, dynamic>) return decoded;
+      if (decoded is Map) return Map<String, dynamic>.from(decoded);
+    } catch (_) {
+      return null;
+    }
+    return null;
+  }
+
+  Future<void> _openSharedChatRequestSheet(String sharedChatPostId) async {
+    Map<String, dynamic> detail;
+    try {
+      detail = await _sharedChatRepository.getDetail(sharedChatPostId);
+    } on DioException catch (e) {
+      if (!mounted) return;
+      final message = e.response?.data is Map && e.response?.data['message'] != null
+          ? e.response!.data['message'].toString()
+          : '공유 요청을 불러오지 못했어요.';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      return;
+    }
+    if (!mounted) return;
+
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        final theme = Theme.of(context);
+        final dark = theme.brightness == Brightness.dark;
+        final messages = (detail['messages'] as List<dynamic>? ?? [])
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+        final myConsent = detail['myConsent']?.toString();
+        final canDecide = myConsent == 'pending' && detail['status'] == 'pending_consent';
+
+        Widget bubble(bool isMine, String content) {
+          return Row(
+            mainAxisAlignment: isMine ? MainAxisAlignment.end : MainAxisAlignment.start,
+            children: [
+              if (!isMine) ...[
+                Container(
+                  width: 26,
+                  height: 26,
+                  decoration: BoxDecoration(
+                    color: dark ? Colors.white10 : Colors.grey.shade200,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    LucideIcons.userRound,
+                    size: 14,
+                    color: dark ? Colors.white70 : Colors.grey.shade700,
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isMine ? theme.colorScheme.primary : (dark ? const Color(0xFF374151) : Colors.white),
+                    borderRadius: BorderRadius.only(
+                      topLeft: const Radius.circular(16),
+                      topRight: const Radius.circular(16),
+                      bottomLeft: Radius.circular(isMine ? 16 : 4),
+                      bottomRight: Radius.circular(isMine ? 4 : 16),
+                    ),
+                  ),
+                  child: Text(
+                    content,
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.4,
+                      color: isMine ? Colors.white : (dark ? Colors.white : const Color(0xFF111827)),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+
+        return SafeArea(
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+            decoration: BoxDecoration(
+              color: dark ? const Color(0xFF111827) : Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  detail['title']?.toString() ?? '공유 요청',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: dark ? Colors.white : const Color(0xFF111827),
+                  ),
+                ),
+                if ((detail['summary']?.toString() ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    detail['summary'].toString(),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                Flexible(
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: dark ? const Color(0xFF0F172A) : const Color(0xFFF3F4F6),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: messages.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final message = messages[index];
+                        final isMine = message['senderRole']?.toString() == 'A';
+                        return bubble(isMine, message['content']?.toString() ?? '');
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                if (canDecide)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.of(context).pop('no'),
+                          child: const Text('거절'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.of(context).pop('yes'),
+                          child: const Text('동의하고 올리기'),
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.tonal(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text(
+                        detail['status'] == 'published'
+                            ? '이미 커뮤니티에 올라갔어요'
+                            : myConsent == 'yes'
+                                ? '내 동의는 이미 완료됐어요'
+                                : '확인',
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (action == 'yes' || action == 'no') {
+      try {
+        await _sharedChatRepository.decideConsent(sharedChatPostId, action!);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(action == 'yes' ? '공유 요청에 동의했어요.' : '공유 요청을 거절했어요.')),
+        );
+        await _loadMessages();
+      } on DioException catch (e) {
+        if (!mounted) return;
+        final message = e.response?.data is Map && e.response?.data['message'] != null
+            ? e.response!.data['message'].toString()
+            : '동의 상태를 저장하지 못했어요.';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      }
+    }
+  }
+
+  Widget _buildSharedChatRequestCard(
+    BuildContext context,
+    Map<String, dynamic> payload,
+    bool dark,
+  ) {
+    final sharedChatPostId = payload['sharedChatPostId']?.toString();
+    final title = payload['title']?.toString() ?? '대화 공유 요청';
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 320),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: dark ? const Color(0xFF1F2937) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.28),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      gradient: ThemeController.getHeaderGradient(),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(LucideIcons.messagesSquare, color: Colors.white, size: 18),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '대화 공유 요청',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: dark ? Colors.white : const Color(0xFF111827),
+                          ),
+                        ),
+                        Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                '채팅 구간을 커뮤니티 후기 글로 올리기 전에 동의를 받는 요청입니다.',
+                style: TextStyle(
+                  fontSize: 12,
+                  height: 1.45,
+                  color: dark ? Colors.grey.shade300 : const Color(0xFF4B5563),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: sharedChatPostId == null ? null : () => _openSharedChatRequestSheet(sharedChatPostId),
+                  child: const Text('내용 보고 결정하기'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   static const double _partnerAvatarRadius = 18;
   static final Set<String> _reportedMatchIds = {};
 
@@ -1454,8 +1761,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       ),
     );
     if (result == true && mounted) {
+      await _loadMessages();
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('상대 동의 대기함으로 보냈어요.')),
+        const SnackBar(content: Text('채팅방에 공유 요청을 보냈어요.')),
       );
     }
   }
