@@ -48,12 +48,12 @@ class ChatRoomScreen extends StatefulWidget {
   const ChatRoomScreen({super.key});
 
   static const _reportReasons = [
-    {'value': 'spam', 'label': '?ㅽ뙵/?덉쐞'},
-    {'value': 'harassment', 'label': '?뺤꽕쨌?먯삤'},
-    {'value': 'impersonation', 'label': '?ъ묶'},
-    {'value': 'sexual', 'label': '?깊씗濡굿룹쓬?'},
-    {'value': 'scam', 'label': '?ш린'},
-    {'value': 'other', 'label': '湲고?'},
+    {'value': 'spam', 'label': '스팸/도배'},
+    {'value': 'harassment', 'label': '괴롭힘/혐오'},
+    {'value': 'impersonation', 'label': '사칭'},
+    {'value': 'sexual', 'label': '성적 불쾌감'},
+    {'value': 'scam', 'label': '사기'},
+    {'value': 'other', 'label': '기타'},
   ];
 
   @override
@@ -73,7 +73,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('?뚮┝ ?ㅼ젙???ㅽ뙣?덉뼱?? ?ㅼ떆 ?쒕룄??二쇱꽭??')),
+          const SnackBar(content: Text('알림 설정에 실패했어요. 다시 시도해 주세요.')),
         );
       }
       return;
@@ -86,7 +86,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       _isMuted = newMute;
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(_isMuted ? '梨꾪똿諛??뚮┝??爰쇱죱?듬땲??' : '梨꾪똿諛??뚮┝??耳쒖죱?듬땲??')),
+      SnackBar(content: Text(_isMuted ? '채팅방 알림을 껐습니다' : '채팅방 알림을 켰습니다')),
     );
   }
 
@@ -126,7 +126,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   String? _roomId;
   bool _isActive = true;
   bool _isProfileRevealed = false;
-  String? _partnerConsentStatus; // 'yes' | 'pending' | 'no' - ?곷?諛??숈쓽 ?щ?
+  String? _partnerConsentStatus; // 'yes' | 'pending' | 'no' - 상대방?숈쓽 ?щ?
   bool _partnerInRoom = false; // ?곷?媛 ??梨꾪똿諛??붾㈃???덈뒗吏(?쒕쾭 presence)
   String? _partnerPhotoStorageKey;
   String? _partnerNickname;
@@ -304,7 +304,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     });
   }
 
-  /// 梨꾪똿諛⑹뿉 ?덈뒗 ?숈븞 getRoom?쇰줈 readAt 媛깆떊 + 留ㅼ묶 痍⑥냼 ??isActive 諛섏쁺
+  /// 梨꾪똿諛⑹뿉 ?덈뒗 ?숈븞 getRoom?쇰줈 readAt 媛깆떊 + 매칭 취소 ??isActive 諛섏쁺
   Future<void> _syncReadAt() async {
     if (_roomId == null || !mounted) return;
     try {
@@ -314,7 +314,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       if (room['muted'] != null && (room['muted'] == true) != _isMuted) {
         setState(() => _isMuted = room['muted'] == true);
       }
-      // 留ㅼ묶 痍⑥냼 ???쒕쾭?먯꽌 isActive=false濡??ㅻ?濡?二쇨린?곸쑝濡?諛섏쁺???낅젰 留됯린
+      // 매칭 취소 ???쒕쾭?먯꽌 isActive=false濡??ㅻ?濡?二쇨린?곸쑝濡?諛섏쁺???낅젰 留됯린
       final isActiveFromServer = room['isActive'] == true;
       final partnerInRoom =
           room['partnerOnline'] == true || room['partnerInRoom'] == true;
@@ -709,7 +709,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         setState(() {
           _messages.add(_ChatMessage(
             id: DateTime.now().millisecondsSinceEpoch.toString(),
-            text: '硫붿떆吏 ?꾩넚 ?ㅽ뙣',
+            text: '메시지 전송 실패',
             isMine: false,
             senderId: _myUserId ?? '',
             createdAt: DateTime.now(),
@@ -723,18 +723,18 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     final shouldCancel = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('留ㅼ묶 痍⑥냼'),
+        title: const Text('매칭 취소'),
         content: const Text(
-          '?뺣쭚濡?痍⑥냼?섏떆寃좎뒿?덇퉴? 痍⑥냼?섎㈃ ?곷?諛⑷낵????붿갹? 鍮꾪솢?깊솕 ?⑸땲??',
+          '정말로 취소하시겠어요? 취소하면 상대방과의 대화가 비활성화됩니다.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('痍⑥냼'),
+            child: const Text('취소'),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('?뺤씤'),
+            child: const Text('확인'),
           ),
         ],
       ),
@@ -752,7 +752,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       debugPrint('[cancelMatch] failed: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('留ㅼ묶 痍⑥냼???ㅽ뙣?덉뒿?덈떎.')),
+        const SnackBar(content: Text('매칭 취소에 실패했습니다.')),
       );
     }
   }
@@ -764,18 +764,18 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('?ъ슜??李⑤떒'),
+        title: const Text('사용자 차단'),
         content: Text(
-          '$partnerName?섏쓣 李⑤떒?섏떆寃좎뼱?? 李⑤떒?섎㈃ ??붽? 鍮꾪솢?깊솕?섍퀬 紐⑸줉?먯꽌 ?④꺼吏????덉뼱??',
+          '$partnerName님을 차단하시겠어요? 차단하면 대화가 비활성화되고 목록에서 사라질 수 있어요.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('痍⑥냼'),
+            child: const Text('취소'),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text('李⑤떒', style: TextStyle(color: Colors.red.shade600)),
+            child: Text('차단', style: TextStyle(color: Colors.red.shade600)),
           ),
         ],
       ),
@@ -785,12 +785,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       await _blockRepository.blockUser(partnerId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('李⑤떒?섏뿀?듬땲??')),
+        const SnackBar(content: Text('차단했습니다')),
       );
       Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
-      String msg = '李⑤떒???ㅽ뙣?덉뼱??';
+      String msg = '차단에 실패했어요';
       if (e is DioException && e.response?.data is Map) {
         final d = e.response!.data as Map<String, dynamic>;
         if (d['message'] != null) msg = d['message'].toString();
@@ -824,7 +824,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   String _messageTime(_ChatMessage message) {
     final dt = message.createdAt ?? message.readAt ?? DateTime.now();
     final hour = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
-    final ampm = dt.hour >= 12 ? '?ㅽ썑' : '?ㅼ쟾';
+    final ampm = dt.hour >= 12 ? '오후' : '오전';
     return '$ampm ${hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 
@@ -839,7 +839,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     if (IceBreakingPhrases.phrases.isEmpty) {
       return Center(
         child: Text(
-          '泥?硫붿떆吏瑜?蹂대궡 蹂댁꽭??',
+          '첫 메시지를 보내 보세요',
           style: TextStyle(color: timeColor, fontSize: 15),
         ),
       );
@@ -851,12 +851,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         children: [
           const SizedBox(height: 40),
           Text(
-            '泥?硫붿떆吏瑜?蹂대궡 蹂댁꽭??',
+            '첫 메시지를 보내 보세요',
             style: TextStyle(color: timeColor, fontSize: 15),
           ),
           const SizedBox(height: 16),
           Text(
-            '?댁깋??遺꾩쐞湲곌? 嫄깆젙?쒕떎硫?',
+            '어색한 분위기가 걱정된다면',
             style: TextStyle(
               color: timeColor,
               fontSize: 13,
@@ -1011,12 +1011,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                   IconButton(
                     icon: const Icon(LucideIcons.flag,
                         color: Colors.white, size: 22),
-                    tooltip: '?좉퀬',
+                    tooltip: '신고',
                     onPressed: _openReportSheet,
                   ),
                   IconButton(
                     icon: Icon(LucideIcons.ban, color: Colors.white, size: 22),
-                    tooltip: '李⑤떒',
+                    tooltip: '차단',
                     onPressed: _partnerId != null ? _openBlockConfirm : null,
                   ),
                   PopupMenuButton<String>(
@@ -1038,7 +1038,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                         ),
                       PopupMenuItem(
                         value: 'mute',
-                        child: Text(_isMuted ? '梨꾪똿諛??뚮엺 耳쒓린' : '梨꾪똿諛??뚮엺 ?꾧린'),
+                        child: Text(_isMuted ? '채팅방 알림 켜기' : '채팅방 알림 끄기'),
                       ),
                     ],
                   ),
@@ -1052,7 +1052,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
                 child: Text(
-                  '留ㅼ묶??痍⑥냼?섏뼱 鍮꾪솢?깊솕?섏뿀?듬땲??',
+                  '매칭이 취소되어 비활성화되었어요',
                   style: TextStyle(
                       color:
                           dark ? Colors.grey.shade300 : Colors.grey.shade700),
@@ -1359,7 +1359,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                           maxLines: null,
                           textInputAction: TextInputAction.send,
                           decoration: InputDecoration(
-                            hintText: '硫붿떆吏瑜??낅젰?섏꽭??..',
+                            hintText: '메시지를 입력해 주세요...',
                             hintStyle:
                                 TextStyle(color: hintColor, fontSize: 14),
                             border: InputBorder.none,
@@ -1465,7 +1465,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       if (!mounted) return;
       if (_matchId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('?좎떆 ???ㅼ떆 ?쒕룄??二쇱꽭??')),
+          const SnackBar(content: Text('잠시 후 다시 시도해 주세요')),
         );
         return;
       }
@@ -1936,17 +1936,17 @@ class _ReportSheetContentState extends State<_ReportSheetContent> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('?좉퀬媛 ?묒닔?섏뿀?듬땲??')));
+          .showSnackBar(const SnackBar(content: Text('신고가 접수되었습니다')));
       widget.onSubmitted();
     } on DioException catch (e) {
       if (!mounted) return;
       final msg = e.response?.data is Map && e.response!.data['message'] != null
           ? e.response!.data['message'].toString()
-          : '?좉퀬 ?묒닔???ㅽ뙣?덉뼱??';
+          : '신고 접수에 실패했어요';
       widget.onError(msg);
     } catch (_) {
       if (!mounted) return;
-      widget.onError('?좉퀬 ?묒닔???ㅽ뙣?덉뼱??');
+      widget.onError('신고 접수에 실패했어요');
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -1991,13 +1991,13 @@ class _ReportSheetContentState extends State<_ReportSheetContent> {
                 size: 56, color: Colors.green.shade600),
             const SizedBox(height: 16),
             Text(
-              '?좉퀬?꾨즺',
+              '신고 완료',
               style: TextStyle(
                   fontSize: 22, fontWeight: FontWeight.bold, color: onSurface),
             ),
             const SizedBox(height: 8),
             Text(
-              '?대? ?좉퀬媛 ?묒닔????붿엯?덈떎.',
+              '이미 신고가 접수된 대상입니다.',
               style: TextStyle(fontSize: 14, color: onSurfaceVariant),
               textAlign: TextAlign.center,
             ),
@@ -2006,7 +2006,7 @@ class _ReportSheetContentState extends State<_ReportSheetContent> {
               width: double.infinity,
               child: TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('?リ린'),
+                child: const Text('닫기'),
               ),
             ),
           ],
@@ -2046,7 +2046,7 @@ class _ReportSheetContentState extends State<_ReportSheetContent> {
                 Icon(LucideIcons.flag, size: 24, color: Colors.red.shade400),
                 const SizedBox(width: 8),
                 Text(
-                  '?곷?諛??좉퀬',
+                  '상대방 신고',
                   style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -2056,11 +2056,11 @@ class _ReportSheetContentState extends State<_ReportSheetContent> {
             ),
             const SizedBox(height: 8),
             Text(
-              '${widget.partnerName}?섏쓣 ?좉퀬?⑸땲?? ?ъ쑀? ?댁슜???낅젰??二쇱꽭??',
+              '${widget.partnerName}님을 신고합니다. 사유와 내용을 입력해 주세요.',
               style: TextStyle(fontSize: 13, color: onSurfaceVariant),
             ),
             const SizedBox(height: 20),
-            Text('?좉퀬 ?ъ쑀',
+            Text('신고 사유',
                 style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -2074,7 +2074,7 @@ class _ReportSheetContentState extends State<_ReportSheetContent> {
               onSelected: (value) => setState(() => _reason = value),
             ),
             const SizedBox(height: 16),
-            Text('?곸꽭 ?댁슜 (?좏깮)',
+            Text('상세 내용 (선택)',
                 style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -2084,7 +2084,7 @@ class _ReportSheetContentState extends State<_ReportSheetContent> {
               controller: _detailController,
               maxLines: 4,
               decoration: InputDecoration(
-                hintText: '援ъ껜?곸씤 ?곹솴???곸뼱 二쇱떆硫?寃?좎뿉 ?꾩????⑸땲??',
+                hintText: '구체적인 상황을 적어 주시면 검토에 도움이 됩니다.',
                 filled: true,
                 fillColor: dark ? Colors.grey.shade800 : Colors.grey.shade100,
                 border: OutlineInputBorder(
@@ -2113,7 +2113,7 @@ class _ReportSheetContentState extends State<_ReportSheetContent> {
                         width: 22,
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: Colors.white))
-                    : const Text('?좉퀬?섍린'),
+                    : const Text('신고하기'),
               ),
             ),
           ],
@@ -2122,6 +2122,8 @@ class _ReportSheetContentState extends State<_ReportSheetContent> {
     );
   }
 }
+
+
 
 
 
