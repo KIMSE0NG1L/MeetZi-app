@@ -1,4 +1,4 @@
-﻿class ApiEndpoints {
+class ApiEndpoints {
   static const String authKakao = '/auth/kakao';
   static const String authKakaoCallback = '/auth/kakao/callback';
   static const String authProfile = '/auth/profile';
@@ -54,6 +54,7 @@
   // ?좉퀬
   static const String reportCommunityPost = '/report/community-post';
   static const String reportCommunityComment = '/report/community-comment';
+  static const String notices = '/notices';
 }
 
 
