@@ -2,69 +2,243 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/settings/data/notice_repository.dart';
 
-class NoticeListScreen extends StatelessWidget {
+class NoticeListScreen extends StatefulWidget {
   const NoticeListScreen({super.key});
 
   @override
+  State<NoticeListScreen> createState() => _NoticeListScreenState();
+}
+
+class _NoticeListScreenState extends State<NoticeListScreen> {
+  String _selectedFilter = '전체';
+  final List<String> _filters = ['전체', '공지', '이벤트', '업데이트'];
+
+  @override
   Widget build(BuildContext context) {
+    const primaryColor = Color(0xFFB4005D);
+    const primaryContainer = Color(0xFFFF6FA2);
+    const bgColor = Color(0xFFFFF4F7);
+    const onSurface = Color(0xFF482139);
+    const onSurfaceVariant = Color(0xFF7B4D67);
+
     return Scaffold(
+      backgroundColor: bgColor,
       appBar: AppBar(
-        title: const Text('공지사항', style: TextStyle(fontWeight: FontWeight.bold)),
-        centerTitle: true,
+        backgroundColor: bgColor,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(LucideIcons.arrowLeft, color: Color(0xFFFF4D94)),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text(
+          'Notice',
+          style: TextStyle(
+            color: Color(0xFFFF4D94),
+            fontWeight: FontWeight.bold,
+            fontFamily: 'PlusJakartaSans',
+          ),
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(color: const Color(0xFFFFECF3), height: 1),
+        ),
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: NoticeRepository().getNotices(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(LucideIcons.megaphone, size: 48, color: Colors.grey.withOpacity(0.5)),
-                  const SizedBox(height: 16),
-                  const Text('등록된 공지사항이 없습니다.', style: TextStyle(color: Colors.grey)),
-                ],
+          return CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              // Hero Section
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                  child: Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [primaryColor, primaryContainer],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(32),
+                      boxShadow: [
+                        BoxShadow(
+                          color: primaryColor.withOpacity(0.3),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Stack(
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Text(
+                                'CAMPUS FESTIVAL NEWS',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'MeetZi 공지사항',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 28,
+                                fontWeight: FontWeight.w800,
+                                fontFamily: 'PlusJakartaSans',
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '캠퍼스의 즐거운 소식을 가장 먼저 확인하세요!',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.8),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Positioned(
+                          bottom: -10,
+                          right: 0,
+                          child: Icon(
+                            LucideIcons.partyPopper,
+                            size: 48,
+                            color: Colors.white.withOpacity(0.2),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-            );
-          }
 
-          final notices = snapshot.data!;
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: notices.length,
-            itemBuilder: (context, index) {
-              final notice = notices[index];
-              // createdAt: 2026-03-25T12:34:56.789Z 형태를 2026-03-25로 변환
-              final fullDate = notice['createdAt']?.toString() ?? '';
-              final date = fullDate.length >= 10 ? fullDate.substring(0, 10) : fullDate;
+              // Filter Tabs
+              SliverToBoxAdapter(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  child: Row(
+                    children: _filters.map((filter) {
+                      final isSelected = _selectedFilter == filter;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: GestureDetector(
+                          onTap: () => setState(() => _selectedFilter = filter),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: isSelected ? primaryColor : const Color(0xFFFFECF3),
+                              borderRadius: BorderRadius.circular(30),
+                              boxShadow: isSelected
+                                  ? [
+                                      BoxShadow(
+                                        color: primaryColor.withOpacity(0.2),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      )
+                                    ]
+                                  : null,
+                            ),
+                            child: Text(
+                              filter,
+                              style: TextStyle(
+                                color: isSelected ? Colors.white : onSurfaceVariant,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
 
-              return _buildNoticeItem(
-                context,
-                date: date,
-                title: notice['title'] ?? '제목 없음',
-                content: notice['content'] ?? '',
-              );
-            },
+              // Notice List
+              if (snapshot.connectionState == ConnectionState.waiting)
+                const SliverFillRemaining(
+                  child: Center(child: CircularProgressIndicator(color: primaryColor)),
+                )
+              else if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty)
+                SliverFillRemaining(
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(LucideIcons.megaphone, size: 64, color: onSurfaceVariant.withOpacity(0.3)),
+                        const SizedBox(height: 16),
+                        const Text('등록된 공지사항이 없습니다.', style: TextStyle(color: onSurfaceVariant)),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final notice = snapshot.data![index];
+                        final fullDate = notice['createdAt']?.toString() ?? '';
+                        final date = fullDate.length >= 10 ? fullDate.substring(0, 10).replaceAll('-', '.') : fullDate;
+                        final title = notice['title'] ?? '제목 없음';
+
+                        // 필터링 (가정: 제목에 태그가 포함되어 있다던가, 혹은 서버에서 타입을 준다던가)
+                        if (_selectedFilter != '전체' && !title.contains('[$_selectedFilter]')) {
+                          return const SizedBox.shrink();
+                        }
+
+                        return _buildStyledNoticeItem(
+                          context,
+                          date: date,
+                          title: title,
+                          isNew: index == 0, // 첫번째 항목만 NEW로 표시 (또는 서버 createdAt 비교)
+                          content: notice['content'] ?? '',
+                        );
+                      },
+                      childCount: snapshot.data!.length,
+                    ),
+                  ),
+                ),
+            ],
           );
         },
       ),
     );
   }
 
-  Widget _buildNoticeItem(BuildContext context, {required String date, required String title, required String content}) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
+  Widget _buildStyledNoticeItem(
+    BuildContext context, {
+    required String date,
+    required String title,
+    required String content,
+    bool isNew = false,
+  }) {
+    const onSurface = Color(0xFF482139);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: dark ? const Color(0xFF1F2937) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(40),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
+            color: onSurface.withOpacity(0.04),
+            blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
@@ -72,7 +246,7 @@ class NoticeListScreen extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(40),
           onTap: () {
             Navigator.of(context).push(
               MaterialPageRoute(
@@ -85,19 +259,60 @@ class NoticeListScreen extends StatelessWidget {
             );
           },
           child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+            child: Row(
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, height: 1.3),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          if (isNew)
+                            Container(
+                              margin: const EdgeInsets.only(right: 6),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFF6FA2),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text(
+                                'NEW',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                          Expanded(
+                            child: Text(
+                              title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: onSurface,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'PlusJakartaSans',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        date,
+                        style: const TextStyle(
+                          color: Color(0xFF7B4D67),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  date,
-                  style: TextStyle(color: dark ? Colors.white54 : Colors.black54, fontSize: 13),
-                ),
+                const Icon(LucideIcons.chevronRight, color: Color(0xFFD49DBA), size: 20),
               ],
             ),
           ),
@@ -121,61 +336,177 @@ class NoticeDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
+    const primaryColor = Color(0xFFB4005D);
+    const primaryContainer = Color(0xFFFF6FA2);
+    const bgColor = Color(0xFFFFF4F7);
+    const onSurface = Color(0xFF482139);
+    const onSurfaceVariant = Color(0xFF7B4D67);
+
     return Scaffold(
+      backgroundColor: bgColor,
       appBar: AppBar(
-        title: const Text('공지사항', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: bgColor,
+        elevation: 0,
         centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(LucideIcons.arrowLeft, color: Color(0xFFFF4D94)),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text(
+          'Notice',
+          style: TextStyle(
+            color: Color(0xFFFF4D94),
+            fontWeight: FontWeight.bold,
+            fontFamily: 'PlusJakartaSans',
+          ),
+        ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                const Icon(LucideIcons.clock, size: 14, color: Colors.grey),
-                const SizedBox(width: 4),
-                Text(
-                  date,
-                  style: TextStyle(
-                    color: dark ? Colors.white54 : Colors.grey.shade600,
-                    fontSize: 14,
+            // Header Section: Gradient Card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [primaryColor, primaryContainer],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: primaryColor.withOpacity(0.15),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
                   ),
-                ),
-              ],
-            ),
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 24),
-              child: Divider(),
-            ),
-            Text(
-              content,
-              style: const TextStyle(
-                fontSize: 16,
-                height: 1.6,
+                ],
+              ),
+              child: Stack(
+                children: [
+                  Positioned(
+                    top: -10,
+                    right: -10,
+                    child: Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.white.withOpacity(0.1)),
+                        ),
+                        child: const Text(
+                          '공지',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                          fontFamily: 'PlusJakartaSans',
+                          height: 1.3,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          Icon(LucideIcons.calendar, color: Colors.white.withOpacity(0.8), size: 16),
+                          const SizedBox(width: 8),
+                          Text(
+                            date,
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.8),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 60),
-            Center(
-              child: OutlinedButton(
+            const SizedBox(height: 24),
+
+            // Content Section
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: onSurface.withOpacity(0.05)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    content,
+                    style: TextStyle(
+                      fontSize: 16,
+                      height: 1.8,
+                      color: onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  const Divider(color: Color(0xFFFFECF3)),
+                  const SizedBox(height: 16),
+                  Text(
+                    'MeetZi는 여러분의 피드백을 소중하게 생각합니다. 불편한 점이 있다면 언제든지 고객센터로 문의해 주세요.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.6,
+                      color: onSurfaceVariant.withOpacity(0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Back to List Button
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: OutlinedButton.icon(
                 onPressed: () => Navigator.of(context).pop(),
-                style: OutlinedButton.styleFrom(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 14),
+                icon: const Icon(LucideIcons.list, size: 20),
+                label: const Text(
+                  '목록으로 돌아가기',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
-                child: const Text('목록으로 돌아가기', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: primaryColor,
+                  backgroundColor: Colors.white,
+                  side: BorderSide(color: primaryColor.withOpacity(0.2)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                ),
               ),
             ),
+            const SizedBox(height: 48),
           ],
         ),
       ),
