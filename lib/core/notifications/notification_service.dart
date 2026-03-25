@@ -44,6 +44,8 @@ class NotificationService {
       sound: true,
     );
 
+    await messaging.subscribeToTopic('notices');
+
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
     const initializationSettings = InitializationSettings(
@@ -195,6 +197,10 @@ class NotificationService {
   }
 
   void saveNotificationToHistory(RemoteMessage message) {
+    // 채팅 메시지 알림은 알림함(History)에 저장하지 않음 (사용자 요청)
+    final type = message.data['type']?.toString();
+    if (type == 'chat') return;
+
     final id = message.messageId ??
         '${message.hashCode}_${DateTime.now().millisecondsSinceEpoch}';
     NotificationHistoryStore.instance.add(
