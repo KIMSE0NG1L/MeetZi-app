@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:nearo_app/features/settings/data/notice_repository.dart';
 
 class NoticeListScreen extends StatelessWidget {
   const NoticeListScreen({super.key});
@@ -11,17 +12,44 @@ class NoticeListScreen extends StatelessWidget {
         title: const Text('공지사항', style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _buildNoticeItem(
-            context,
-            date: '2026-03-22',
-            title: '[공지] Meetzi 업데이트 안내',
-            content: 'Meetzi 서비스가 새롭게 단장되었습니다. 이제 더 빠르고 안정적인 매칭 서비스를 이용해 보세요!',
-          ),
-          // TODO: 서버 연동 후 동적으로 리스트 구성
-        ],
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: NoticeRepository().getNotices(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(LucideIcons.megaphone, size: 48, color: Colors.grey.withOpacity(0.5)),
+                  const SizedBox(height: 16),
+                  const Text('등록된 공지사항이 없습니다.', style: TextStyle(color: Colors.grey)),
+                ],
+              ),
+            );
+          }
+
+          final notices = snapshot.data!;
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: notices.length,
+            itemBuilder: (context, index) {
+              final notice = notices[index];
+              // createdAt: 2026-03-25T12:34:56.789Z 형태를 2026-03-25로 변환
+              final fullDate = notice['createdAt']?.toString() ?? '';
+              final date = fullDate.length >= 10 ? fullDate.substring(0, 10) : fullDate;
+
+              return _buildNoticeItem(
+                context,
+                date: date,
+                title: notice['title'] ?? '제목 없음',
+                content: notice['content'] ?? '',
+              );
+            },
+          );
+        },
       ),
     );
   }
