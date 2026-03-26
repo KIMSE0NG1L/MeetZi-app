@@ -35,7 +35,9 @@ class _PrivacyConsentGateScreenState extends State<PrivacyConsentGateScreen> {
           child: AlertDialog(
             title: const Text('약관 및 개인정보 처리방침 동의'),
             content: const Text(
-              '원활한 서비스 이용을 위해 서비스 이용약관 및 개인정보 처리방침에 동의해 주세요.',
+              '원활한 서비스 이용을 위해 서비스 이용약관 및 개인정보 처리방침에 동의해 주세요.\n\n'
+              '계정 삭제 시 계정은 즉시 비활성화되며, 3개월 내 동일 카카오 계정으로 다시 로그인하면 복구할 수 있습니다. '
+              '3개월이 지나면 프로필성 개인정보는 삭제 또는 익명화되고, 채팅기록을 포함한 잔여 정보는 최대 1년 보관 후 최종 삭제될 수 있습니다.',
             ),
             actions: [
               TextButton(
