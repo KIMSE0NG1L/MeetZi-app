@@ -105,8 +105,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('계정 삭제'),
-        content: const Text(
-          '계정을 삭제하면 프로필, 매칭 정보, 대화 내용 등 모든 데이터가 삭제되며 복구할 수 없습니다. 삭제 후 다시 이용하려면 카카오 로그인이 필요합니다. 정말 삭제하시겠습니까?',
+        content: const SingleChildScrollView(
+          child: Text(
+            '계정을 삭제하면 즉시 비활성화되며 앱에서 로그아웃됩니다.\n\n'
+            '탈퇴 후 3개월 동안은 같은 카카오 계정으로 다시 로그인하면 계정을 복구할 수 있습니다.\n\n'
+            '3개월이 지나면 닉네임, 학교/소속, 키, MBTI, 자기소개, 취향 정보, 아바타 설정 등 프로필성 개인정보는 삭제 또는 익명화됩니다.\n\n'
+            '채팅기록은 분쟁 대응 및 운영 이력 관리 목적상 최종 삭제 시점까지 보관될 수 있으며, 계정은 탈퇴 후 최대 1년 보관 뒤 최종 삭제됩니다.\n\n'
+            '정말 계정을 삭제하시겠습니까?',
+          ),
         ),
         actions: [
           TextButton(
