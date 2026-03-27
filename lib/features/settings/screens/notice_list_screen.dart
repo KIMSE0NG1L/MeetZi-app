@@ -13,6 +13,12 @@ class _NoticeListScreenState extends State<NoticeListScreen> {
   String _selectedFilter = '전체';
   final List<String> _filters = ['전체', '공지', '이벤트', '업데이트'];
 
+  final Map<String, String> _typeMap = {
+    '공지': 'notice',
+    '이벤트': 'event',
+    '업데이트': 'update',
+  };
+
   @override
   Widget build(BuildContext context) {
     const primaryColor = Color(0xFFB4005D);
@@ -198,8 +204,9 @@ class _NoticeListScreenState extends State<NoticeListScreen> {
                         final date = fullDate.length >= 10 ? fullDate.substring(0, 10).replaceAll('-', '.') : fullDate;
                         final title = notice['title'] ?? '제목 없음';
 
-                        // 필터링 (가정: 제목에 태그가 포함되어 있다던가, 혹은 서버에서 타입을 준다던가)
-                        if (_selectedFilter != '전체' && !title.contains('[$_selectedFilter]')) {
+                        // DB 타입 필드 기반 필터링
+                        final noticeType = notice['type']?.toString() ?? 'notice';
+                        if (_selectedFilter != '전체' && noticeType != _typeMap[_selectedFilter]) {
                           return const SizedBox.shrink();
                         }
 
@@ -209,6 +216,7 @@ class _NoticeListScreenState extends State<NoticeListScreen> {
                           title: title,
                           isNew: index == 0, // 첫번째 항목만 NEW로 표시 (또는 서버 createdAt 비교)
                           content: notice['content'] ?? '',
+                          type: noticeType,
                         );
                       },
                       childCount: snapshot.data!.length,
@@ -227,6 +235,7 @@ class _NoticeListScreenState extends State<NoticeListScreen> {
     required String date,
     required String title,
     required String content,
+    required String type,
     bool isNew = false,
   }) {
     const onSurface = Color(0xFF482139);
@@ -254,6 +263,7 @@ class _NoticeListScreenState extends State<NoticeListScreen> {
                   title: title,
                   date: date,
                   content: content,
+                  type: type,
                 ),
               ),
             );
@@ -326,12 +336,14 @@ class NoticeDetailScreen extends StatelessWidget {
   final String title;
   final String date;
   final String content;
+  final String type;
 
   const NoticeDetailScreen({
     super.key,
     required this.title,
     required this.date,
     required this.content,
+    required this.type,
   });
 
   @override
@@ -409,9 +421,9 @@ class NoticeDetailScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(color: Colors.white.withOpacity(0.1)),
                         ),
-                        child: const Text(
-                          '공지',
-                          style: TextStyle(
+                        child: Text(
+                          type == 'event' ? '이벤트' : type == 'update' ? '업데이트' : '공지',
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
