@@ -13,6 +13,7 @@ import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/shared/utils/photo_url.dart';
+import 'package:nearo_app/shared/utils/profanity_mask.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -167,6 +168,13 @@ class _MessagesScreenState extends State<MessagesScreen>
     if (diff.inHours < 24) return '${diff.inHours}시간 전';
     if (diff.inDays < 7) return '${diff.inDays}일 전';
     return '${time.year}.${time.month.toString().padLeft(2, '0')}.${time.day.toString().padLeft(2, '0')}';
+  }
+
+  DateTime? _parseServerDateTime(dynamic value) {
+    if (value == null) return null;
+    final parsed = DateTime.tryParse(value.toString());
+    if (parsed == null) return null;
+    return parsed.isUtc ? parsed.toLocal() : parsed;
   }
 
   Future<void> _deleteRoom(String roomId) async {
@@ -362,7 +370,7 @@ class _MessagesScreenState extends State<MessagesScreen>
                         final room = _rooms[index];
                         final partner =
                             room['partnerNickname']?.toString() ?? '상대';
-                        final last = room['lastMessage']?.toString() ?? '';
+                        final last = maskProfanity(room['lastMessage']?.toString() ?? '');
                         final photoKey =
                             room['partnerPhotoStorageKey']?.toString();
                         final photoUrl = _resolvePhotoUrl(photoKey);
@@ -388,9 +396,7 @@ class _MessagesScreenState extends State<MessagesScreen>
                         final unread =
                             (room['unreadCount'] as num?)?.toInt() ?? 0;
                         final lastTimeRaw = room['lastMessageAt']?.toString();
-                        final lastTime = lastTimeRaw != null
-                            ? DateTime.tryParse(lastTimeRaw)
-                            : null;
+                        final lastTime = _parseServerDateTime(lastTimeRaw);
                         final timeAgo = _formatTimeAgo(lastTime);
 
                         return Dismissible(

@@ -11,6 +11,7 @@ import 'package:nearo_app/shared/notification_utils.dart';
 import 'package:nearo_app/shared/utils/app_config.dart';
 import 'package:nearo_app/shared/utils/photo_url.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
+import 'package:nearo_app/shared/utils/profanity_mask.dart';
 import 'package:nearo_app/shared/utils/token_storage.dart';
 import 'package:nearo_app/core/auth/auth_repository.dart';
 import 'package:nearo_app/features/matching_board/profile_detail_sheet.dart';
@@ -109,6 +110,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   String _formatMessageTime(DateTime? dateTime) {
     final dt = dateTime ?? DateTime.now();
     return "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
+  }
+
+  DateTime? _parseServerDateTime(dynamic value) {
+    if (value == null) return null;
+    final parsed = DateTime.tryParse(value.toString());
+    if (parsed == null) return null;
+    return parsed.isUtc ? parsed.toLocal() : parsed;
   }
 
   IO.Socket? _socket;
@@ -282,7 +290,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     for (final m in messageReadAts) {
       final id = m['id']?.toString();
       final readAt = m['readAt'] != null
-          ? DateTime.tryParse(m['readAt'].toString())
+          ? _parseServerDateTime(m['readAt'])
           : null;
       if (id != null && readAt != null) {
         serverReadAt[id] = readAt;
@@ -377,10 +385,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
               senderId: senderId ?? '',
               isSystem: m['isSystem'] == true || _isSystemContent(m['content']?.toString() ?? ''),
               readAt: m['readAt'] != null
-                  ? DateTime.tryParse(m['readAt'].toString())
+                  ? _parseServerDateTime(m['readAt'])
                   : null,
               createdAt: m['createdAt'] != null
-                  ? DateTime.tryParse(m['createdAt'].toString())
+                  ? _parseServerDateTime(m['createdAt'])
                   : null,
             );
           }));
@@ -476,10 +484,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           senderId: data['senderId']?.toString() ?? '',
           isSystem: data['isSystem'] == true || _isSystemContent(data['content']?.toString() ?? ''),
           readAt: data['readAt'] != null
-              ? DateTime.tryParse(data['readAt'].toString())
+              ? _parseServerDateTime(data['readAt'])
               : null,
           createdAt: data['createdAt'] != null
-              ? DateTime.tryParse(data['createdAt'].toString())
+              ? _parseServerDateTime(data['createdAt'])
               : null,
         ));
       });
@@ -525,7 +533,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       final String? messageId = data['messageId']?.toString();
       final String? userId = data['userId']?.toString();
       final DateTime? readAt = data['readAt'] != null
-          ? DateTime.tryParse(data['readAt'].toString())
+          ? _parseServerDateTime(data['readAt'])
           : null;
       if (messageId == null || userId == null || readAt == null) return;
       // ?닿? 蹂대궦 硫붿떆吏媛 ?곷??먭쾶 ?쏀삍???뚮쭔 媛깆떊 (userId = ?쎌? ?щ엺 = ?곷?)
@@ -701,7 +709,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
               isMine: true,
               senderId: message['senderId']?.toString() ?? (_myUserId ?? ''),
               createdAt: message['createdAt'] != null
-                  ? DateTime.tryParse(message['createdAt'].toString())
+                  ? _parseServerDateTime(message['createdAt'])
                   : DateTime.now(),
             ));
           });
@@ -1252,7 +1260,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                                                       ],
                                                     ),
                                                     child: Text(
-                                                      message.text,
+                                                      maskProfanity(message.text),
                                                       style: const TextStyle(
                                                         color: Colors.white,
                                                         fontSize: 14,
@@ -1294,7 +1302,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                                                       ],
                                                     ),
                                                     child: Text(
-                                                      message.text,
+                                                      maskProfanity(message.text),
                                                       style: TextStyle(
                                                         color: dark
                                                             ? Colors.white
