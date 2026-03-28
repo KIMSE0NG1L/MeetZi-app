@@ -11,8 +11,12 @@ class MatchingRepository {
     return response.data as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> cancelMatch() async {
-    final response = await _client.dio.delete(ApiEndpoints.matchingCancel);
+  Future<Map<String, dynamic>> cancelMatch({String? matchId}) async {
+    final response = await _client.dio.delete(
+      ApiEndpoints.matchingCancel,
+      queryParameters:
+          matchId != null && matchId.isNotEmpty ? {'matchId': matchId} : null,
+    );
     return response.data as Map<String, dynamic>;
   }
 
