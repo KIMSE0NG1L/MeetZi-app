@@ -692,43 +692,39 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       ));
     });
     _scrollToBottom();
-    if (_socket != null && _socket!.connected) {
-      _socket!.emit('sendMessage', {'roomId': _roomId, 'content': text});
-      _scheduleMessageSync();
-    } else {
-      try {
-        final response =
-            await _repository.sendMessage(roomId: _roomId!, content: text);
-        final message = response['message'] as Map<String, dynamic>?;
-        if (!mounted) return;
-        if (message != null) {
-          setState(() {
-            _appendOrMergeIncomingMessage(_ChatMessage(
-              id: message['id']?.toString() ?? tempId,
-              text: message['content']?.toString() ?? text,
-              isMine: true,
-              senderId: message['senderId']?.toString() ?? (_myUserId ?? ''),
-              createdAt: message['createdAt'] != null
-                  ? _parseServerDateTime(message['createdAt'])
-                  : DateTime.now(),
-            ));
-          });
-        } else {
-          _scheduleMessageSync();
-        }
-      } catch (e) {
-        debugPrint('[sendMessage HTTP fallback] failed: $e');
-        if (!mounted) return;
+    try {
+      final response =
+          await _repository.sendMessage(roomId: _roomId!, content: text);
+      final message = response['message'] as Map<String, dynamic>?;
+      if (!mounted) return;
+      if (message != null) {
         setState(() {
-          _messages.add(_ChatMessage(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
-            text: '메시지 전송 실패',
-            isMine: false,
-            senderId: _myUserId ?? '',
-            createdAt: DateTime.now(),
+          _appendOrMergeIncomingMessage(_ChatMessage(
+            id: message['id']?.toString() ?? tempId,
+            text: message['content']?.toString() ?? text,
+            isMine: true,
+            senderId: message['senderId']?.toString() ?? (_myUserId ?? ''),
+            createdAt: message['createdAt'] != null
+                ? _parseServerDateTime(message['createdAt'])
+                : DateTime.now(),
           ));
         });
+      } else {
+        _scheduleMessageSync();
       }
+    } catch (e) {
+      debugPrint('[sendMessage] failed: $e');
+      if (!mounted) return;
+      setState(() {
+        _appendOrMergeIncomingMessage(_ChatMessage(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          text: '메시지 전송 실패',
+          isMine: false,
+          senderId: _myUserId ?? '',
+          createdAt: DateTime.now(),
+        ));
+      });
+      _scheduleMessageSync();
     }
   }
 
