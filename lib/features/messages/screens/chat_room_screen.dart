@@ -733,6 +733,15 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   }
 
   Future<void> _cancelMatch() async {
+    final matchId = _matchId;
+    if (matchId == null || matchId.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('현재 채팅방의 매칭 정보를 찾을 수 없습니다.')),
+      );
+      return;
+    }
+
     final shouldCancel = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -756,7 +765,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     if (shouldCancel != true) return;
 
     try {
-      await _matchingRepository.cancelMatch();
+      await _matchingRepository.cancelMatch(matchId: matchId);
       if (!mounted) return;
       setState(() => _isActive = false);
       _controller.clear();
