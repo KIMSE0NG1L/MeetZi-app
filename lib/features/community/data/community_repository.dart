@@ -3,8 +3,11 @@ import 'package:nearo_app/shared/api/endpoints.dart';
 
 class CommunityRepository {
   final ApiClient _client;
+  static const String globalEnvironmentId = 'global';
 
   CommunityRepository({ApiClient? client}) : _client = client ?? ApiClient();
+
+  bool _isGlobal(String environmentId) => environmentId == globalEnvironmentId;
 
   /// 학교별 커뮤니티 정보 (없으면 서버에서 생성 후 반환)
   Future<Map<String, dynamic>?> getCommunity(String environmentId) async {
@@ -25,7 +28,9 @@ class CommunityRepository {
     if (tag != null && tag.isNotEmpty) query['tag'] = tag;
     if (scope != null && scope.isNotEmpty) query['scope'] = scope;
     final response = await _client.dio.get(
-      ApiEndpoints.communityPosts(environmentId),
+      _isGlobal(environmentId)
+          ? ApiEndpoints.communityGlobalPosts
+          : ApiEndpoints.communityPosts(environmentId),
       queryParameters: query,
     );
     return Map<String, dynamic>.from(response.data as Map);
@@ -34,7 +39,9 @@ class CommunityRepository {
   /// 게시글 상세 (댓글 포함)
   Future<Map<String, dynamic>?> getPost(String environmentId, String postId) async {
     final response = await _client.dio.get(
-      ApiEndpoints.communityPost(environmentId, postId),
+      _isGlobal(environmentId)
+          ? ApiEndpoints.communityGlobalPost(postId)
+          : ApiEndpoints.communityPost(environmentId, postId),
     );
     return response.data != null ? Map<String, dynamic>.from(response.data as Map) : null;
   }
@@ -59,7 +66,9 @@ class CommunityRepository {
       }
     }
     final response = await _client.dio.post(
-      ApiEndpoints.communityPosts(environmentId),
+      _isGlobal(environmentId)
+          ? ApiEndpoints.communityGlobalPosts
+          : ApiEndpoints.communityPosts(environmentId),
       data: data,
     );
     return Map<String, dynamic>.from(response.data as Map);
@@ -78,7 +87,9 @@ class CommunityRepository {
       data['parentCommentId'] = parentCommentId;
     }
     final response = await _client.dio.post(
-      ApiEndpoints.communityPostComments(environmentId, postId),
+      _isGlobal(environmentId)
+          ? ApiEndpoints.communityGlobalPostComments(postId)
+          : ApiEndpoints.communityPostComments(environmentId, postId),
       data: data,
     );
     return Map<String, dynamic>.from(response.data as Map);
@@ -87,7 +98,9 @@ class CommunityRepository {
   /// 좋아요 토글 (로그인 필요)
   Future<Map<String, dynamic>> toggleLike(String environmentId, String postId) async {
     final response = await _client.dio.post(
-      ApiEndpoints.communityPostLike(environmentId, postId),
+      _isGlobal(environmentId)
+          ? ApiEndpoints.communityGlobalPostLike(postId)
+          : ApiEndpoints.communityPostLike(environmentId, postId),
     );
     return Map<String, dynamic>.from(response.data as Map);
   }
@@ -98,20 +111,28 @@ class CommunityRepository {
     String commentId,
   ) async {
     final response = await _client.dio.post(
-      ApiEndpoints.communityPostCommentLike(environmentId, postId, commentId),
+      _isGlobal(environmentId)
+          ? ApiEndpoints.communityGlobalPostCommentLike(postId, commentId)
+          : ApiEndpoints.communityPostCommentLike(environmentId, postId, commentId),
     );
     return Map<String, dynamic>.from(response.data as Map);
   }
 
   /// 게시글 삭제 (본인 글만, 로그인 필요)
   Future<void> deletePost(String environmentId, String postId) async {
-    await _client.dio.delete(ApiEndpoints.communityPostDelete(environmentId, postId));
+    await _client.dio.delete(
+      _isGlobal(environmentId)
+          ? ApiEndpoints.communityGlobalPostDelete(postId)
+          : ApiEndpoints.communityPostDelete(environmentId, postId),
+    );
   }
 
   /// 댓글 삭제 (본인 댓글만, 로그인 필요)
   Future<void> deleteComment(String environmentId, String postId, String commentId) async {
     await _client.dio.delete(
-      ApiEndpoints.communityPostCommentDelete(environmentId, postId, commentId),
+      _isGlobal(environmentId)
+          ? ApiEndpoints.communityGlobalPostCommentDelete(postId, commentId)
+          : ApiEndpoints.communityPostCommentDelete(environmentId, postId, commentId),
     );
   }
 
@@ -122,7 +143,9 @@ class CommunityRepository {
     int optionIndex,
   ) async {
     final response = await _client.dio.post(
-      ApiEndpoints.communityPostVote(environmentId, postId),
+      _isGlobal(environmentId)
+          ? ApiEndpoints.communityGlobalPostVote(postId)
+          : ApiEndpoints.communityPostVote(environmentId, postId),
       data: {'optionIndex': optionIndex},
     );
     return Map<String, dynamic>.from(response.data as Map);
