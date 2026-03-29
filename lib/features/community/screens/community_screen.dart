@@ -53,6 +53,12 @@ class _CommunityScreenState extends State<CommunityScreen> {
   String _selectedTag = 'all';
   String _selectedScope = ''; // 기본: 체크 없음, 전체(태그) 피드
 
+  bool get _isGlobalCommunity =>
+      widget.environmentId == CommunityRepository.globalEnvironmentId;
+
+  String get _communityTitle =>
+      _isGlobalCommunity ? '커뮤니티' : '${widget.schoolName} 커뮤니티';
+
   @override
   void initState() {
     super.initState();
@@ -425,7 +431,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
         ),
         child: Column(
           children: [
-          // ?ㅻ뜑: ?숆탳${widget.schoolName} 커뮤니티 ??댄?怨???궧 踰꾪듉
+          // 헤더
           Container(
             width: double.infinity,
             decoration: const BoxDecoration(
@@ -450,7 +456,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                       ),
                     Expanded(
                       child: Text(
-                        '${widget.schoolName} 커뮤니티',
+                        _communityTitle,
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 20,
