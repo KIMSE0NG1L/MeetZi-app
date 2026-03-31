@@ -528,11 +528,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
                       setState(() => _currentIndex = i);
                       WidgetsBinding.instance.addPostFrameCallback((_) {
                         if (_pageController.hasClients && _currentIndex == i) {
-                          _pageController.animateToPage(
-                            i,
-                            duration: const Duration(milliseconds: 300),
-                            curve: Curves.easeInOut,
-                          );
+                          _pageController.jumpToPage(i);
                         }
                       });
                     },
