@@ -1,4 +1,4 @@
-import 'package:dio/dio.dart';
+﻿import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/app/app_routes.dart';
@@ -7,7 +7,6 @@ import 'package:nearo_app/features/auth/data/environment_repository.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/privacy_consent_storage.dart';
 
-/// last EmailVerification 1:1 UI + 기존 API 연동 (학교 메일 인증)
 class EnvironmentScreen extends StatefulWidget {
   const EnvironmentScreen({super.key});
 
@@ -55,9 +54,9 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
       final affiliation = user['affiliationText']?.toString();
       final items = await _environmentsFuture;
       if (!mounted) return;
+
       final universities = items
-          .where(
-              (item) => item is Map && item['type']?.toString() == 'university')
+          .where((item) => item is Map && item['type']?.toString() == 'university')
           .map((item) => Map<String, dynamic>.from(item as Map))
           .toList();
 
@@ -122,9 +121,20 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
   String get _emailHelpText {
     if (_selectedEnvironmentEmailDomain != null &&
         _selectedEnvironmentEmailDomain!.isNotEmpty) {
-      return '$_selectedEnvironmentEmailDomain 메일을 입력하세요';
+      return '$_selectedEnvironmentEmailDomain 메일을 입력해주세요';
     }
-    return '@sju.ac.kr 또는 @sejong.ac.kr 메일을 입력하세요';
+    return '@sju.ac.kr 또는 @sejong.ac.kr 메일을 입력해주세요';
+  }
+
+  String _extractDioMessage(DioException error, String fallback) {
+    final data = error.response?.data;
+    if (data is Map && data['message'] != null) {
+      return data['message'].toString();
+    }
+    if (data != null) {
+      return data.toString();
+    }
+    return fallback;
   }
 
   Future<void> _requestCode() async {
@@ -136,7 +146,7 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
     final email = _emailController.text.trim();
 
     if (environmentId == null || environmentId.isEmpty) {
-      setState(() => _error = '학교를 선택해 주세요.');
+      setState(() => _error = '학교를 선택해주세요');
       return;
     }
     if (email.isEmpty) {
@@ -144,8 +154,7 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
       return;
     }
     if (!_isValidEmail(email)) {
-      setState(() =>
-          _error = '${_selectedEnvironmentName ?? "해당 학교"} 메일 주소를 입력해주세요');
+      setState(() => _error = '${_selectedEnvironmentName ?? "해당 학교"} 메일 주소를 입력해주세요');
       return;
     }
 
@@ -159,16 +168,15 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
       setState(() {
         _isRequesting = false;
         _isCodeSent = true;
-        _success = '인증번호가 발송되었습니다!';
+        _success = '인증번호가 발송되었습니다.';
         _timer = 180;
       });
       _startTimer();
     } on DioException catch (e) {
       if (!mounted) return;
-      final msg = e.response?.data?.toString() ?? '요청에 실패했습니다.';
       setState(() {
         _isRequesting = false;
-        _error = msg;
+        _error = _extractDioMessage(e, '요청에 실패했습니다.');
       });
     }
   }
@@ -203,7 +211,7 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
     final code = _codeController.text.trim();
 
     if (environmentId == null || environmentId.isEmpty) {
-      setState(() => _error = '학교를 선택해 주세요.');
+      setState(() => _error = '학교를 선택해주세요');
       return;
     }
     if (code.isEmpty) {
@@ -224,7 +232,7 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
       if (!mounted) return;
       setState(() {
         _isConfirming = false;
-        _success = '인증이 완료되었습니다! 🎉';
+        _success = '인증이 완료되었습니다.';
       });
       try {
         await _authRepository.initAvatar();
@@ -240,10 +248,9 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
       );
     } on DioException catch (e) {
       if (!mounted) return;
-      final msg = e.response?.data?.toString() ?? '인증에 실패했습니다.';
       setState(() {
         _isConfirming = false;
-        _error = msg;
+        _error = _extractDioMessage(e, '인증에 실패했습니다.');
       });
     }
   }
@@ -251,7 +258,6 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    // last: gradient header (rose-300 → pink-300 → rose-400)
     const gradient = LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
@@ -292,7 +298,6 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
         ),
         child: Column(
           children: [
-            // Header (last: gradient, 뒤로 / 학생 인증 / 3-step progress)
             Container(
               padding: EdgeInsets.only(
                 left: 20,
@@ -341,7 +346,6 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  // 3-step: 프로필 — 메일 인증 — 완료
                   Row(
                     children: [
                       _progressStep(
@@ -379,13 +383,12 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
             ),
             Expanded(
               child: SingleChildScrollView(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '학생 메일 인증이\n필요해요 📧',
+                      '학생 메일 인증이 필요해요',
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -421,8 +424,7 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
                       decoration: InputDecoration(
                         hintText: _emailHint,
                         filled: true,
-                        fillColor:
-                            dark ? const Color(0xFF1F2937) : Colors.white,
+                        fillColor: dark ? const Color(0xFF1F2937) : Colors.white,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                           borderSide: BorderSide(
@@ -465,11 +467,9 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
                     const SizedBox(height: 8),
                     Text(
                       _emailHelpText,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 12,
-                        color: dark
-                            ? const Color(0xFF6B7280)
-                            : const Color(0xFF6B7280),
+                        color: Color(0xFF6B7280),
                       ),
                     ),
                     if (_isCodeSent) ...[
@@ -482,8 +482,7 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
-                              color:
-                                  dark ? Colors.white : const Color(0xFF111827),
+                              color: dark ? Colors.white : const Color(0xFF111827),
                             ),
                           ),
                           if (_timer > 0)
@@ -515,8 +514,7 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
                           hintText: '',
                           counterText: '',
                           filled: true,
-                          fillColor:
-                              dark ? const Color(0xFF1F2937) : Colors.white,
+                          fillColor: dark ? const Color(0xFF1F2937) : Colors.white,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
                             borderSide: BorderSide(
@@ -536,13 +534,11 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            '메일로 전송된 6자리 숫자를 입력하세요',
+                          const Text(
+                            '메일로 전송된 6자리 숫자를 입력해주세요',
                             style: TextStyle(
                               fontSize: 12,
-                              color: dark
-                                  ? const Color(0xFF6B7280)
-                                  : const Color(0xFF6B7280),
+                              color: Color(0xFF6B7280),
                             ),
                           ),
                           TextButton(
@@ -672,7 +668,7 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  '• 학교 학생 메일만 인증 가능합니다\n• 인증번호는 3분간 유효합니다\n• 메일이 오지 않으면 스팸함을 확인해주세요\n• 재전송은 여러 번 가능합니다',
+                                  '학교 학생 메일만 인증 가능합니다.\n인증번호는 3분간 유효합니다.\n메일이 오지 않으면 스팸함을 확인해주세요.\n재전송은 여러 번 가능합니다.',
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: dark
@@ -691,7 +687,6 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
                 ),
               ),
             ),
-            // Bottom button: 전체 너비, 캡슐형 둥근 모서리, 비활성 시 연한 회색 + 은은한 그림자
             Container(
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
               decoration: BoxDecoration(
@@ -763,10 +758,13 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
                                   ),
                                 ),
                                 SizedBox(width: 8),
-                                Text('인증 중...',
-                                    style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold)),
+                                Text(
+                                  '인증 중...',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ],
                             )
                           : Text(
