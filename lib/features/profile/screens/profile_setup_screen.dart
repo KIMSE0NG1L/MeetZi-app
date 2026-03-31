@@ -15,6 +15,7 @@ import 'package:nearo_app/features/photo/data/photo_repository.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/app_config.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
+import 'package:nearo_app/shared/utils/reviewer_flow_storage.dart';
 import 'package:nearo_app/shared/widgets/primary_button.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -60,6 +61,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   bool _isEditing = false;
   bool _forceEdit = false;
   bool _isInitialSetup = false;
+  bool _isReviewerFlow = false;
   bool _didReadArgs = false;
   XFile? _selectedPhoto;
   List<dynamic> _photos = [];
@@ -84,10 +86,16 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       _forceEdit = args;
     } else if (args is Map) {
       _isInitialSetup = args['isInitialSetup'] == true;
+      _isReviewerFlow = args['isReviewerFlow'] == true;
     }
     _didReadArgs = true;
     _loadProfileIfExists();
-    _loadVerifiedAffiliation();
+    if (_isReviewerFlow) {
+      _affiliation = '리뷰어 계정';
+      _affiliationLoaded = true;
+    } else {
+      _loadVerifiedAffiliation();
+    }
   }
 
   Future<void> _loadVerifiedAffiliation() async {
@@ -228,6 +236,13 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
   Future<void> _loadProfileIfExists() async {
     try {
+      if (_isReviewerFlow && !_forceEdit) {
+        setState(() {
+          _isEditing = false;
+          _photos = [];
+        });
+        return;
+      }
       final result = await _repository.getProfile();
       final user = (result['user'] as Map?) ?? result;
       final nickname = user['nickname']?.toString();
@@ -567,6 +582,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       setState(() => _result = '키는 120~200cm 범위로 입력해 주세요.');
       return;
     }
+    if (_isReviewerFlow && _affiliation.trim().isEmpty) {
+      _affiliation = '리뷰어 계정';
+    }
     if (_affiliation.trim().isEmpty) {
       setState(() => _result = '인증된 학교 정보를 확인한 뒤 다시 시도해 주세요.');
       return;
@@ -645,7 +663,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       });
       _applyThemeForAffiliation();
       if (!mounted) return;
-      if (_isInitialSetup || _isEditing) {
+      if (_isReviewerFlow) {
+        await ReviewerFlowStorage.markCompleted();
+      }
+      if (_isInitialSetup || _isEditing || _isReviewerFlow) {
         Navigator.of(context).pushNamedAndRemoveUntil(
           AppRoutes.home,
           (route) => false,
