@@ -129,6 +129,7 @@ class _NearoAppState extends State<NearoApp> {
       final tokenFromLink = (initialLink.queryParameters['token'] ?? '').trim();
       final refreshFromLink =
           (initialLink.queryParameters['refresh_token'] ?? '').trim();
+      await ReviewerFlowStorage.clear();
       if (tokenFromLink.isNotEmpty && refreshFromLink.isNotEmpty) {
         await _authRepository.saveTokens(
             accessToken: tokenFromLink, refreshToken: refreshFromLink);
@@ -280,12 +281,14 @@ class _NearoAppState extends State<NearoApp> {
       final token = uri.queryParameters['token'];
       final refreshToken = uri.queryParameters['refresh_token'];
       if (token != null && token.isNotEmpty) {
-        if (refreshToken != null && refreshToken.isNotEmpty) {
-          _authRepository.saveTokens(
-              accessToken: token, refreshToken: refreshToken);
-        } else {
-          _tokenStorage.saveAccessToken(token);
-        }
+        ReviewerFlowStorage.clear().then((_) {
+          if (refreshToken != null && refreshToken.isNotEmpty) {
+            _authRepository.saveTokens(
+                accessToken: token, refreshToken: refreshToken);
+          } else {
+            _tokenStorage.saveAccessToken(token);
+          }
+        });
       }
       // 코드 시작이 아닌 동안(앱이 이미 떠 있는 상태에서 링크로 복귀) 세션 복원 분기로 이동
       if (!isInitial) {
@@ -298,6 +301,7 @@ class _NearoAppState extends State<NearoApp> {
 
   Future<void> _handleLogout() async {
     await _authService.logout();
+    await ReviewerFlowStorage.clear();
     if (_navigatorKey.currentState != null) {
       _navigatorKey.currentState!.pushNamedAndRemoveUntil(
         AppRoutes.login,
