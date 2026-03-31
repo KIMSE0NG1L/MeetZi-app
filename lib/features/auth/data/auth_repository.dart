@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:nearo_app/shared/api/api_client.dart';
 import 'package:nearo_app/shared/api/endpoints.dart';
+import 'package:nearo_app/shared/utils/reviewer_flow_storage.dart';
 import 'package:nearo_app/shared/utils/token_storage.dart';
 
 class AuthRepository {
@@ -46,6 +47,7 @@ class AuthRepository {
       accessToken: accessToken,
       refreshToken: refreshToken,
     );
+    await ReviewerFlowStorage.startFreshFlow();
   }
 
   Future<Map<String, dynamic>> getProfile({bool forceRefresh = false}) async {
@@ -117,7 +119,10 @@ class AuthRepository {
 
   Future<void> logout() {
     _invalidateProfileCache();
-    return _tokenStorage.clear();
+    return Future.wait([
+      _tokenStorage.clear(),
+      ReviewerFlowStorage.clear(),
+    ]);
   }
 
   Future<void> deleteAccount() async {
@@ -137,6 +142,7 @@ class AuthRepository {
     } finally {
       _invalidateProfileCache();
       await _tokenStorage.clear();
+      await ReviewerFlowStorage.clear();
     }
   }
 

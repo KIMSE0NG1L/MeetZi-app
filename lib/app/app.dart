@@ -5,6 +5,7 @@ import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/token_storage.dart';
+import 'package:nearo_app/shared/utils/reviewer_flow_storage.dart';
 import 'package:nearo_app/features/auth/screens/environment_screen.dart';
 import 'package:nearo_app/features/auth/screens/login_screen.dart';
 import 'package:nearo_app/presentation/pages/meetzy_onboarding_page.dart';
@@ -78,6 +79,19 @@ class _NearoAppState extends State<NearoApp> {
     return false;
   }
 
+  Future<String> _reviewerRouteAfterLogin() async {
+    final stage = await ReviewerFlowStorage.getStage();
+    switch (stage) {
+      case ReviewerFlowStorage.stageProfileSetup:
+        return AppRoutes.reviewerProfileSetup;
+      case ReviewerFlowStorage.stageCompleted:
+        return await _routeAfterVerified();
+      case ReviewerFlowStorage.stageOnboarding:
+      default:
+        return AppRoutes.onboarding;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -128,6 +142,9 @@ class _NearoAppState extends State<NearoApp> {
     if (token == null || token.isEmpty) {
       route = AppRoutes.onboarding;
     } else {
+      if (await ReviewerFlowStorage.isActive()) {
+        route = await _reviewerRouteAfterLogin();
+      } else {
       try {
         final profile = await _authRepository.getProfile();
         final user = (profile['user'] as Map?) ?? profile;
@@ -163,6 +180,7 @@ class _NearoAppState extends State<NearoApp> {
           route = await _routeAfterVerified();
         }
       }
+      }
     }
     // 설명 주석
     final elapsed = stopwatch.elapsedMilliseconds;
@@ -184,6 +202,14 @@ class _NearoAppState extends State<NearoApp> {
   Future<void> _restoreSession() async {
     final token = await _tokenStorage.readAccessToken();
     if (token != null && token.isNotEmpty) {
+      if (await ReviewerFlowStorage.isActive()) {
+        final reviewerRoute = await _reviewerRouteAfterLogin();
+        _navigatorKey.currentState?.pushNamedAndRemoveUntil(
+          reviewerRoute,
+          (route) => false,
+        );
+        return;
+      }
       try {
         final profile = await _authRepository.getProfile();
         final user = (profile['user'] as Map?) ?? profile;
@@ -351,10 +377,18 @@ class _NearoAppState extends State<NearoApp> {
           routes: {
             AppRoutes.onboarding: (context) => MeetzyOnboardingPage(
                   onComplete: () {
-                    if (context.mounted) {
-                      Navigator.of(context)
-                          .pushReplacementNamed(AppRoutes.login);
-                    }
+                    ReviewerFlowStorage.isActive().then((isReviewerFlow) async {
+                      if (!context.mounted) return;
+                      if (isReviewerFlow) {
+                        await ReviewerFlowStorage.markProfileSetupReady();
+                        if (!context.mounted) return;
+                        Navigator.of(context).pushReplacementNamed(
+                          AppRoutes.reviewerProfileSetup,
+                        );
+                        return;
+                      }
+                      Navigator.of(context).pushReplacementNamed(AppRoutes.login);
+                    });
                   },
                 ),
             AppRoutes.login: (_) => const LoginScreen(),
@@ -373,6 +407,7 @@ class _NearoAppState extends State<NearoApp> {
             AppRoutes.authProfile: (_) => const ProfileScreen(),
             AppRoutes.users: (_) => const UsersScreen(),
             AppRoutes.profileSetup: (_) => const ProfileSetupScreen(),
+            AppRoutes.reviewerProfileSetup: (_) => const ProfileSetupScreen(),
             AppRoutes.avatarSetup: (_) => const AvatarSetupScreen(),
             AppRoutes.partnerProfile: (_) => const PartnerProfileScreen(),
             AppRoutes.home: (_) => const HomeShellScreen(),

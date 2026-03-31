@@ -105,7 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   if (!mounted) return;
                   dialogNavigator.pop();
                   rootNavigator.pushNamedAndRemoveUntil(
-                    AppRoutes.home,
+                    AppRoutes.onboarding,
                     (route) => false,
                   );
                 } on DioException catch (e) {
