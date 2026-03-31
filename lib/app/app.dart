@@ -1,4 +1,5 @@
 import 'package:app_links/app_links.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
@@ -67,6 +68,14 @@ class _NearoAppState extends State<NearoApp> {
   Future<String> _routeAfterVerified() async {
     final hasAcceptedPrivacy = await PrivacyConsentStorage.hasAccepted();
     return hasAcceptedPrivacy ? AppRoutes.home : AppRoutes.privacyConsentGate;
+  }
+
+  bool _isAuthFailure(Object error) {
+    if (error is DioException) {
+      final statusCode = error.response?.statusCode;
+      return statusCode == 401 || statusCode == 403;
+    }
+    return false;
   }
 
   @override
@@ -147,8 +156,12 @@ class _NearoAppState extends State<NearoApp> {
         }
       } catch (e) {
         debugPrint('Error fetching profile during init: $e');
-        await _tokenStorage.clear();
-        route = AppRoutes.onboarding;
+        if (_isAuthFailure(e)) {
+          await _tokenStorage.clear();
+          route = AppRoutes.onboarding;
+        } else {
+          route = await _routeAfterVerified();
+        }
       }
     }
     // 설명 주석
@@ -225,7 +238,13 @@ class _NearoAppState extends State<NearoApp> {
         }
       } catch (e) {
         debugPrint('Error restoring profile: $e');
-        await _tokenStorage.clear();
+        if (_isAuthFailure(e)) {
+          await _tokenStorage.clear();
+          _navigatorKey.currentState?.pushNamedAndRemoveUntil(
+            AppRoutes.login,
+            (route) => false,
+          );
+        }
       }
     }
   }
