@@ -19,6 +19,35 @@ class AuthRepository {
     return _tokenStorage.saveTokens(accessToken: accessToken, refreshToken: refreshToken);
   }
 
+  Future<void> reviewerLogin({
+    required String loginId,
+    required String password,
+  }) async {
+    final response = await _client.dio.post(
+      '/auth/reviewer-login',
+      data: {
+        'loginId': loginId,
+        'password': password,
+      },
+    );
+
+    final data = response.data as Map<String, dynamic>;
+    final accessToken = (data['accessToken'] ?? data['access_token'])?.toString();
+    final refreshToken = (data['refreshToken'] ?? data['refresh_token'])?.toString();
+
+    if (accessToken == null ||
+        accessToken.isEmpty ||
+        refreshToken == null ||
+        refreshToken.isEmpty) {
+      throw Exception('리뷰어 로그인 응답이 올바르지 않습니다.');
+    }
+
+    await _tokenStorage.saveTokens(
+      accessToken: accessToken,
+      refreshToken: refreshToken,
+    );
+  }
+
   Future<Map<String, dynamic>> getProfile({bool forceRefresh = false}) async {
     final now = DateTime.now();
     if (!forceRefresh &&
@@ -43,6 +72,19 @@ class AuthRepository {
 
     _inFlightProfileRequest = request;
     return request;
+  }
+
+  Future<bool> isNicknameAvailable(String nickname) async {
+    final response = await _client.dio.get(
+      '/users/me/nickname-availability',
+      queryParameters: {'nickname': nickname},
+    );
+
+    final data = response.data;
+    if (data is Map<String, dynamic>) {
+      return data['available'] == true;
+    }
+    return false;
   }
 
   Future<Map<String, dynamic>> updateProfile(
