@@ -7,6 +7,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/core/theme/university_theme.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
@@ -66,6 +67,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   XFile? _selectedPhoto;
   List<dynamic> _photos = [];
   bool _isUploadingPhoto = false;
+  double _uploadProgress = 0.0;
   String? _photoError;
   String _boardDisplayType = 'avatar'; // avatar | photo — 게시판에 아바타 vs 본인 사진
   // MBTI 세그먼트 버튼용 (각 차원별 선택, null이면 미선택)
@@ -367,11 +369,35 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     setState(() {
       _isUploadingPhoto = true;
       _photoError = null;
+      _uploadProgress = 0.0;
     });
     try {
-      await _photoRepository.uploadPhotoFile(file: _selectedPhoto!);
+      // 1. 이미지 압축
+      final bytes = await _selectedPhoto!.readAsBytes();
+      final compressedBytes = await FlutterImageCompress.compressWithList(
+        bytes,
+        minWidth: 1080,
+        minHeight: 1080,
+        quality: 80,
+        format: CompressFormat.jpeg,
+      );
+
+      // 2. 다이렉트 업로드
+      await _photoRepository.uploadPhotoFile(
+        compressedBytes: compressedBytes,
+        onProgress: (count, total) {
+          if (!mounted) return;
+          setState(() {
+            _uploadProgress = total > 0 ? count / total : 0.0;
+          });
+        },
+      );
+
       if (!mounted) return;
-      setState(() => _selectedPhoto = null);
+      setState(() {
+        _selectedPhoto = null;
+        _uploadProgress = 0.0;
+      });
       await _loadPhotos();
       if (!mounted) return;
       // 검수 안내 메시지
@@ -396,10 +422,15 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         ),
       );
     } on DioException catch (error) {
-      setState(() => _photoError = error.response?.data.toString() ?? '업로드 실패');
+      setState(() => _photoError = error.response?.data?.toString() ?? '업로드 실패');
+    } catch (e) {
+      setState(() => _photoError = '업로드 중 오류가 발생했습니다.');
     } finally {
       if (mounted) {
-        setState(() => _isUploadingPhoto = false);
+        setState(() {
+          _isUploadingPhoto = false;
+          _uploadProgress = 0.0;
+        });
       }
     }
   }
@@ -1233,7 +1264,16 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                                             boxShadow: [BoxShadow(color: Theme.of(context).colorScheme.primary.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 2))],
                                           ),
                                           child: _isUploadingPhoto
-                                              ? const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)))
+                                              ? Center(
+                                                  child: Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                                                      const SizedBox(width: 8),
+                                                      Text('${(_uploadProgress * 100).toInt()}%', style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold)),
+                                                    ],
+                                                  ),
+                                                )
                                               : Text(_photos.isEmpty ? '사진 업로드' : '사진 변경', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white)),
                                         ),
                                       ),
