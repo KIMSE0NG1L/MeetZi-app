@@ -358,6 +358,28 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       if (!mounted) return;
       setState(() => _selectedPhoto = null);
       await _loadPhotos();
+      if (!mounted) return;
+      // 검수 안내 메시지
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.hourglass_top_rounded, color: Colors.white, size: 18),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  '사진이 업로드되었습니다! 검수 후 프로필에 공개됩니다.',
+                  style: TextStyle(fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFFB4005D),
+          duration: const Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
     } on DioException catch (error) {
       setState(() => _photoError = error.response?.data.toString() ?? '업로드 실패');
     } finally {
@@ -1266,6 +1288,29 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 11,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          // 검수 대기 배지
+                          if (photo['moderationStatus']?.toString() == 'pending')
+                            Positioned(
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 3),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xCC000000),
+                                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(8)),
+                                ),
+                                child: const Text(
+                                  '검수 중',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ),
