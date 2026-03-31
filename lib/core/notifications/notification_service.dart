@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:app_badge_plus/app_badge_plus.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -58,7 +59,8 @@ class NotificationService {
 
     await flutterLocalNotificationsPlugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.createNotificationChannel(_channel);
 
     final token = await messaging.getToken();
@@ -103,6 +105,8 @@ class NotificationService {
       if (message.data.isEmpty && message.notification == null) return;
 
       final type = message.data['type']?.toString();
+      saveNotificationToHistory(message);
+
       if (type == 'take_note_request') {
         final requestId = message.data['requestId']?.toString();
         if (requestId != null && requestId.isNotEmpty) {
@@ -111,11 +115,6 @@ class NotificationService {
           if (rp is Map) requesterProfile = Map<String, dynamic>.from(rp);
           PendingTakeNoteStore.instance.setPending(requestId, requesterProfile);
         }
-        await showForegroundLocalNotification(
-          message: message,
-          fallbackTitle: '매칭 요청',
-          fallbackBody: '새로운 매칭 요청이 도착했어요.',
-        );
         return;
       }
 
@@ -128,31 +127,15 @@ class NotificationService {
             matchId: message.data['matchId']?.toString(),
           );
         }
-        saveNotificationToHistory(message);
-        await showForegroundLocalNotification(
-          message: message,
-          fallbackTitle: '매칭 수락',
-          fallbackBody: '상대가 요청을 수락했어요. 대화를 시작해 보세요.',
-        );
         return;
       }
 
       if (type == 'take_note_rejected') {
-        saveNotificationToHistory(message);
-        await showForegroundLocalNotification(
-          message: message,
-          fallbackTitle: '매칭 거절',
-          fallbackBody: '상대가 요청을 거절했어요.',
-        );
         return;
       }
 
-      saveNotificationToHistory(message);
-      await showForegroundLocalNotification(
-        message: message,
-        fallbackTitle: '알림',
-        fallbackBody: message.notification?.body ?? '',
-      );
+      // Foreground 상태에서는 중복 배너를 띄우지 않고 화면 UI만 갱신한다.
+      return;
     });
 
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
@@ -170,7 +153,9 @@ class NotificationService {
         }
         WidgetsBinding.instance.addPostFrameCallback((_) {
           handleNotificationNavigation(
-              navigatorKey, Map<String, dynamic>.from(message.data));
+            navigatorKey,
+            Map<String, dynamic>.from(message.data),
+          );
         });
         return;
       }
@@ -189,7 +174,9 @@ class NotificationService {
       saveNotificationToHistory(message);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         handleNotificationNavigation(
-            navigatorKey, Map<String, dynamic>.from(message.data));
+          navigatorKey,
+          Map<String, dynamic>.from(message.data),
+        );
       });
     });
 
@@ -201,7 +188,8 @@ class NotificationService {
     final type = message.data['type']?.toString();
     if (type == 'chat') return;
 
-    final id = message.messageId ??
+    final id =
+        message.messageId ??
         '${message.hashCode}_${DateTime.now().millisecondsSinceEpoch}';
     NotificationHistoryStore.instance.add(
       id: id,
@@ -220,9 +208,10 @@ class NotificationService {
     final body = message.notification?.body ?? fallbackBody;
 
     await flutterLocalNotificationsPlugin.show(
-      id: ('${message.data['type'] ?? 'notification'}_${message.messageId ?? DateTime.now().millisecondsSinceEpoch}')
-          .hashCode
-          .abs(),
+      id:
+          ('${message.data['type'] ?? 'notification'}_${message.messageId ?? DateTime.now().millisecondsSinceEpoch}')
+              .hashCode
+              .abs(),
       title: title,
       body: body,
       notificationDetails: NotificationDetails(
@@ -247,7 +236,9 @@ class NotificationService {
   }
 
   void handleNotificationNavigation(
-      GlobalKey<NavigatorState> navigatorKey, Map<String, dynamic> data) {
+    GlobalKey<NavigatorState> navigatorKey,
+    Map<String, dynamic> data,
+  ) {
     final navigator = navigatorKey.currentState;
     if (navigator == null) return;
 
@@ -266,11 +257,12 @@ class NotificationService {
           postId.isNotEmpty) {
         navigator.push(
           MaterialPageRoute<void>(
-            builder: (_) => CommunityPostDetailScreen(
-              environmentId: environmentId,
-              schoolName: schoolName,
-              postId: postId,
-            ),
+            builder:
+                (_) => CommunityPostDetailScreen(
+                  environmentId: environmentId,
+                  schoolName: schoolName,
+                  postId: postId,
+                ),
           ),
         );
       }
