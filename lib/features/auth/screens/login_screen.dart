@@ -1,9 +1,11 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:nearo_app/app/app_routes.dart';
+import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/settings/screens/open_source_licenses_screen.dart';
-// Privacy Policy is opened via external url
-import 'package:nearo_app/shared/utils/app_config.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
+import 'package:nearo_app/shared/utils/app_config.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -14,42 +16,168 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // Onboarding Flow Design - 기능 3종 (MeetZy 디자인)
+  final _authRepository = AuthRepository();
+  int _logoTapCount = 0;
+  bool _showReviewerLogin = false;
+  bool _isReviewerLoginLoading = false;
+
   static const List<Map<String, dynamic>> _features = [
     {
       'icon': LucideIcons.users,
       'title': '우리 학교만',
-      'description': '검증된 동기들과',
+      'description': '검증된 학교 친구와',
       'color': Color(0xFF3B82F6),
     },
     {
       'icon': LucideIcons.heart,
       'title': '실시간 매칭',
-      'description': '즉시 대화 시작',
+      'description': '즉시 대화를 시작',
       'color': NearoTheme.designPink500,
     },
     {
       'icon': LucideIcons.shieldCheck,
       'title': '안전한 만남',
-      'description': '신뢰할 수 있는',
+      'description': '신뢰할 수 있는 연결',
       'color': Color(0xFF8B5CF6),
     },
   ];
 
   Future<void> _openPrivacyNotice() async {
     final url = Uri.parse('https://www.notion.so/32a97b83a0ac80f4b7a2ebac146f3113');
-    if (await canLaunchUrl(url)) await launchUrl(url, mode: LaunchMode.externalApplication);
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
   }
 
   Future<void> _openTermsOfService() async {
     final url = Uri.parse('https://www.notion.so/32a97b83a0ac80d098ccd09e715df3d2');
-    if (await canLaunchUrl(url)) await launchUrl(url, mode: LaunchMode.externalApplication);
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
   }
 
   void _openOpenSourceNotice() {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const OpenSourceLicensesScreen()),
     );
+  }
+
+  void _handleLogoTap() {
+    if (_showReviewerLogin) return;
+    setState(() {
+      _logoTapCount += 1;
+      if (_logoTapCount >= 5) {
+        _showReviewerLogin = true;
+      }
+    });
+  }
+
+  Future<void> _openReviewerLoginDialog() async {
+    final idController = TextEditingController();
+    final passwordController = TextEditingController();
+
+    try {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) {
+          return StatefulBuilder(
+            builder: (context, setDialogState) {
+              Future<void> submit() async {
+                final dialogNavigator = Navigator.of(dialogContext);
+                final rootNavigator = Navigator.of(this.context);
+                final rootMessenger = ScaffoldMessenger.of(this.context);
+                final loginId = idController.text.trim();
+                final password = passwordController.text;
+
+                if (loginId.isEmpty || password.isEmpty) {
+                  rootMessenger.showSnackBar(
+                    const SnackBar(content: Text('아이디와 비밀번호를 입력해주세요.')),
+                  );
+                  return;
+                }
+
+                setDialogState(() => _isReviewerLoginLoading = true);
+                try {
+                  await _authRepository.reviewerLogin(
+                    loginId: loginId,
+                    password: password,
+                  );
+                  if (!mounted) return;
+                  dialogNavigator.pop();
+                  rootNavigator.pushNamedAndRemoveUntil(
+                    AppRoutes.home,
+                    (route) => false,
+                  );
+                } on DioException catch (e) {
+                  final message =
+                      (e.response?.data is Map<String, dynamic>)
+                          ? (e.response?.data['message']?.toString() ??
+                              '리뷰어 로그인에 실패했습니다.')
+                          : '리뷰어 로그인에 실패했습니다.';
+                  if (!mounted) return;
+                  rootMessenger.showSnackBar(SnackBar(content: Text(message)));
+                } catch (_) {
+                  if (!mounted) return;
+                  rootMessenger.showSnackBar(
+                    const SnackBar(content: Text('리뷰어 로그인에 실패했습니다.')),
+                  );
+                } finally {
+                  if (mounted) {
+                    setDialogState(() => _isReviewerLoginLoading = false);
+                  }
+                }
+              }
+
+              return AlertDialog(
+                title: const Text('리뷰어 로그인'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: idController,
+                      decoration: const InputDecoration(labelText: '아이디'),
+                      enabled: !_isReviewerLoginLoading,
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: passwordController,
+                      decoration: const InputDecoration(labelText: '비밀번호'),
+                      obscureText: true,
+                      enabled: !_isReviewerLoginLoading,
+                      onSubmitted: (_) => submit(),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed:
+                        _isReviewerLoginLoading
+                            ? null
+                            : () => Navigator.of(dialogContext).pop(),
+                    child: const Text('취소'),
+                  ),
+                  FilledButton(
+                    onPressed: _isReviewerLoginLoading ? null : submit,
+                    child:
+                        _isReviewerLoginLoading
+                            ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                            : const Text('로그인'),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+    } finally {
+      idController.dispose();
+      passwordController.dispose();
+      _isReviewerLoginLoading = false;
+    }
   }
 
   @override
@@ -79,54 +207,55 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // 상단: 로고 및 캐치프레이즈
                   Padding(
                     padding: const EdgeInsets.fromLTRB(32, 32, 32, 32),
                     child: Column(
                       children: [
-                        TweenAnimationBuilder<double>(
-                          tween: Tween(begin: 0.8, end: 1.0),
-                          duration: const Duration(milliseconds: 500),
-                          curve: Curves.easeOutBack,
-                          builder: (context, value, child) {
-                            final clamped = value.clamp(0.0, 1.0);
-                            return Transform.scale(
-                              scale: value,
-                              child: Opacity(
-                                opacity: clamped,
-                                child: Container(
-                                  width: 112,
-                                  height: 112,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(32),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black
-                                            .withValues(alpha: 0.08),
-                                        blurRadius: 16,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  clipBehavior: Clip.antiAlias,
-                                  child: Image.asset(
-                                    'assets/icon.png',
-                                    fit: BoxFit.cover,
+                        GestureDetector(
+                          onTap: _handleLogoTap,
+                          child: TweenAnimationBuilder<double>(
+                            tween: Tween(begin: 0.8, end: 1.0),
+                            duration: const Duration(milliseconds: 500),
+                            curve: Curves.easeOutBack,
+                            builder: (context, value, child) {
+                              final clamped = value.clamp(0.0, 1.0);
+                              return Transform.scale(
+                                scale: value,
+                                child: Opacity(
+                                  opacity: clamped,
+                                  child: Container(
                                     width: 112,
                                     height: 112,
-                                    errorBuilder: (_, __, ___) => Container(
-                                      color: Colors.white,
-                                      child: const Icon(
-                                        LucideIcons.heart,
-                                        size: 56,
-                                        color: NearoTheme.designPink500,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(32),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.08),
+                                          blurRadius: 16,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    clipBehavior: Clip.antiAlias,
+                                    child: Image.asset(
+                                      'assets/icon.png',
+                                      fit: BoxFit.cover,
+                                      width: 112,
+                                      height: 112,
+                                      errorBuilder: (_, __, ___) => Container(
+                                        color: Colors.white,
+                                        child: const Icon(
+                                          LucideIcons.heart,
+                                          size: 56,
+                                          color: NearoTheme.designPink500,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            );
-                          },
+                              );
+                            },
+                          ),
                         ),
                         const SizedBox(height: 24),
                         TweenAnimationBuilder<double>(
@@ -150,7 +279,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                     const SizedBox(height: 12),
                                     Text(
-                                      '대학생을 위한 특별한 만남',
+                                      '대학생을 위한 연결된 만남',
                                       style: TextStyle(
                                         fontSize: 18,
                                         color: Colors.grey.shade600,
@@ -165,10 +294,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       ],
                     ),
                   ),
-                  // 중간: 주요 기능 3개 (고정 높이 제거, 스크롤 대응)
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 32, vertical: 24),
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
                     child: Column(
                       children: [
                         Row(
@@ -180,16 +307,14 @@ class _LoginScreenState extends State<LoginScreen> {
                               return Expanded(
                                 child: TweenAnimationBuilder<double>(
                                   tween: Tween(begin: 0.0, end: 1.0),
-                                  duration: Duration(
-                                      milliseconds: 500 + (index * 100)),
+                                  duration: Duration(milliseconds: 500 + (index * 100)),
                                   builder: (context, value, child) {
                                     return Opacity(
                                       opacity: value.clamp(0.0, 1.0),
                                       child: Transform.translate(
                                         offset: Offset(0, 20 * (1 - value)),
                                         child: Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 6),
+                                          padding: const EdgeInsets.symmetric(horizontal: 6),
                                           child: Column(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
@@ -197,18 +322,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                                 width: 64,
                                                 height: 64,
                                                 decoration: BoxDecoration(
-                                                  color: color.withValues(
-                                                      alpha: 0.15),
-                                                  borderRadius:
-                                                      BorderRadius.circular(16),
+                                                  color: color.withValues(alpha: 0.15),
+                                                  borderRadius: BorderRadius.circular(16),
                                                   boxShadow: [
                                                     BoxShadow(
-                                                      color: Colors.black
-                                                          .withValues(
-                                                              alpha: 0.05),
+                                                      color: Colors.black.withValues(alpha: 0.05),
                                                       blurRadius: 4,
-                                                      offset:
-                                                          const Offset(0, 2),
+                                                      offset: const Offset(0, 2),
                                                     ),
                                                   ],
                                                 ),
@@ -249,7 +369,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 32),
-                        // 추가 정보 박스
                         TweenAnimationBuilder<double>(
                           tween: Tween(begin: 0.0, end: 1.0),
                           duration: const Duration(milliseconds: 600),
@@ -259,7 +378,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               child: Container(
                                 width: double.infinity,
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 24, vertical: 24),
+                                  horizontal: 24,
+                                  vertical: 24,
+                                ),
                                 decoration: BoxDecoration(
                                   gradient: const LinearGradient(
                                     begin: Alignment.centerLeft,
@@ -281,13 +402,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                     children: [
                                       TextSpan(
-                                        text: '전국 24개 대학',
+                                        text: '전국 24개 대학에서\n',
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           color: Color(0xFF2563EB),
                                         ),
                                       ),
-                                      TextSpan(text: '에서\n'),
                                       TextSpan(
                                         text: '12,000명 이상',
                                         style: TextStyle(
@@ -306,7 +426,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ],
                     ),
                   ),
-                  // 하단: 카카오 로그인 버튼
                   Padding(
                     padding: const EdgeInsets.fromLTRB(32, 8, 32, 0),
                     child: Column(
@@ -323,15 +442,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                   color: const Color(0xFFFEE500),
                                   borderRadius: BorderRadius.circular(24),
                                   elevation: 8,
-                                  shadowColor:
-                                      Colors.black.withValues(alpha: 0.2),
+                                  shadowColor: Colors.black.withValues(alpha: 0.2),
                                   child: InkWell(
                                     onTap: _handleKakaoLogin,
                                     borderRadius: BorderRadius.circular(24),
                                     child: Container(
                                       width: double.infinity,
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 20),
+                                      padding: const EdgeInsets.symmetric(vertical: 20),
                                       alignment: Alignment.center,
                                       child: const Text(
                                         '카카오로 3초만에 시작하기',
@@ -349,6 +466,13 @@ class _LoginScreenState extends State<LoginScreen> {
                           },
                         ),
                         const SizedBox(height: 16),
+                        if (_showReviewerLogin) ...[
+                          OutlinedButton(
+                            onPressed: _openReviewerLoginDialog,
+                            child: const Text('리뷰어 로그인'),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
                         Text.rich(
                           TextSpan(
                             style: const TextStyle(
@@ -356,9 +480,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               color: Color(0xFF9CA3AF),
                             ),
                             children: [
-                              const TextSpan(text: '로그인 시 '),
+                              const TextSpan(text: '로그인하면 '),
                               TextSpan(
-                                text: '서비스 약관',
+                                text: '서비스 이용약관',
                                 style: TextStyle(
                                   decoration: TextDecoration.underline,
                                   color: Colors.grey.shade500,
@@ -372,7 +496,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   color: Colors.grey.shade500,
                                 ),
                               ),
-                              const TextSpan(text: '에 동의하게 됩니다'),
+                              const TextSpan(text: '에 동의하게 됩니다.'),
                             ],
                           ),
                           textAlign: TextAlign.center,
@@ -383,10 +507,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           spacing: 12,
                           runSpacing: 4,
                           children: [
-                            _LegalLink(
-                              label: '이용약관',
-                              onTap: _openTermsOfService,
-                            ),
+                            _LegalLink(label: '이용약관', onTap: _openTermsOfService),
                             _LegalLink(
                               label: '개인정보 처리방침',
                               onTap: _openPrivacyNotice,
@@ -417,7 +538,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
     if (!launched && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('카카오 로그인 연결 실패')),
+        const SnackBar(content: Text('카카오 로그인 연결에 실패했습니다.')),
       );
     }
   }

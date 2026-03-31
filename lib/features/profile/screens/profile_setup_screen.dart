@@ -518,6 +518,24 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       return;
     }
 
+    try {
+      final available = await _repository.isNicknameAvailable(nickname);
+      if (!available) {
+        setState(() => _result = '이미 사용 중인 닉네임입니다.');
+        return;
+      }
+    } on DioException catch (error) {
+      String msg = '닉네임 중복 확인에 실패했습니다.';
+      final data = error.response?.data;
+      if (data is Map && data['message'] != null) {
+        msg = data['message'].toString();
+      } else if (data != null) {
+        msg = data.toString();
+      }
+      setState(() => _result = msg);
+      return;
+    }
+
     final heightCm = _heightCm ?? int.tryParse(_heightController.text.trim());
     if (heightCm == null) {
       setState(() => _result = '키를 반드시 입력해 주세요.');
