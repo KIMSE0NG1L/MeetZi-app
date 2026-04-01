@@ -13,6 +13,14 @@ class PhotoRepository {
     return response.data as List<dynamic>;
   }
 
+  Future<Map<String, dynamic>> uploadPhoto({required String storageKey}) async {
+    final response = await _client.dio.post(
+      ApiEndpoints.photosUpload,
+      data: {'storageKey': storageKey},
+    );
+    return response.data as Map<String, dynamic>;
+  }
+
   Future<Map<String, dynamic>> getUploadUrl() async {
     final response = await _client.dio.get('${ApiEndpoints.photos}/upload-url');
     return response.data as Map<String, dynamic>;

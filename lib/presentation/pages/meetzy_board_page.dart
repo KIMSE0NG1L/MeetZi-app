@@ -28,6 +28,8 @@ class MeetzyBoardContent extends StatelessWidget {
     this.mySchoolName,
     this.onFilterTap,
     this.isLoading = false,
+    this.scrollController,
+    this.isLoadingMore = false,
   });
 
   final String? myNickname;
@@ -45,6 +47,8 @@ class MeetzyBoardContent extends StatelessWidget {
   final String? mySchoolName;
   final VoidCallback? onFilterTap;
   final bool isLoading;
+  final ScrollController? scrollController;
+  final bool isLoadingMore;
 
   @override
   Widget build(BuildContext context) {
@@ -57,6 +61,7 @@ class MeetzyBoardContent extends StatelessWidget {
       builder: (context, constraints) {
         final contentWidth = constraints.maxWidth;
         return SingleChildScrollView(
+          controller: scrollController,
           physics: const AlwaysScrollableScrollPhysics(),
           padding: MeetzyDesignTokens.contentPadding,
           child: SizedBox(
@@ -193,6 +198,11 @@ class MeetzyBoardContent extends StatelessWidget {
                         onTap: () => onProfileTap?.call(index, p),
                       );
                     },
+                  ),
+                if (isLoadingMore)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Center(child: CircularProgressIndicator()),
                   ),
                 const SizedBox(height: MeetzyDesignTokens.gridBottomSpace),
               ],

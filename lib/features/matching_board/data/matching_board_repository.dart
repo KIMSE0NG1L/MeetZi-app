@@ -46,21 +46,34 @@ class MatchingBoardRepository {
   }
 
   /// 설명 주석
-  Future<List<Map<String, dynamic>>> fetchProfiles({String? preferredGender, bool allSchools = false}) async {
-    final query = <String, dynamic>{};
+  Future<Map<String, dynamic>> fetchProfiles({
+    String? preferredGender,
+    bool allSchools = false,
+    int page = 1,
+    int limit = 12,
+  }) async {
+    final query = <String, dynamic>{
+      'page': page,
+      'limit': limit,
+    };
     if (preferredGender != null && preferredGender.isNotEmpty) {
       query['gender'] = preferredGender;
     }
     if (allSchools) query['allSchools'] = 'true';
     final response = await _client.dio.get('/matching-board', queryParameters: query);
-    final rawList = response.data;
-    if (rawList is! List) return [];
+    final data = response.data;
+    if (data is! Map) return {'data': <Map<String, dynamic>>[], 'isLastPage': true};
+    
+    final rawList = data['data'];
+    final isLastPage = data['isLastPage'] == true;
+    
+    if (rawList is! List) return {'data': <Map<String, dynamic>>[], 'isLastPage': true};
     final list = <Map<String, dynamic>>[];
     for (final e in rawList) {
       if (e is! Map) continue;
       list.add(_normalizeBoardProfile(Map<String, dynamic>.from(e as Map)));
     }
-    return list;
+    return {'data': list, 'isLastPage': isLastPage};
   }
 
   /// 설명 주석
