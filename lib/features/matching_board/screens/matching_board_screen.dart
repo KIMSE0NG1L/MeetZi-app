@@ -162,10 +162,10 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     }
   }
 
-  /// 저장된 전체/우리대학 선택을 읽어서 해당 목록을 불러옴. 기본은 우리 학교.
+  /// 저장된 전체/우리대학 선택을 읽어서 해당 목록을 불러옴. 기본은 전체 대학.
   Future<void> _loadScopeAndFetch() async {
     final prefs = await SharedPreferences.getInstance();
-    final scopeAll = prefs.getBool(_keyScopeAllUniversities) ?? false;
+    final scopeAll = prefs.getBool(_keyScopeAllUniversities) ?? true;
     if (!mounted) return;
     setState(() => _isShowingAllUniversities = scopeAll);
     if (scopeAll) {
