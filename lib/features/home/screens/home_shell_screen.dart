@@ -54,7 +54,6 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
         const MessagesScreen(),
         MatchingBoardScreen(refreshTrigger: _boardRefreshTrigger),
         const MyProfileScreen(),
-        RatingsScreen(),
       ];
 
   static const _purpleGradient = LinearGradient(
@@ -396,10 +395,6 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
         title = 'My프로필';
         subtitle = null;
         break;
-      case 4:
-        title = '상점';
-        subtitle = null;
-        break;
       default:
         title = 'Meetzi';
         subtitle = _affiliationShort.isNotEmpty ? _affiliationShort : null;
@@ -491,13 +486,12 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
     const inactiveColor = Color(0xFF9CA3AF); // gray-400 (last)
     // last: active tab = bg-gradient-to-br themeColors.gradient (from-rose-300 via-pink-300 to-rose-400), text white
     final activeGradient = ThemeController.getActiveAccentGradient();
-    final labels = ['커뮤니티', '메시지함', '홈', 'My프로필', '상점'];
+    final labels = ['커뮤니티', '메시지함', '홈', 'My프로필'];
     final icons = [
       LucideIcons.users,
       LucideIcons.messageCircle,
       LucideIcons.house,
       LucideIcons.user,
-      LucideIcons.shoppingBag,
     ];
     return Container(
       width: double.infinity,
@@ -517,7 +511,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: List.generate(5, (i) {
+            children: List.generate(4, (i) {
               final active = _currentIndex == i;
               return Expanded(
                 child: Material(

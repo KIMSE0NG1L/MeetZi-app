@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/community/data/community_repository.dart';
@@ -14,20 +14,21 @@ import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/post_time_format.dart';
 import 'package:nearo_app/shared/utils/mention_text_span.dart';
 
-/// ?숆탳蹂?而ㅻ??덊떚 ?쇰뱶 ?붾㈃
+/// 학교별 커뮤니티 필드 화면
 class CommunityScreen extends StatefulWidget {
   final String environmentId;
   final String schoolName;
+
+  final bool isRootTab;
+  final String? initialScope;
 
   const CommunityScreen({
     super.key,
     required this.environmentId,
     required this.schoolName,
     this.isRootTab = false,
+    this.initialScope,
   });
-
-  /// true硫?猷⑦듃 ??쑝濡??ъ슜(?ㅻ줈媛湲?????곷떒 ?쇱そ ?щ갚).
-  final bool isRootTab;
 
   @override
   State<CommunityScreen> createState() => _CommunityScreenState();
@@ -51,7 +52,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
   bool _loading = true;
   bool _loadingMore = false;
   String _selectedTag = 'all';
-  String _selectedScope = ''; // 기본: 체크 없음, 전체(태그) 피드
+  late String _selectedScope;
 
   bool get _isGlobalCommunity =>
       widget.environmentId == CommunityRepository.globalEnvironmentId;
@@ -62,6 +63,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedScope = widget.initialScope ?? '';
     _loadMyUserId();
     _load();
   }
@@ -503,7 +505,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         child: ListView(
                           padding: const EdgeInsets.fromLTRB(16, 8, 16, 92),
                           children: [
-                            _buildScopeBar(dark),
                             if (bestPosts.isNotEmpty) ...[
                               Row(
                                 children: [
