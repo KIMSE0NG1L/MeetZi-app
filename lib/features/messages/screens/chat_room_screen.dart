@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -132,7 +132,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   final Map<String, Map<String, dynamic>> _sharedChatRequestDetails = {};
   final Set<String> _sharedChatRequestLoadingIds = {};
   String? _partnerId;
-  final List<_ChatMessage> _messages = [];
+  final ValueNotifier<List<_ChatMessage>> _messagesNotifier = ValueNotifier([]);
   bool _loading = true;
   String _title = '대화';
   String? _roomId;
@@ -161,31 +161,34 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   }
 
   void _appendOrMergeIncomingMessage(_ChatMessage incoming) {
+    final currentList = List<_ChatMessage>.from(_messagesNotifier.value);
     final existingIndex =
-        _messages.indexWhere((message) => message.id == incoming.id);
+        currentList.indexWhere((message) => message.id == incoming.id);
     if (existingIndex >= 0) {
-      _messages[existingIndex] = incoming;
+      currentList[existingIndex] = incoming;
+      _messagesNotifier.value = currentList;
       return;
     }
 
     if (incoming.isMine) {
-      final pendingIndex = _messages.indexWhere(
+      final pendingIndex = currentList.indexWhere(
         (message) =>
             message.isMine &&
             message.isPending &&
             message.text == incoming.text,
       );
       if (pendingIndex >= 0) {
-        _messages[pendingIndex] = incoming;
+        currentList[pendingIndex] = incoming;
+        _messagesNotifier.value = currentList;
         return;
       }
     }
 
-    _messages.add(incoming);
+    currentList.add(incoming);
+    _messagesNotifier.value = currentList;
   }
 
-  /// 梨꾪똿諛⑹뿉???닿? 吏곸젒 ??踰덉씠?쇰룄 硫붿떆吏瑜?蹂대깉?쇰㈃ ?꾩씠?ㅻ툕?덉씠而?臾멸뎄 ?④?
-  bool get _shouldHideIceBreakers => _messages.any((m) => m.isMine);
+  bool get _shouldHideIceBreakers => _messagesNotifier.value.any((m) => m.isMine);
 
   @override
   void initState() {
@@ -204,7 +207,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       if (args.containsKey('isActive')) {
         _isActive = args['isActive'] == true;
       }
-      // 紐⑸줉?먯꽌 ?꾨떖???꾨줈???곗씠?곕줈 利됱떆 ?쒖떆 (getRoom ?묐떟 ?꾩뿉??紐⑸줉怨??숈씪?섍쾶)
       final passedPhotoKey = args['partnerPhotoStorageKey']?.toString();
       if (passedPhotoKey != null && passedPhotoKey.trim().isNotEmpty) {
         _partnerPhotoStorageKey = passedPhotoKey.trim();
@@ -247,7 +249,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     }
   }
 
-  /// getRoom ?묐떟??messageReadAts濡?'1' 媛깆떊 (listMessages ???媛踰쇱슫 getRoom ?ъ슜)
   void _disposeSocketConnection({bool emitOutRoom = false}) {
     final socket = _socket;
     if (socket == null) return;
@@ -296,37 +297,36 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         serverReadAt[id] = readAt;
       }
     }
-    setState(() {
-      for (int i = 0; i < _messages.length; i++) {
-        final msg = _messages[i];
-        if (!msg.isMine || msg.readAt != null) continue;
-        final readAt = serverReadAt[msg.id];
-        if (readAt != null) {
-          _messages[i] = _ChatMessage(
-            id: msg.id,
-            text: msg.text,
-            isMine: msg.isMine,
-            senderId: msg.senderId,
-            isSystem: msg.isSystem,
-            readAt: readAt,
-            createdAt: msg.createdAt,
-          );
-        }
+    final currentList = List<_ChatMessage>.from(_messagesNotifier.value);
+    bool changed = false;
+    for (int i = 0; i < currentList.length; i++) {
+      final msg = currentList[i];
+      if (!msg.isMine || msg.readAt != null) continue;
+      final readAt = serverReadAt[msg.id];
+      if (readAt != null) {
+        currentList[i] = _ChatMessage(
+          id: msg.id,
+          text: msg.text,
+          isMine: msg.isMine,
+          senderId: msg.senderId,
+          isSystem: msg.isSystem,
+          readAt: readAt,
+          createdAt: msg.createdAt,
+        );
+        changed = true;
       }
-    });
+    }
+    if (changed) _messagesNotifier.value = currentList;
   }
 
-  /// 梨꾪똿諛⑹뿉 ?덈뒗 ?숈븞 getRoom?쇰줈 readAt 媛깆떊 + 매칭 취소 ??isActive 諛섏쁺
   Future<void> _syncReadAt() async {
     if (_roomId == null || !mounted) return;
     try {
       final room = await _repository.getRoom(roomId: _roomId!);
       if (!mounted) return;
-      // ?쒕쾭???뚮┝ ???곹깭 ?숆린??
       if (room['muted'] != null && (room['muted'] == true) != _isMuted) {
         setState(() => _isMuted = room['muted'] == true);
       }
-      // 매칭 취소 ???쒕쾭?먯꽌 isActive=false濡??ㅻ?濡?二쇨린?곸쑝濡?諛섏쁺???낅젰 留됯린
       final isActiveFromServer = room['isActive'] == true;
       final partnerInRoom =
           room['partnerOnline'] == true || room['partnerInRoom'] == true;
@@ -343,13 +343,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     }
   }
 
-  // ?쎌? ?딆? 硫붿떆吏??????뚯폆?쇰줈 ?쎌쓬 ?대깽???꾩넚
   void _sendReadReceipts() {
     if (_socket == null ||
         !_socket!.connected ||
         _roomId == null ||
         _myUserId == null) return;
-    for (final msg in _messages) {
+    for (final msg in _messagesNotifier.value) {
       if (!msg.isMine && msg.readAt == null) {
         final payload = {
           'roomId': _roomId,
@@ -357,72 +356,37 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           'userId': _myUserId,
           'readAt': DateTime.now().toIso8601String(),
         };
-        print('[?뚯폆 ?쎌쓬 emit] $payload');
         _socket!.emit('read', payload);
       }
     }
   }
-
-  // Removed unused method _fetchMyUserIdAndInitSocket
 
   Future<void> _loadMessages() async {
     if (_roomId == null) return;
     try {
       final result = await _repository.listMessages(roomId: _roomId!);
       if (!mounted) return;
-      setState(() {
-        _messages
-          ..clear()
-          ..addAll(result.map((m) {
-            final senderId = m['senderId']?.toString();
-            final isMine = senderId == _myUserId;
-            print(
-                '[isMine ?먮퀎] senderId=$senderId, _myUserId=$_myUserId, isMine=$isMine, text=${m['content']}');
-            return _ChatMessage(
-              id: m['id']?.toString() ?? '',
-              text: m['content']?.toString() ?? '',
-              isMine: isMine,
-              senderId: senderId ?? '',
-              isSystem: m['isSystem'] == true || _isSystemContent(m['content']?.toString() ?? ''),
-              readAt: m['readAt'] != null
-                  ? _parseServerDateTime(m['readAt'])
-                  : null,
-              createdAt: m['createdAt'] != null
-                  ? _parseServerDateTime(m['createdAt'])
-                  : null,
-            );
-          }));
-        _loading = false;
-      });
-      // ?쎌? ?딆? ?곷? 硫붿떆吏 ?쎌쓬 泥섎━
-      for (int i = 0; i < _messages.length; i++) {
-        final msg = _messages[i];
+      final List<_ChatMessage> fetchedMessages = result.map((m) {
+        final senderId = m['senderId']?.toString();
+        final isMine = senderId == _myUserId;
+        return _ChatMessage(
+          id: m['id']?.toString() ?? '',
+          text: m['content']?.toString() ?? '',
+          isMine: isMine,
+          senderId: senderId ?? '',
+          isSystem: m['isSystem'] == true || _isSystemContent(m['content']?.toString() ?? ''),
+          readAt: m['readAt'] != null ? _parseServerDateTime(m['readAt']) : null,
+          createdAt: m['createdAt'] != null ? _parseServerDateTime(m['createdAt']) : null,
+        );
+      }).toList();
+      _messagesNotifier.value = fetchedMessages;
+      setState(() => _loading = false);
+      
+      for (final msg in fetchedMessages) {
         if (!msg.isMine && msg.readAt == null) {
           await _repository.readMessage(roomId: _roomId!, messageId: msg.id);
-          final now = DateTime.now();
-          // ?쎌쓬 泥섎━ ??readAt??利됱떆 媛깆떊?섏뿬 UI?먯꽌 諭껋? ?щ씪吏寃?
-          setState(() {
-            _messages[i] = _ChatMessage(
-              id: msg.id,
-              text: msg.text,
-              isMine: msg.isMine,
-              senderId: msg.senderId,
-              isSystem: msg.isSystem,
-              readAt: now,
-            );
-          });
-          // ?뚯폆?쇰줈 ?쎌쓬 ?대깽?몃룄 媛숈씠 ?꾩넚
-          if (_socket != null && _socket!.connected) {
-            _socket!.emit('read', {
-              'roomId': _roomId,
-              'messageId': msg.id,
-              'userId': _myUserId,
-              'readAt': now.toIso8601String(),
-            });
-          }
         }
       }
-      // ?뚮┝/諭껋? ?대━??
       await clearAllNotifications();
       unawaited(_prefetchSharedChatRequestDetails());
       await _loadRoomState();
@@ -437,14 +401,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     if (_roomId == null || _myUserId == null || _myUserId!.isEmpty) return;
     final accessToken = await _tokenStorage.readAccessToken();
     if (accessToken == null || accessToken.isEmpty) {
-      if (mounted) {
-        setState(() => _loading = false);
-      }
+      if (mounted) setState(() => _loading = false);
       return;
     }
     _disposeSocketConnection();
     final completer = Completer<void>();
-    print('[?뚯폆 ?곌껐 ?쒕룄] roomId=$_roomId, myUserId=$_myUserId');
     _socket = IO.io(
       '${AppConfig.baseUrl}/chat',
       IO.OptionBuilder()
@@ -454,114 +415,57 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           .build(),
     );
     _socket!.onConnect((_) {
-      print('[?뚯폆 ?곌껐 ?깃났]');
       _socket!.emit('joinRoom', {'roomId': _roomId});
       if (!completer.isCompleted) completer.complete();
-      print('[?뚯폆 joinRoom emit] roomId=$_roomId');
     });
-    _socket!.onDisconnect((reason) {
-      debugPrint('[chat socket disconnected] $reason');
-    });
-    _socket!.onConnectError((error) {
-      debugPrint('[chat socket connect error] $error');
-      if (!completer.isCompleted) {
-        completer.completeError(error ?? 'connect error');
-      }
-    });
-    _socket!.onError((error) {
-      debugPrint('[chat socket error] $error');
-    });
-    _socket!.on('newMessage', (data) {
-      print('[?뚯폆 newMessage ?몃뱾???깅줉?? data=$data');
-      if (!mounted) return;
-      final messageId = data['id']?.toString() ?? '';
-      final isMine = data['senderId']?.toString() == _myUserId;
-      setState(() {
-        _appendOrMergeIncomingMessage(_ChatMessage(
-          id: messageId,
-          text: data['content'] ?? '',
-          isMine: isMine,
-          senderId: data['senderId']?.toString() ?? '',
-          isSystem: data['isSystem'] == true || _isSystemContent(data['content']?.toString() ?? ''),
-          readAt: data['readAt'] != null
-              ? _parseServerDateTime(data['readAt'])
-              : null,
-          createdAt: data['createdAt'] != null
-              ? _parseServerDateTime(data['createdAt'])
-              : null,
-        ));
-      });
-      _scrollToBottom();
-      // ?곷?媛 蹂대궦 硫붿떆吏硫??쎌쓬 泥섎━ + ?뚯폆 ?쎌쓬 ?꾩넚 ??蹂대궦 ?щ엺 ?붾㈃?먯꽌 "1" ?щ씪吏?
-      if (!isMine &&
-          messageId.isNotEmpty &&
-          _roomId != null &&
-          _myUserId != null) {
-        final now = DateTime.now();
-        _repository.readMessage(roomId: _roomId!, messageId: messageId);
-        if (_socket != null && _socket!.connected) {
-          _socket!.emit('read', {
-            'roomId': _roomId,
-            'messageId': messageId,
-            'userId': _myUserId,
-            'readAt': now.toIso8601String(),
-          });
-        }
-        if (!mounted) return;
-        setState(() {
-          final idx = _messages.indexWhere((m) => m.id == messageId);
-          if (idx >= 0) {
-            final msg = _messages[idx];
-            _messages[idx] = _ChatMessage(
-              id: msg.id,
-              text: msg.text,
-              isMine: msg.isMine,
-              senderId: msg.senderId,
-              isSystem: msg.isSystem,
-              readAt: now,
-            );
-          }
-        });
-      }
-    });
-    print('[?뚯폆 read ?몃뱾???깅줉??');
-    // ?쎌쓬 ?대깽??泥섎━: ?대떦 硫붿떆吏??readAt 媛깆떊
-    _socket!.on('read', (data) {
-      debugPrint(
-          '[read ?대깽???섏떊] messageId=${data['messageId']}, userId=${data['userId']}, ??硫붿떆吏 ??${_messages.where((m) => m.isMine && m.readAt == null).length}');
-      if (!mounted) return;
-      final String? messageId = data['messageId']?.toString();
-      final String? userId = data['userId']?.toString();
-      final DateTime? readAt = data['readAt'] != null
-          ? _parseServerDateTime(data['readAt'])
-          : null;
-      if (messageId == null || userId == null || readAt == null) return;
-      // ?닿? 蹂대궦 硫붿떆吏媛 ?곷??먭쾶 ?쏀삍???뚮쭔 媛깆떊 (userId = ?쎌? ?щ엺 = ?곷?)
-      setState(() {
-        final newList = <_ChatMessage>[];
-        for (final msg in _messages) {
-          if (msg.id == messageId && msg.isMine && msg.readAt == null) {
-            newList.add(_ChatMessage(
-              id: msg.id,
-              text: msg.text,
-              isMine: msg.isMine,
-              senderId: msg.senderId,
-              isSystem: msg.isSystem,
-              readAt: readAt,
-              createdAt: msg.createdAt,
-            ));
-          } else {
-            newList.add(msg);
-          }
-        }
-        _messages
-          ..clear()
-          ..addAll(newList);
-      });
-    });
+    _socket!.on('newMessage', _onMessageReceived);
+    _socket!.on('read', _onReadReceived);
     _socket!.connect();
-    print('[?뚯폆 connect ?몄텧??');
     await completer.future.timeout(const Duration(seconds: 10));
+  }
+
+  void _onMessageReceived(dynamic data) {
+    if (data == null) return;
+    final Map<String, dynamic> msg = Map<String, dynamic>.from(data as Map);
+    final isMine = msg['senderId']?.toString() == _myUserId;
+    final incoming = _ChatMessage(
+      id: msg['id']?.toString() ?? '',
+      text: msg['content']?.toString() ?? '',
+      isMine: isMine,
+      senderId: msg['senderId']?.toString() ?? '',
+      isSystem: msg['isSystem'] == true || _isSystemContent(msg['content']?.toString() ?? ''),
+      readAt: _parseServerDateTime(msg['readAt']),
+      createdAt: _parseServerDateTime(msg['createdAt']),
+    );
+
+    if (mounted) {
+      _appendOrMergeIncomingMessage(incoming);
+      _scrollToBottom();
+      _sendReadReceipts();
+    }
+  }
+
+  void _onReadReceived(dynamic data) {
+    if (data == null) return;
+    final Map<String, dynamic> readData = Map<String, dynamic>.from(data as Map);
+    final String messageId = readData['messageId']?.toString() ?? '';
+    final DateTime? readAt = _parseServerDateTime(readData['readAt']);
+
+    final currentList = List<_ChatMessage>.from(_messagesNotifier.value);
+    final index = currentList.indexWhere((m) => m.id == messageId);
+    if (index >= 0) {
+      currentList[index] = _ChatMessage(
+        id: currentList[index].id,
+        text: currentList[index].text,
+        isMine: currentList[index].isMine,
+        senderId: currentList[index].senderId,
+        isSystem: currentList[index].isSystem,
+        isPending: currentList[index].isPending,
+        readAt: readAt,
+        createdAt: currentList[index].createdAt,
+      );
+      _messagesNotifier.value = currentList;
+    }
   }
 
   Future<void> _loadRoomState() async {
@@ -589,7 +493,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       }
       _partnerId = room['partnerId']?.toString();
       _matchId = room['matchId']?.toString();
-      // room??partnerPhotoStorageKey ?놁쑝硫?room.partner ?먮뒗 room.partnerUser?먯꽌 異붿텧 (諛깆뿏??援ъ“ ?ㅼ뼇?????
       if ((_partnerPhotoStorageKey == null ||
           _partnerPhotoStorageKey!.trim().isEmpty)) {
         final partner = room['partner'] as Map<String, dynamic>?;
@@ -618,7 +521,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       }
       final list = room['messageReadAts'];
       if (list is List) _applyMessageReadAts(list);
-      // ?숈쓽 ?щ?? 愿怨꾩뾾???곷? ?꾨줈??濡쒕뱶 (?꾨컮? ????諛붾줈 ?뺣낫 蹂닿린)
       if (_matchId != null) {
         try {
           final profile = await _partnerProfileRepository.getPartnerProfile(
@@ -626,7 +528,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           if (!mounted) return;
           setState(() {
             _partnerProfile = profile;
-            // room???곷? ?ъ쭊 ?ㅺ? ?놁쑝硫??꾨줈?꾩뿉??梨꾩? (?ъ쭊 ?좏깮 ??梨꾪똿?먯꽌???ъ쭊 ?몄텧)
             if ((_partnerPhotoStorageKey == null ||
                 _partnerPhotoStorageKey!.trim().isEmpty)) {
               _partnerPhotoStorageKey = _photoStorageKeyFromProfile(profile);
@@ -634,7 +535,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           });
         } catch (_) {
           if (mounted) {
-            // API ?ㅽ뙣 ??room.partner媛 ?덉쑝硫?洹멸구濡?理쒖냼 ?꾨줈??援ъ꽦 (?ъ쭊 ?쒖떆??
             final partner = room['partner'] as Map<String, dynamic>?;
             final partnerUser = room['partnerUser'] as Map<String, dynamic>?;
             final p = partner ?? partnerUser;
@@ -654,7 +554,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           }
         }
       } else {
-        // matchId ?놁뼱??room.partner媛 ?덉쑝硫??꾨줈???ъ쭊 ?쒖떆?⑹쑝濡??ъ슜
         final partner = room['partner'] as Map<String, dynamic>?;
         final partnerUser = room['partnerUser'] as Map<String, dynamic>?;
         final p = partner ?? partnerUser;
@@ -676,55 +575,36 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   }
 
   Future<void> _sendMessage() async {
-    if (!_isActive) return;
     final text = _controller.text.trim();
     if (text.isEmpty || _roomId == null) return;
+
+    final pending = _ChatMessage(
+      id: 'pending-${DateTime.now().millisecondsSinceEpoch}',
+      text: text,
+      isMine: true,
+      senderId: _myUserId ?? '',
+      isPending: true,
+    );
+
+    _appendOrMergeIncomingMessage(pending);
     _controller.clear();
-    final tempId = 'pending_${DateTime.now().microsecondsSinceEpoch}';
-    setState(() {
-      _messages.add(_ChatMessage(
-        id: tempId,
-        text: text,
-        isMine: true,
-        isPending: true,
-        senderId: _myUserId ?? '',
-        createdAt: DateTime.now(),
-      ));
-    });
     _scrollToBottom();
-    try {
-      final response =
-          await _repository.sendMessage(roomId: _roomId!, content: text);
-      final message = response['message'] as Map<String, dynamic>?;
-      if (!mounted) return;
-      if (message != null) {
-        setState(() {
-          _appendOrMergeIncomingMessage(_ChatMessage(
-            id: message['id']?.toString() ?? tempId,
-            text: message['content']?.toString() ?? text,
-            isMine: true,
-            senderId: message['senderId']?.toString() ?? (_myUserId ?? ''),
-            createdAt: message['createdAt'] != null
-                ? _parseServerDateTime(message['createdAt'])
-                : DateTime.now(),
-          ));
-        });
-      } else {
-        _scheduleMessageSync();
-      }
-    } catch (e) {
-      debugPrint('[sendMessage] failed: $e');
-      if (!mounted) return;
-      setState(() {
-        _appendOrMergeIncomingMessage(_ChatMessage(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          text: '메시지 전송 실패',
-          isMine: false,
-          senderId: _myUserId ?? '',
-          createdAt: DateTime.now(),
-        ));
+
+    if (_socket != null && _socket!.connected) {
+      _socket!.emit('sendMessage', {
+        'roomId': _roomId,
+        'content': text,
       });
-      _scheduleMessageSync();
+    } else {
+      try {
+        await _repository.sendMessage(roomId: _roomId!, content: text);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('메시지 전송에 실패했어요.')),
+          );
+        }
+      }
     }
   }
 
@@ -838,7 +718,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     super.dispose();
   }
 
-  // AppDesign: 硫붿떆吏 ?꾩넚/?섏떊 ?쒓컖 (createdAt ?곗꽑)
+  // AppDesign: 硫붿떆吏€ ?꾩넚/?섏떊 ?쒓컖 (createdAt ?곗꽑)
   String _messageTime(_ChatMessage message) {
     final dt = message.createdAt ?? message.readAt ?? DateTime.now();
     final hour = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
@@ -945,7 +825,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       body: SafeArea(
         child: Column(
           children: [
-            // AppDesign: 濡쒖쫰 洹몃씪?곗씠???ㅻ뜑, ?ㅻ줈媛湲? ?꾨컮?+?대쫫+?⑤씪?? ?붾낫湲?
+            // AppDesign: 濡쒖쫰 洹몃씪?곗씠???ㅻ뜑, ?ㅻ줈媛€湲? ?꾨컮?€+?대쫫+?⑤씪?? ?붾낫湲?
             Container(
               padding: EdgeInsets.only(
                 left: 20,
@@ -1051,7 +931,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                           value: 'cancel', child: Text('매칭 취소')),
                       const PopupMenuItem(
                         value: 'share',
-                        child: Text('대화 구간 공유'),
+        child: Text('대화 구간 공유'),
                       ),
                       PopupMenuItem(
                         value: 'mute',
@@ -1078,27 +958,31 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
             Expanded(
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
-                  : _messages.isEmpty
-                      ? _buildEmptyStateWithIceBreakers(
-                          context, dark, timeColor)
-                      : ListView.separated(
+                  : ValueListenableBuilder<List<_ChatMessage>>(
+                      valueListenable: _messagesNotifier,
+                      builder: (context, messages, child) {
+                        if (messages.isEmpty) {
+                          return _buildEmptyStateWithIceBreakers(
+                              context, dark, timeColor);
+                        }
+                        return ListView.separated(
                           controller: _scrollController,
                           reverse: true,
                           padding: const EdgeInsets.only(
                               left: 20, right: 12, top: 16, bottom: 16),
-                          itemCount: _messages.length,
+                          itemCount: messages.length,
                           separatorBuilder: (_, __) =>
                               const SizedBox(height: 12),
                           itemBuilder: (context, index) {
                             final message =
-                                _messages[_messages.length - 1 - index];
+                                messages[messages.length - 1 - index];
                             final messageDate = message.createdAt ??
                                 message.readAt ??
                                 DateTime.now();
                             DateTime? prevDate;
-                            if (index < _messages.length - 1) {
+                            if (index < messages.length - 1) {
                               final prev =
-                                  _messages[_messages.length - 1 - (index + 1)];
+                                  messages[messages.length - 1 - (index + 1)];
                               prevDate = prev.createdAt ??
                                   prev.readAt ??
                                   DateTime.now();
@@ -1120,24 +1004,16 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 16, vertical: 6),
                                       decoration: BoxDecoration(
-                                        color: dark
-                                            ? Colors.grey.shade800
-                                            : Colors.white,
-                                        borderRadius:
-                                            BorderRadius.circular(999),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color:
-                                                Colors.black.withOpacity(0.06),
-                                            blurRadius: 4,
-                                            offset: const Offset(0, 1),
-                                          ),
-                                        ],
+                                        color: dark ? Colors.white10 : Colors.black.withOpacity(0.05),
+                                        borderRadius: BorderRadius.circular(20),
                                       ),
                                       child: Text(
                                         dateStr,
                                         style: TextStyle(
-                                            fontSize: 12, color: timeColor),
+                                          color: timeColor,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -1353,11 +1229,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                               children: children,
                             );
                           },
-                        ),
+                        );
+                      },
+                    ),
             ),
             if (_isActive &&
-                _messages.isNotEmpty &&
-                _messages.length <= 3 &&
+                _messagesNotifier.value.isNotEmpty &&
+                _messagesNotifier.value.length <= 3 &&
                 !_shouldHideIceBreakers)
               _buildIceBreakerChipsRow(dark, hintColor),
             if (_isActive)
@@ -1474,7 +1352,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   }
 
   Future<void> _prefetchSharedChatRequestDetails() async {
-    final ids = _messages
+    final ids = _messagesNotifier.value
         .map((message) => _parseSharedChatRequestMessage(message.text))
         .whereType<Map<String, dynamic>>()
         .map((payload) => payload['sharedChatPostId']?.toString())
@@ -1870,7 +1748,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
   Future<void> _openSharedChatComposer() async {
     if (_roomId == null) return;
-    final shareableMessages = _messages
+    final shareableMessages = _messagesNotifier.value
         .where((message) => !message.isSystem)
         .map((message) => {
               'id': message.id,

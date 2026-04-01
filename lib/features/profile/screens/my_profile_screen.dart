@@ -9,6 +9,8 @@ import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/shared/utils/photo_url.dart';
+import 'package:nearo_app/features/community/screens/community_screen.dart';
+import 'package:nearo_app/features/community/data/community_repository.dart';
 
 class MyProfileScreen extends StatefulWidget {
   const MyProfileScreen({super.key});
@@ -422,6 +424,31 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                             )).toList(),
                                           ),
                                         ],
+                                        const SizedBox(height: 16),
+                                        // ad: 커뮤니티 활동 관리 (내 글 / 내 댓글)
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: _buildCommunityLink(
+                                                context: context,
+                                                title: '내 글',
+                                                icon: LucideIcons.fileText,
+                                                scope: 'my_posts',
+                                                dark: dark,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: _buildCommunityLink(
+                                                context: context,
+                                                title: '내 댓글',
+                                                icon: LucideIcons.messageSquare,
+                                                scope: 'my_comments',
+                                                dark: dark,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                         const SizedBox(height: 24),
                                         Material(
                                           color: Colors.transparent,
@@ -492,6 +519,60 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       child: Text(
         display,
         style: TextStyle(fontSize: 14, height: 1.5, color: textColor),
+      ),
+    );
+  }
+
+  Widget _buildCommunityLink({
+    required BuildContext context,
+    required String title,
+    required IconData icon,
+    required String scope,
+    required bool dark,
+  }) {
+    final primary = Theme.of(context).colorScheme.primary;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          final envId = _profile?['environmentId']?.toString() ?? _profile?['school']?['id']?.toString() ?? 'global';
+          final schoolName = _profile?['schoolName']?.toString() ?? _profile?['school']?['name']?.toString() ?? '우리 학교';
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => CommunityScreen(
+                environmentId: envId,
+                schoolName: schoolName,
+                initialScope: scope,
+              ),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          decoration: BoxDecoration(
+            color: dark ? Colors.white.withOpacity(0.05) : Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: dark ? Colors.white10 : Colors.grey.shade300,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 16, color: primary),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: dark ? Colors.white70 : Colors.grey.shade800,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
