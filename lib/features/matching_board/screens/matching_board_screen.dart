@@ -22,165 +22,6 @@ import 'package:nearo_app/presentation/widgets/meetzy_profile_detail_modal.dart'
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// 설명 주석
-MeetzyProfileDetailData _profileMapToDetailData(Map<String, dynamic> profile) {
-  final user = profile['user'] as Map<String, dynamic>?;
-  dynamic pluck(List<String> keys) {
-    for (final k in keys) {
-      final v1 = profile[k];
-      if (v1 != null && v1.toString().trim().isNotEmpty) return v1;
-      final v2 = user?[k];
-      if (v2 != null && v2.toString().trim().isNotEmpty) return v2;
-    }
-    return null;
-  }
-  String str(dynamic v) => v?.toString().trim() ?? '';
-
-  /// 아바타 시드 등으로 잘못 들어온 값(한글 없이 영소문자+숫자만 긴 문자열)은 빈 문자열로 취급
-  String strContent(dynamic v) {
-    final s = v?.toString().trim() ?? '';
-    if (s.isEmpty) return '';
-    if (s.length > 10 && RegExp(r'^[a-z0-9]+$').hasMatch(s)) return '';
-    if (s.length > 8 && !RegExp(r'[가-힣\s]').hasMatch(s)) return '';
-    return s;
-  }
-  String toLabel(String? field, dynamic v) {
-    final s = v?.toString().trim();
-    if (s == null || s.isEmpty) return '';
-    switch (field) {
-      case 'gender':
-        switch (s.toLowerCase()) {
-          case 'male':
-            return '남성';
-          case 'female':
-            return '여성';
-          default:
-            return s;
-        }
-      case 'gradeYear':
-        switch (s.toLowerCase()) {
-          case 'one':
-            return '1학년';
-          case 'two':
-            return '2학년';
-          case 'three':
-            return '3학년';
-          case 'four':
-            return '4학년';
-          case 'five':
-            return '5학년';
-          case 'graduation_deferred':
-            return '졸업유예';
-          default:
-            return s;
-        }
-      case 'smoking':
-        if (v is bool) return v ? '흡연' : '비흡연';
-        switch (s.toLowerCase()) {
-          case 'none':
-            return '비흡연';
-          case 'sometimes':
-            return '가끔';
-          case 'often':
-            return '자주';
-          default:
-            return s;
-        }
-      case 'drinking':
-        if (v is bool) return v ? '음주' : '비음주';
-        switch (s.toLowerCase()) {
-          case 'none':
-            return '비음주';
-          case 'sometimes':
-            return '가끔';
-          case 'often':
-            return '자주';
-          default:
-            return s;
-        }
-      case 'fashionStyle':
-        switch (s.toLowerCase()) {
-          case 'hood_casual':
-            return '후드/캐주얼';
-          case 'shirt_neat':
-            return '셔츠/단정';
-          case 'street':
-            return '스트릿';
-          case 'knit':
-            return '니트/감성';
-          case 'sporty':
-            return '스포티';
-          case 'minimal':
-            return '미니멀';
-          case 'hip':
-            return '힙한';
-          default:
-            return s;
-        }
-      case 'preferredDateType':
-        switch (s.toLowerCase()) {
-          case 'cafe':
-            return '카페';
-          case 'walk':
-            return '산책';
-          case 'movie':
-            return '영화';
-          case 'drink':
-            return '술자리';
-          case 'exercise':
-            return '운동';
-          case 'food_tour':
-            return '맛집 탐방';
-          case 'drive':
-            return '드라이브';
-          default:
-            return s;
-        }
-      case 'activityTime':
-        switch (s.toLowerCase()) {
-          case 'morning':
-            return '아침형';
-          case 'daytime':
-            return '주간형';
-          case 'evening':
-            return '저녁형';
-          case 'night_owl':
-            return '야행성';
-          default:
-            return s;
-        }
-      default:
-        return s;
-    }
-  }
-  final heightVal = pluck(['heightCm', 'height']);
-  final heightStr = heightVal != null ? '${heightVal} cm' : '';
-  final listTags = <String>[];
-  final kw = pluck(['idealTypeKeywords']) ?? user?['idealTypeKeywords'];
-  if (kw is List) {
-    for (final e in kw) {
-      final s = e?.toString().trim();
-      if (s != null && s.isNotEmpty) listTags.add(s);
-    }
-  }
-  return MeetzyProfileDetailData(
-    nickname: str(pluck(['nickname']) ?? user?['nickname']).isEmpty ? '-' : str(pluck(['nickname']) ?? user?['nickname']),
-    major: str(pluck(['department', 'major', 'departmentName'])),
-    gender: toLabel('gender', pluck(['gender', 'sex'])),
-    school: str(pluck(['affiliation', 'school', 'affiliationText', 'organization'])),
-    height: heightStr,
-    grade: toLabel('gradeYear', pluck(['grade', 'year', 'schoolYear', 'class'])),
-    mbti: str(pluck(['mbti', 'mbtiType'])),
-    smoking: toLabel('smoking', pluck(['isSmoking', 'smoking', 'smoke'])),
-    drinking: toLabel('drinking', pluck(['isDrinking', 'drinking', 'alcohol'])),
-    intro: strContent(user?['introOneLine'] ?? pluck(['oneLineIntroduce', 'introOneLine', 'bio', 'introduction'])),
-    interest: strContent(user?['intoLately'] ?? pluck(['intoLately', 'hobby', 'recentInterest'])),
-    idealType: strContent(user?['idealType'] ?? pluck(['idealType', 'ideal'])),
-    fashionStyle: toLabel('fashionStyle', pluck(['fashionStyle', 'style'])),
-    datePreference: toLabel('preferredDateType', pluck(['preferredDateType', 'preferredDate'])),
-    activeTime: toLabel('activityTime', pluck(['activityTime', 'activeTime'])),
-    tags: listTags,
-  );
-}
 
 /// 설명 주석
 Future<void> showBoardNoteSheet(
@@ -275,13 +116,6 @@ class _MatchingBoardScreenBody extends StatefulWidget {
 class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   final MatchingBoardRepository _repository = MatchingBoardRepository();
   final AuthRepository _authRepository = AuthRepository();
-  List<Map<String, dynamic>> _profiles = [];
-  bool _loading = false;
-  bool _isRegistering = false;
-  bool _isOpeningSheet = false; // 설명 주석
-  MyTickets? _myTickets;
-  int _receivedRequestCount = 0;
-  late Future<Map<String, dynamic>> _myProfileFuture;
   String? _preferredGender;
   bool _hasAppliedFilter = false;
   bool _filterNonSmokingOnly = false;
@@ -289,6 +123,20 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   int _filterMinHeight = 150;
   int _filterMaxHeight = 190;
   bool _isShowingAllUniversities = false;
+
+  final ScrollController _scrollController = ScrollController();
+  int _page = 1;
+  static const int _limit = 12;
+  bool _isLastPage = false;
+  bool _isLoadingMore = false;
+
+  late Future<Map<String, dynamic>?> _myProfileFuture;
+  bool _loading = false;
+  int _receivedRequestCount = 0;
+  dynamic _myTickets;
+  List<Map<String, dynamic>> _profiles = [];
+  bool _isRegistering = false;
+  bool _isOpeningSheet = false;
 
   static const String _keyScopeAllUniversities = 'meetzy_board_scope_all_universities';
   static const int _heightMinLimit = 120;
@@ -302,7 +150,16 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     _loadScopeAndFetch();
     _fetchMySummary();
     _fetchReceivedRequestCount();
+    _scrollController.addListener(_scrollListener);
     widget.refreshTrigger?.addListener(_onRefreshTriggered);
+  }
+
+  void _scrollListener() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      if (!_isLoadingMore && !_isLastPage && !_loading) {
+        _loadMoreProfiles();
+      }
+    }
   }
 
   /// 저장된 전체/우리대학 선택을 읽어서 해당 목록을 불러옴. 기본은 우리 학교.
@@ -320,6 +177,8 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
 
   @override
   void dispose() {
+    _scrollController.removeListener(_scrollListener);
+    _scrollController.dispose();
     widget.refreshTrigger?.removeListener(_onRefreshTriggered);
     super.dispose();
   }
@@ -358,6 +217,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   Future<void> _primePreferredGender() async {
     try {
       final profile = await _myProfileFuture;
+      if (profile == null) return;
       final raw = profile['user'] is Map ? profile['user'] as Map : profile;
       _preferredGender = _normalizePreferredGender(raw['gender']);
     } catch (_) {
@@ -373,7 +233,8 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     try {
       final summary = await _repository.fetchMySummary();
       _myProfileFuture = Future.value(summary.user);
-      _preferredGender = _normalizePreferredGender(summary.user['gender']);
+      final Map<String, dynamic> userMap = summary.user;
+      _preferredGender = _normalizePreferredGender(userMap['gender']);
       setState(() {
         _myTickets = summary.tickets;
       });
@@ -386,11 +247,16 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
 
   /// 설명 주석
   Future<void> _fetchProfilesAllUniversities() async {
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _page = 1;
+      _isLastPage = false;
+    });
     try {
       String? preferredGender = _preferredGender;
       try {
         final profile = await _myProfileFuture;
+        if (profile == null) throw Exception('no profile');
         final raw = profile['user'] is Map ? profile['user'] as Map : profile;
         final g = raw['gender']?.toString().trim().toLowerCase();
         if (g == 'male' || g == '남성') {
@@ -399,12 +265,18 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
           preferredGender = 'male';
         }
       } catch (_) {}
-      final profiles = await _repository.fetchProfiles(preferredGender: preferredGender, allSchools: true);
+      final result = await _repository.fetchProfiles(
+        preferredGender: preferredGender,
+        allSchools: true,
+        page: _page,
+        limit: _limit,
+      );
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_keyScopeAllUniversities, true);
       if (!mounted) return;
       setState(() {
-        _profiles = profiles;
+        _profiles = result['data'] as List<Map<String, dynamic>>;
+        _isLastPage = result['isLastPage'] == true;
         _isShowingAllUniversities = true;
       });
     } catch (_) {
@@ -416,11 +288,16 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
 
   /// 설명 주석
   Future<void> _fetchProfiles() async {
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _page = 1;
+      _isLastPage = false;
+    });
     try {
       String? preferredGender = _preferredGender;
       try {
         final profile = await _myProfileFuture;
+        if (profile == null) throw Exception('no profile');
         final raw = profile['user'] is Map ? profile['user'] as Map : profile;
         final g = raw['gender']?.toString().trim().toLowerCase();
         if (g == 'male' || g == '남성') {
@@ -429,12 +306,17 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
           preferredGender = 'male';
         }
       } catch (_) {}
-      final profiles = await _repository.fetchProfiles(preferredGender: preferredGender);
+      final result = await _repository.fetchProfiles(
+        preferredGender: preferredGender,
+        page: _page,
+        limit: _limit,
+      );
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_keyScopeAllUniversities, false);
       if (!mounted) return;
       setState(() {
-        _profiles = profiles;
+        _profiles = result['data'] as List<Map<String, dynamic>>;
+        _isLastPage = result['isLastPage'] == true;
         _isShowingAllUniversities = false;
       });
     } catch (_) {
@@ -444,10 +326,50 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     }
   }
 
+  Future<void> _loadMoreProfiles() async {
+    if (_isLoadingMore || _isLastPage) return;
+    setState(() => _isLoadingMore = true);
+    try {
+      final nextPage = _page + 1;
+      String? preferredGender = _preferredGender;
+      try {
+        final profile = await _myProfileFuture;
+        if (profile == null) throw Exception('no profile');
+        final raw = profile['user'] is Map ? profile['user'] as Map : profile;
+        final g = raw['gender']?.toString().trim().toLowerCase();
+        if (g == 'male' || g == '남성') {
+          preferredGender = 'female';
+        } else if (g == 'female' || g == '여성') {
+          preferredGender = 'male';
+        }
+      } catch (_) {}
+      
+      final result = await _repository.fetchProfiles(
+        preferredGender: preferredGender,
+        allSchools: _isShowingAllUniversities,
+        page: nextPage,
+        limit: _limit,
+      );
+      
+      if (!mounted) return;
+      setState(() {
+        _page = nextPage;
+        final List<Map<String, dynamic>> newData = result['data'] as List<Map<String, dynamic>>;
+        _profiles.addAll(newData);
+        _isLastPage = result['isLastPage'] == true;
+      });
+    } catch (_) {
+      // 에러 발생 시 더 이상 로드 안 함 (또는 에러 토스트)
+    } finally {
+      if (mounted) setState(() => _isLoadingMore = false);
+    }
+  }
+
   Future<void> _onDeveloperMatchTap() async {
     if (!mounted) return;
     try {
       final myProfile = await _myProfileFuture;
+      if (myProfile == null) return;
       final user = myProfile['user'] is Map ? myProfile['user'] as Map<String, dynamic> : myProfile;
       final myGender = (user['gender'] ?? myProfile['gender'])?.toString().trim().toLowerCase();
       if (myGender == 'male') {
@@ -921,7 +843,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     final onSurface = dark ? Colors.white : const Color(0xFF111827);
     final onSurfaceVariant = dark ? Colors.grey.shade400 : Colors.grey.shade600;
 
-    return FutureBuilder<Map<String, dynamic>>(
+    return FutureBuilder<Map<String, dynamic>?>(
       future: _myProfileFuture,
       builder: (context, snapshot) {
         final raw = snapshot.data;
@@ -962,7 +884,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                     child: SizedBox(
                       width: 64,
                       height: 64,
-                      child: _buildBoardAvatar(context, meProfile),
+                      child: _buildBoardAvatar(context, meProfile!),
                     ),
                   )
                 : null,
@@ -979,7 +901,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
               return MeetzyBoardProfileItem(
                 nickname: displayName.isEmpty ? '-' : displayName,
                 tag: tag,
-                avatarWidget: _buildBoardAvatar(context, p),
+                avatarWidget: _buildBoardAvatar(context, p!),
                 isNew: i < 6,
               );
             }).toList(),
@@ -1038,6 +960,8 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
             mySchoolName: mySchoolNameOrNull,
             onFilterTap: () => _openFilterDialog(displayProfiles),
             isLoading: _loading,
+            scrollController: _scrollController,
+            isLoadingMore: _isLoadingMore,
           ),
         );
       },
@@ -1055,7 +979,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       final profileId = tappedProfile['id']?.toString();
       if (profileId == null || profileId.isEmpty) return;
       if (!mounted) return;
-      final detailData = _profileMapToDetailData(tappedProfile);
+      final detailData = profileMapToDetailData(tappedProfile);
       final (photoUrlForEnlarge, avatarUrlForEnlarge) = getEnlargeUrlsFromProfile(tappedProfile);
       final dark = Theme.of(context).brightness == Brightness.dark;
       // 설명 주석
@@ -1095,7 +1019,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                             child: MeetzyProfileDetailModal(
                           profile: detailData,
                           darkMode: dark,
-                          avatarWidget: _buildBoardAvatar(ctx, tappedProfile),
+                          avatarWidget: _buildBoardAvatar(ctx, tappedProfile!),
                           photoUrlForEnlarge: photoUrlForEnlarge,
                           avatarUrlForEnlarge: avatarUrlForEnlarge,
                           onClose: () => Navigator.of(ctx).pop(),
@@ -1105,13 +1029,13 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                               context: ctx,
                               isScrollControlled: true,
                               backgroundColor: Colors.transparent,
-                              builder: (sheetCtx) => _TakeNoteMessageSheet(profile: tappedProfile),
+                              builder: (sheetCtx) => _TakeNoteMessageSheet(profile: tappedProfile!),
                             );
                             if (!ctx.mounted) return;
                             if (message == null) return;
                             Navigator.of(ctx).pop();
                             if (!mounted) return;
-                            final ok = await _takeNote(profileId, tappedProfile, message: message);
+                            final ok = await _takeNote(profileId, tappedProfile!, message: message);
                             if (!mounted) return;
                             if (ok) {
                               await showDialog<void>(
@@ -1119,7 +1043,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                                 barrierDismissible: false,
                                 barrierColor: Colors.black54,
                                 builder: (dialogCtx) => _MatchCelebrationOverlay(
-                                  profile: tappedProfile,
+                                  profile: tappedProfile!,
                                   buildAvatar: _buildBoardAvatar,
                                 ),
                               );
@@ -2119,7 +2043,7 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
 
     final primaryGradient = ThemeController.getSheetGradient();
     final dark = theme.brightness == Brightness.dark;
-    final detailData = _profileMapToDetailData(profile);
+    final detailData = profileMapToDetailData(profile);
     final (photoUrlForEnlarge, avatarUrlForEnlarge) = getEnlargeUrlsFromProfile(profile);
 
     return Container(
