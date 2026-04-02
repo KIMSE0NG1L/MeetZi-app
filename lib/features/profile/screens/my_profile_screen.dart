@@ -542,7 +542,6 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
               builder: (context) => CommunityScreen(
                 environmentId: envId,
                 schoolName: schoolName,
-                initialScope: scope,
               ),
             ),
           );

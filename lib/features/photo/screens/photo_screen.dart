@@ -85,9 +85,7 @@ class _PhotoScreenState extends State<PhotoScreen> {
                 label: '사진 업로드',
                 isLoading: _isLoading,
                 onPressed: () => _run(
-                  () => _repository.uploadPhoto(
-                    storageKey: _storageKeyController.text.trim(),
-                  ),
+                  () => _repository.getUploadUrl(),
                 ),
               ),
               const SizedBox(height: 12),

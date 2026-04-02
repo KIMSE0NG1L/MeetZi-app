@@ -1,0 +1,25 @@
+키 저장소 유형: PKCS12
+키 저장소 제공자: SUN
+
+키 저장소에 1개의 항목이 포함되어 있습니다.
+
+별칭 이름: androiddebugkey
+생성 날짜: 2026. 2. 1.
+항목 유형: PrivateKeyEntry
+인증서 체인 길이: 1
+인증서[1]:
+keytool 오류: java.util.IllegalFormatConversionException: d != java.lang.String
+java.util.IllegalFormatConversionException: d != java.lang.String
+	at java.base/java.util.Formatter$FormatSpecifier.failConversion(Formatter.java:4662)
+	at java.base/java.util.Formatter$FormatSpecifier.printInteger(Formatter.java:3200)
+	at java.base/java.util.Formatter$FormatSpecifier.print(Formatter.java:3155)
+	at java.base/java.util.Formatter.format(Formatter.java:2767)
+	at java.base/java.util.Formatter.format(Formatter.java:2698)
+	at java.base/java.lang.String.format(String.java:4455)
+	at java.base/sun.security.tools.keytool.Main.withWeakConstraint(Main.java:3629)
+	at java.base/sun.security.tools.keytool.Main.printX509Cert(Main.java:3660)
+	at java.base/sun.security.tools.keytool.Main.doPrintEntry(Main.java:2268)
+	at java.base/sun.security.tools.keytool.Main.doPrintEntries(Main.java:2634)
+	at java.base/sun.security.tools.keytool.Main.doCommands(Main.java:1296)
+	at java.base/sun.security.tools.keytool.Main.run(Main.java:419)
+	at java.base/sun.security.tools.keytool.Main.main(Main.java:400)

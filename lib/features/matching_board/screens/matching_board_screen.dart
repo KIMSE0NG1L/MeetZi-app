@@ -400,12 +400,12 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
           preferredGender = 'male';
         }
       } catch (_) {}
-      final profiles = await _repository.fetchProfiles(preferredGender: preferredGender, allSchools: true);
+      final result = await _repository.fetchProfiles(preferredGender: preferredGender, allSchools: true);
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_keyScopeAllUniversities, true);
       if (!mounted) return;
       setState(() {
-        _profiles = profiles;
+        _profiles = result['data'] as List<Map<String, dynamic>>;
         _isShowingAllUniversities = true;
       });
     } catch (_) {
@@ -430,12 +430,12 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
           preferredGender = 'male';
         }
       } catch (_) {}
-      final profiles = await _repository.fetchProfiles(preferredGender: preferredGender);
+      final result = await _repository.fetchProfiles(preferredGender: preferredGender);
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_keyScopeAllUniversities, false);
       if (!mounted) return;
       setState(() {
-        _profiles = profiles;
+        _profiles = result['data'] as List<Map<String, dynamic>>;
         _isShowingAllUniversities = false;
       });
     } catch (_) {
