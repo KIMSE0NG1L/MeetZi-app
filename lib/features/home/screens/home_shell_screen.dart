@@ -642,11 +642,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
   }
 
   Widget _buildRandomMatchButton() {
-    final bgColor = Theme.of(context).brightness == Brightness.dark
-        ? const Color(0xFF111827)
-        : const Color(0xFFF9FAFB);
-    return Container(
-      color: bgColor,
+    return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
       child: SizedBox(
         width: double.infinity,
@@ -722,13 +718,19 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
                   itemCount: _pages.length,
                   onPageChanged: (index) =>
                       setState(() => _currentIndex = index),
-                  itemBuilder: (_, index) => _pages[index],
+                    itemBuilder: (_, index) => _pages[index],
                 ),
               ),
-              if (_currentIndex == 2) _buildRandomMatchButton(),
               _buildBottomNav(),
             ],
           ),
+          if (_currentIndex == 2)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: MediaQuery.of(context).padding.bottom + 88,
+              child: _buildRandomMatchButton(),
+            ),
           if (_showCoachMark)
             MeetzyCoachMark(
               onComplete: () => setState(() => _showCoachMark = false),
