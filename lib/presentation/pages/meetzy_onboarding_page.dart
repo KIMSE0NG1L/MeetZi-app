@@ -217,7 +217,7 @@ class _MeetzyOnboardingPageState extends State<MeetzyOnboardingPage>
           children: [
             // last 효과: 스텝별 배경 애니메이션 (터치 무시)
             if (_currentStep == 0) Positioned.fill(child: IgnorePointer(child: _FloatingHearts(elapsed: _elapsedSeconds))),
-            if (_currentStep == 1) Positioned.fill(child: IgnorePointer(child: const _SwipeCards())),
+            
             // 3페이지(step 2)는 효과 없음
             if (_currentStep == 3) Positioned.fill(child: IgnorePointer(child: _MatchingParticles(animation: _particleController))),
             Positioned(

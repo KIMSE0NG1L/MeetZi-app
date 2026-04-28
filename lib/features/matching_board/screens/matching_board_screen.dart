@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:nearo_app/core/ads/ad_service.dart';
 import 'package:nearo_app/features/matching_board/data/matching_board_repository.dart';
 import 'package:nearo_app/features/matching_board/profile_detail_sheet.dart';
 import 'package:nearo_app/features/matching_board/screens/mailbox_screen.dart';
@@ -1188,6 +1189,11 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       await _repository.takeNote(profileId, message: trimmed);
       if (!mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('요청을 보냈어요. 상대가 수락하면 매칭돼요.')));
+      // 매칭 신청 성공 시 전면 광고 표시
+      final interstitial = InterstitialAdService();
+      await interstitial.load();
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (mounted) await interstitial.show();
       if (_isShowingAllUniversities) {
         _fetchProfilesAllUniversities();
       } else {

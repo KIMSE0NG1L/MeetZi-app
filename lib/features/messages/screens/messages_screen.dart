@@ -6,6 +6,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/app/app.dart';
 import 'package:nearo_app/app/app_routes.dart';
+import 'package:nearo_app/core/ads/ad_service.dart';
+import 'package:nearo_app/core/ads/banner_ad_widget.dart';
 import 'package:nearo_app/features/matching_board/profile_detail_sheet.dart';
 import 'package:nearo_app/features/messages/data/chat_repository.dart';
 import 'package:nearo_app/features/messages/data/partner_profile_repository.dart';
@@ -31,12 +33,14 @@ class _MessagesScreenState extends State<MessagesScreen>
   bool _routeObserverSubscribed = false;
   List<Map<String, dynamic>> _rooms = [];
   Timer? _refreshTimer;
+  final _rewardedAd = RewardedAdService();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadRooms();
+    _rewardedAd.load();
     _refreshTimer = Timer.periodic(
       const Duration(seconds: 6),
       (_) => _loadRooms(showLoader: false),
@@ -70,6 +74,7 @@ class _MessagesScreenState extends State<MessagesScreen>
   @override
   void dispose() {
     _refreshTimer?.cancel();
+    _rewardedAd.dispose();
     WidgetsBinding.instance.removeObserver(this);
     if (_routeObserverSubscribed) {
       routeObserver.unsubscribe(this);
@@ -310,6 +315,52 @@ class _MessagesScreenState extends State<MessagesScreen>
     return Icon(LucideIcons.user, size: 48, color: Colors.grey.shade600);
   }
 
+  /// 보상형 광고 로드 대기(최대 5초) 후 표시, 완료 시 채팅방 진입
+  Future<void> _showRewardedThenNavigate(
+    BuildContext ctx, {
+    required String roomId,
+    required String partner,
+    required bool isActive,
+    required String? photoKey,
+    required String? avatarSeed,
+    required String? avatarOptionsRaw,
+  }) async {
+    void goToChat() {
+      if (!ctx.mounted) return;
+      Navigator.of(ctx).pushNamed(
+        AppRoutes.chatRoom,
+        arguments: {
+          'roomId': roomId,
+          'partnerNickname': partner,
+          'isActive': isActive,
+          'partnerPhotoStorageKey': photoKey,
+          'partnerAvatarSeed': avatarSeed,
+          'partnerAvatarOptions': avatarOptionsRaw,
+        },
+      ).then((_) => _loadRooms(showLoader: false));
+    }
+
+    // 최대 5초 대기하며 광고 로드 확인
+    const timeout = Duration(seconds: 5);
+    const interval = Duration(milliseconds: 200);
+    var waited = Duration.zero;
+    while (!_rewardedAd.isLoaded && waited < timeout) {
+      await Future.delayed(interval);
+      waited += interval;
+    }
+
+    if (!_rewardedAd.isLoaded) {
+      debugPrint('[AdMob] Rewarded not loaded after ${timeout.inSeconds}s, going direct');
+      goToChat();
+      return;
+    }
+
+    await _rewardedAd.show(
+      onRewarded: (_) {},
+      onDismissed: goToChat,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
@@ -319,45 +370,48 @@ class _MessagesScreenState extends State<MessagesScreen>
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: dark ? null : ThemeController.getScreenBgGradient(),
-          color: dark ? NearoTheme.designScreenBgDark : null,
-        ),
-        child: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : _rooms.isEmpty
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(LucideIcons.messageCircle,
-                              size: 64, color: onSurfaceVariant),
-                          const SizedBox(height: 16),
-                          Text(
-                            '아직 메시지가 없어요',
-                            style: TextStyle(
-                                fontSize: 16, color: onSurfaceVariant),
-                            textAlign: TextAlign.center,
+      body: Column(
+        children: [
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              height: double.infinity,
+              decoration: BoxDecoration(
+                gradient: dark ? null : ThemeController.getScreenBgGradient(),
+                color: dark ? NearoTheme.designScreenBgDark : null,
+              ),
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _rooms.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(LucideIcons.messageCircle,
+                                    size: 64, color: onSurfaceVariant),
+                                const SizedBox(height: 16),
+                                Text(
+                                  '아직 메시지가 없어요',
+                                  style: TextStyle(
+                                      fontSize: 16, color: onSurfaceVariant),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '게시판에서 마음에 드는 프로필을 찾아보세요',
+                                  style: TextStyle(
+                                      fontSize: 14, color: onSurfaceVariant),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '게시판에서 마음에 드는 프로필을 찾아보세요',
-                            style: TextStyle(
-                                fontSize: 14, color: onSurfaceVariant),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                : RefreshIndicator(
-                    onRefresh: () => _loadRooms(showLoader: false),
-                    child: ListView.separated(
+                        )
+                      : RefreshIndicator(
+                          onRefresh: () => _loadRooms(showLoader: false),
+                          child: ListView.separated(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 12),
                       itemCount: _rooms.length,
@@ -438,20 +492,16 @@ class _MessagesScreenState extends State<MessagesScreen>
                                 Colors.black.withOpacity(dark ? 0.18 : 0.08),
                             child: InkWell(
                               borderRadius: BorderRadius.circular(16),
-                              onTap: () {
-                                Navigator.of(context).pushNamed(
-                                  AppRoutes.chatRoom,
-                                  arguments: {
-                                    'roomId': roomId,
-                                    'partnerNickname': partner,
-                                    'isActive': isActive,
-                                    'partnerPhotoStorageKey': photoKey,
-                                    'partnerAvatarSeed': avatarSeed,
-                                    'partnerAvatarOptions': avatarOptionsRaw,
-                                  },
-                                ).then((_) {
-                                  _loadRooms(showLoader: false);
-                                });
+                              onTap: () async {
+                                await _showRewardedThenNavigate(
+                                  context,
+                                  roomId: roomId,
+                                  partner: partner,
+                                  isActive: isActive,
+                                  photoKey: photoKey,
+                                  avatarSeed: avatarSeed,
+                                  avatarOptionsRaw: avatarOptionsRaw,
+                                );
                               },
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(
@@ -583,8 +633,13 @@ class _MessagesScreenState extends State<MessagesScreen>
                           ),
                         );
                       },
+                        ),
+                      ),
                     ),
                   ),
+          // 배너 광고 (하단 고정)
+          const BannerAdWidget(),
+        ],
       ),
     );
   }
