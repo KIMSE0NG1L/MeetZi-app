@@ -281,7 +281,10 @@ class NotificationService {
       if (acceptedRoomId != null && acceptedRoomId.isNotEmpty) {
         navigator.pushNamed(
           AppRoutes.chatRoom,
-          arguments: {'roomId': acceptedRoomId, 'partnerNickname': '상대'},
+          arguments: {
+            'roomId': acceptedRoomId,
+            'partnerNickname': data['partnerNickname']?.toString() ?? '',
+          },
         );
       } else {
         navigator.push(
@@ -296,7 +299,10 @@ class NotificationService {
     if (roomId != null && roomId.isNotEmpty) {
       navigator.pushNamed(
         AppRoutes.chatRoom,
-        arguments: {'roomId': roomId, 'partnerNickname': '상대'},
+        arguments: {
+          'roomId': roomId,
+          'partnerNickname': data['partnerNickname']?.toString() ?? '',
+        },
       );
     }
   }

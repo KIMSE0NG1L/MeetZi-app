@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -579,6 +579,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         _partnerPhotoStorageKey = roomPhotoKey.trim();
       }
       _partnerNickname = room['partnerNickname']?.toString();
+      // API에서 닉네임을 받아오면 화면 타이틀도 업데이트 (알림 딥링크 진입 시 빈값 보정)
+      if (_partnerNickname != null && _partnerNickname!.isNotEmpty) {
+        _title = _partnerNickname!;
+      }
       final roomSeed = room['partnerAvatarSeed']?.toString();
       if (roomSeed != null && roomSeed.trim().isNotEmpty) {
         _partnerAvatarSeed = roomSeed.trim();
