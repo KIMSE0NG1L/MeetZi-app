@@ -223,6 +223,7 @@ class MeetzyBoardContent extends StatelessWidget {
                         tag: p.tag,
                         avatarWidget: p.avatarWidget,
                         avatarBgColor: p.avatarBgColor,
+                        borderColor: p.borderColor,
                         isNew: p.isNew,
                         onTap: () => onProfileTap?.call(index, p),
                       );
@@ -637,6 +638,7 @@ class MeetzyBoardProfileItem {
     required this.tag,
     required this.avatarWidget,
     this.avatarBgColor,
+    this.borderColor,
     this.isNew = false,
   });
 
@@ -644,6 +646,7 @@ class MeetzyBoardProfileItem {
   final String tag;
   final Widget avatarWidget;
   final Color? avatarBgColor;
+  final Color? borderColor;
   final bool isNew;
 }
 

@@ -856,6 +856,16 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     }
   }
 
+  /// 학교 교색 hex 문자열('#003380' or '003380')을 Flutter Color로 변환
+  Color? _parseSchoolColor(String? hex) {
+    if (hex == null || hex.isEmpty) return null;
+    final clean = hex.replaceAll('#', '').trim();
+    if (clean.length != 6) return null;
+    final value = int.tryParse('FF$clean', radix: 16);
+    if (value == null) return null;
+    return Color(value);
+  }
+
   Map<String, String> _parseAvatarOptions(dynamic raw) {
     if (raw == null) return {};
     final s = raw.toString();
@@ -981,6 +991,9 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                 nickname: displayName.isEmpty ? '-' : displayName,
                 tag: tag,
                 avatarWidget: _buildBoardAvatar(context, p),
+                borderColor: _parseSchoolColor(
+                  (p['user'] as Map<String, dynamic>?)?['schoolColor']?.toString(),
+                ),
                 isNew: i < 6,
               );
             }).toList(),

@@ -11,6 +11,7 @@ class MeetzyProfileCard extends StatelessWidget {
     required this.tag,
     required this.avatarWidget,
     this.avatarBgColor,
+    this.borderColor,
     this.isNew = false,
     this.onTap,
   });
@@ -19,6 +20,7 @@ class MeetzyProfileCard extends StatelessWidget {
   final String tag;
   final Widget avatarWidget;
   final Color? avatarBgColor;
+  final Color? borderColor;
   final bool isNew;
   final VoidCallback? onTap;
 
@@ -39,7 +41,8 @@ class MeetzyProfileCard extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(MeetzyDesignTokens.cardOuterRadius),
-            gradient: UniversityTheme.designPinkGradient,
+            gradient: borderColor != null ? null : UniversityTheme.designPinkGradient,
+            color: borderColor,
             boxShadow: MeetzyDesignTokens.cardOuterShadow,
           ),
           padding: const EdgeInsets.all(MeetzyDesignTokens.cardBorderWidth),
