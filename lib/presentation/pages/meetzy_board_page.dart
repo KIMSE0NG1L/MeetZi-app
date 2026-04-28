@@ -176,7 +176,36 @@ class MeetzyBoardContent extends StatelessWidget {
                       ),
                     ),
                   )
-                else
+                else ...[
+                  Row(
+                    children: [
+                      Text(
+                        '추천 프로필',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? Colors.white : const Color(0xFF111827),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          gradient: ThemeController.getActiveAccentGradient(),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          '${profiles.length}명',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
                   GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -199,6 +228,7 @@ class MeetzyBoardContent extends StatelessWidget {
                       );
                     },
                   ),
+                ],
                 if (isLoadingMore)
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 24),
@@ -243,7 +273,7 @@ class MeetzyBoardContent extends StatelessWidget {
   Widget _buildNoticeBanner(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -254,26 +284,35 @@ class MeetzyBoardContent extends StatelessWidget {
         },
         borderRadius: BorderRadius.circular(12),
         child: Ink(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1F2937) /* gray-800 */ : const Color(0xFFF3F4F6) /* gray-100 */,
+            gradient: isDark
+                ? null
+                : const LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [Color(0xFFFDF4FF), Color(0xFFFAF5FF)],
+                  ),
+            color: isDark ? const Color(0xFF1F2937) : null,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
+              color: isDark ? const Color(0xFF374151) : const Color(0xFFE9D5FF),
             ),
           ),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF374151) : Colors.white,
+                padding: const EdgeInsets.all(5),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFFE879F9), Color(0xFFA855F7)],
+                  ),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
                   LucideIcons.megaphone,
-                  size: 12,
-                  color: Color(0xFFE879F9), // notice accent
+                  size: 11,
+                  color: Colors.white,
                 ),
               ),
               const SizedBox(width: 8),
@@ -283,7 +322,7 @@ class MeetzyBoardContent extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white : const Color(0xFF111827),
+                    color: isDark ? Colors.white : const Color(0xFF6B21A8),
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -291,7 +330,7 @@ class MeetzyBoardContent extends StatelessWidget {
               Icon(
                 LucideIcons.chevronRight,
                 size: 14,
-                color: isDark ? Colors.grey.shade400 : Colors.grey.shade500,
+                color: isDark ? Colors.grey.shade400 : const Color(0xFFA855F7),
               ),
             ],
           ),

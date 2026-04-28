@@ -11,6 +11,7 @@ class MeetzyTicketChip extends StatelessWidget {
     this.emoji = '👀',
     this.backgroundColor,
     this.foregroundColor,
+    this.gradient,
   });
 
   final String label;
@@ -18,6 +19,7 @@ class MeetzyTicketChip extends StatelessWidget {
   final String emoji;
   final Color? backgroundColor;
   final Color? foregroundColor;
+  final Gradient? gradient;
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +29,8 @@ class MeetzyTicketChip extends StatelessWidget {
     return Container(
       padding: MeetzyDesignTokens.ticketChipPadding,
       decoration: BoxDecoration(
-        color: bg,
+        color: gradient != null ? null : bg,
+        gradient: gradient,
         borderRadius: BorderRadius.circular(MeetzyDesignTokens.ticketChipRadius),
         boxShadow: const [
           BoxShadow(color: Color(0x1A000000), blurRadius: 4, offset: Offset(0, 2)),
@@ -64,8 +67,12 @@ class MeetzyReadingTicketChip extends StatelessWidget {
       label: '열람권',
       count: count,
       emoji: '👀',
-      backgroundColor: const Color(0xFFDBEAFE),
-      foregroundColor: const Color(0xFF2563EB),
+      gradient: const LinearGradient(
+        colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      foregroundColor: Colors.white,
     );
   }
 }
@@ -82,8 +89,12 @@ class MeetzyRegisterTicketChip extends StatelessWidget {
       label: '등록권',
       count: count,
       emoji: '📝',
-      backgroundColor: const Color(0xFFFCE7F3),
-      foregroundColor: const Color(0xFFDB2777),
+      gradient: const LinearGradient(
+        colors: [Color(0xFFF472B6), Color(0xFFDB2777)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      foregroundColor: Colors.white,
     );
   }
 }
@@ -100,8 +111,12 @@ class MeetzyMatchingTicketChip extends StatelessWidget {
       label: '매칭권',
       count: count,
       emoji: '💝',
-      backgroundColor: const Color(0xFFEDE9FE),
-      foregroundColor: const Color(0xFF7C3AED),
+      gradient: const LinearGradient(
+        colors: [Color(0xFFA78BFA), Color(0xFF7C3AED)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      foregroundColor: Colors.white,
     );
   }
 }

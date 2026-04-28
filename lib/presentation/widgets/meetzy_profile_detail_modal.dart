@@ -196,8 +196,13 @@ class MeetzyProfileDetailModal extends StatelessWidget {
                                 shape: BoxShape.circle,
                                 color: profile.avatarBgColor ?? UniversityTheme.bgGradientStart,
                                 border: Border.all(color: Colors.white, width: 4),
-                                boxShadow: const [
-                                  BoxShadow(color: Color(0x40000000), blurRadius: 16, offset: Offset(0, 4)),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.45),
+                                    blurRadius: 20,
+                                    spreadRadius: 2,
+                                  ),
+                                  const BoxShadow(color: Color(0x40000000), blurRadius: 16, offset: Offset(0, 4)),
                                 ],
                               ),
                               child: ClipOval(
@@ -292,63 +297,108 @@ class MeetzyProfileDetailModal extends StatelessWidget {
                 const SizedBox(height: 16),
                 // 한 줄 소개 (ad rounded-2xl bg-gray-50)
                 if (profile.intro.isNotEmpty && profile.intro != '-') ...[
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: contentBg,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      '💬 ${profile.intro}',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        height: 1.5,
-                        color: onContent,
-                        decoration: TextDecoration.none,
-                        decorationColor: Colors.transparent,
-                      ) ?? TextStyle(fontSize: 14, height: 1.5, color: onContent, decoration: TextDecoration.none, decorationColor: Colors.transparent),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Stack(
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          color: contentBg,
+                          padding: const EdgeInsets.all(16),
+                          child: Text(
+                            '💬 ${profile.intro}',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              height: 1.5,
+                              color: onContent,
+                              decoration: TextDecoration.none,
+                              decorationColor: Colors.transparent,
+                            ) ?? TextStyle(fontSize: 14, height: 1.5, color: onContent, decoration: TextDecoration.none, decorationColor: Colors.transparent),
+                          ),
+                        ),
+                        Positioned(
+                          left: 0,
+                          top: 0,
+                          bottom: 0,
+                          child: Container(
+                            width: 3,
+                            decoration: BoxDecoration(
+                              gradient: ThemeController.getSheetGradient(),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 12),
                 ],
                 // 취미 / 요즘 빠진 것
                 if (profile.interest.isNotEmpty && profile.interest != '-') ...[
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: contentBg,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      '✨ 요즘 빠진 것: ${profile.interest}',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        height: 1.5,
-                        color: onContent,
-                        decoration: TextDecoration.none,
-                        decorationColor: Colors.transparent,
-                      ) ?? TextStyle(fontSize: 14, height: 1.5, color: onContent, decoration: TextDecoration.none, decorationColor: Colors.transparent),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Stack(
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          color: contentBg,
+                          padding: const EdgeInsets.all(16),
+                          child: Text(
+                            '✨ 요즘 빠진 것: ${profile.interest}',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              height: 1.5,
+                              color: onContent,
+                              decoration: TextDecoration.none,
+                              decorationColor: Colors.transparent,
+                            ) ?? TextStyle(fontSize: 14, height: 1.5, color: onContent, decoration: TextDecoration.none, decorationColor: Colors.transparent),
+                          ),
+                        ),
+                        Positioned(
+                          left: 0,
+                          top: 0,
+                          bottom: 0,
+                          child: Container(
+                            width: 3,
+                            decoration: BoxDecoration(
+                              gradient: ThemeController.getSheetGradient(),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 12),
                 ],
                 // 이상형
                 if (profile.idealType.isNotEmpty && profile.idealType != '-') ...[
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: contentBg,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      '💕 이상형: ${profile.idealType}',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        height: 1.5,
-                        color: onContent,
-                        decoration: TextDecoration.none,
-                        decorationColor: Colors.transparent,
-                      ) ?? TextStyle(fontSize: 14, height: 1.5, color: onContent, decoration: TextDecoration.none, decorationColor: Colors.transparent),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Stack(
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          color: contentBg,
+                          padding: const EdgeInsets.all(16),
+                          child: Text(
+                            '💕 이상형: ${profile.idealType}',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              height: 1.5,
+                              color: onContent,
+                              decoration: TextDecoration.none,
+                              decorationColor: Colors.transparent,
+                            ) ?? TextStyle(fontSize: 14, height: 1.5, color: onContent, decoration: TextDecoration.none, decorationColor: Colors.transparent),
+                          ),
+                        ),
+                        Positioned(
+                          left: 0,
+                          top: 0,
+                          bottom: 0,
+                          child: Container(
+                            width: 3,
+                            decoration: BoxDecoration(
+                              gradient: ThemeController.getSheetGradient(),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 12),

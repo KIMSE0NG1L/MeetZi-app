@@ -409,6 +409,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
               senderId: msg.senderId,
               isSystem: msg.isSystem,
               readAt: now,
+              createdAt: msg.createdAt,
             );
           });
           // ?뚯폆?쇰줈 ?쎌쓬 ?대깽?몃룄 媛숈씠 ?꾩넚
@@ -519,6 +520,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
               senderId: msg.senderId,
               isSystem: msg.isSystem,
               readAt: now,
+              createdAt: msg.createdAt,
             );
           }
         });
@@ -844,7 +846,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
   // AppDesign: 硫붿떆吏 ?꾩넚/?섏떊 ?쒓컖 (createdAt ?곗꽑)
   String _messageTime(_ChatMessage message) {
-    final dt = message.createdAt ?? message.readAt ?? DateTime.now();
+    final dt = message.createdAt ?? DateTime.now();
     final hour = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
     final ampm = dt.hour >= 12 ? '오후' : '오전';
     return '$ampm ${hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';

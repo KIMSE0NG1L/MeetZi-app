@@ -643,26 +643,31 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
 
   Widget _buildRandomMatchButton() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
       child: SizedBox(
         width: double.infinity,
-        height: 48,
+        height: 52,
         child: DecoratedBox(
           decoration: BoxDecoration(
             gradient: ThemeController.getActiveAccentGradient(),
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.16),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.40),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+              BoxShadow(
+                color: Colors.black.withOpacity(0.10),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
               onTap: _randomMatchLoading ? null : _onTapRandomMatch,
               child: Center(
                 child: _randomMatchLoading
@@ -678,8 +683,11 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
                     : const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          Icon(LucideIcons.zap,
+                              color: Colors.white, size: 16),
+                          SizedBox(width: 6),
                           Icon(LucideIcons.shuffle,
-                              color: Colors.white, size: 18),
+                              color: Colors.white, size: 17),
                           SizedBox(width: 8),
                           Text(
                             '\uB79C\uB364 \uB9E4\uCE6D',
@@ -687,6 +695,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
                               color: Colors.white,
                               fontWeight: FontWeight.w700,
                               fontSize: 15,
+                              letterSpacing: 0.3,
                             ),
                           ),
                         ],

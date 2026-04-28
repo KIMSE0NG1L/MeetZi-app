@@ -359,13 +359,9 @@ class _MessagesScreenState extends State<MessagesScreen>
                     onRefresh: () => _loadRooms(showLoader: false),
                     child: ListView.separated(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 8),
+                          horizontal: 12, vertical: 12),
                       itemCount: _rooms.length,
-                      separatorBuilder: (_, __) => Divider(
-                        height: 1,
-                        color:
-                            dark ? Colors.grey.shade800 : Colors.grey.shade200,
-                      ),
+                      separatorBuilder: (_, __) => const SizedBox(height: 6),
                       itemBuilder: (context, index) {
                         final room = _rooms[index];
                         final partner =
@@ -433,8 +429,15 @@ class _MessagesScreenState extends State<MessagesScreen>
                                 color: Colors.white),
                           ),
                           child: Material(
-                            color: Colors.transparent,
+                            color: dark
+                                ? const Color(0xFF1F2937)
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            elevation: 1.5,
+                            shadowColor:
+                                Colors.black.withOpacity(dark ? 0.18 : 0.08),
                             child: InkWell(
+                              borderRadius: BorderRadius.circular(16),
                               onTap: () {
                                 Navigator.of(context).pushNamed(
                                   AppRoutes.chatRoom,
@@ -451,8 +454,8 @@ class _MessagesScreenState extends State<MessagesScreen>
                                 });
                               },
                               child: Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 14, horizontal: 16),
                                 child: Row(
                                   children: [
                                     GestureDetector(
@@ -470,7 +473,10 @@ class _MessagesScreenState extends State<MessagesScreen>
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
                                           border: Border.all(
-                                              color: Colors.white, width: 2),
+                                              color: isActive
+                                                  ? primary.withOpacity(0.42)
+                                                  : Colors.grey.withOpacity(0.30),
+                                              width: 2.5),
                                           boxShadow: [
                                             BoxShadow(
                                               color: Colors.black
@@ -538,10 +544,20 @@ class _MessagesScreenState extends State<MessagesScreen>
                                                     vertical: 4,
                                                   ),
                                                   decoration: BoxDecoration(
-                                                    color: primary,
+                                                    gradient: ThemeController
+                                                        .getActiveAccentGradient(),
                                                     borderRadius:
                                                         BorderRadius.circular(
                                                             12),
+                                                    boxShadow: [
+                                                      BoxShadow(
+                                                        color: primary
+                                                            .withOpacity(0.40),
+                                                        blurRadius: 6,
+                                                        offset:
+                                                            const Offset(0, 2),
+                                                      ),
+                                                    ],
                                                   ),
                                                   child: Text(
                                                     unread.toString(),

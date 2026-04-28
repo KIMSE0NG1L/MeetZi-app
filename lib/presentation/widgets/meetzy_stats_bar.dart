@@ -30,13 +30,21 @@ class MeetzyStatsBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primary = Theme.of(context).colorScheme.primary;
     final onSurface = isDark ? Colors.white : UniversityTheme.onSurface;
     final bg = isDark ? const Color(0xFF1F2937) : UniversityTheme.surface;
 
     return Container(
       padding: MeetzyDesignTokens.statsBarPadding,
       decoration: BoxDecoration(
-        color: bg,
+        gradient: isDark
+            ? null
+            : LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Colors.white, primary.withValues(alpha: 0.06)],
+              ),
+        color: isDark ? bg : null,
         borderRadius: BorderRadius.circular(MeetzyDesignTokens.statsBarRadius),
         boxShadow: MeetzyDesignTokens.statsBarShadow,
       ),
@@ -49,7 +57,7 @@ class MeetzyStatsBar extends StatelessWidget {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFFFBBF24).withValues(alpha: 0.3),
+                  color: primary.withValues(alpha: 0.28),
                   blurRadius: 15,
                 ),
               ],

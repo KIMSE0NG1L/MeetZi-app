@@ -46,7 +46,7 @@ class MeetzyProfileCard extends StatelessWidget {
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(MeetzyDesignTokens.radiusCardInner),
-              color: surface.withValues(alpha: isDark ? 0.95 : 0.98),
+              color: isDark ? const Color(0xFF1B2230) : const Color(0xFFFFF7F8),
               boxShadow: MeetzyDesignTokens.cardInnerShadow,
             ),
             padding: MeetzyDesignTokens.cardInnerPadding,
@@ -91,7 +91,7 @@ class MeetzyProfileCard extends StatelessWidget {
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: isDark ? Colors.white24 : Colors.white70,
+                                color: isDark ? Colors.white24 : primary.withValues(alpha: 0.38),
                                 width: MeetzyDesignTokens.cardAvatarRingWidth,
                               ),
                               boxShadow: [
@@ -181,6 +181,30 @@ class MeetzyProfileCard extends StatelessWidget {
                     );
                   },
                 ),
+                if (isNew)
+                  Positioned(
+                    top: MeetzyDesignTokens.badgeTop,
+                    right: MeetzyDesignTokens.badgeRight,
+                    child: Container(
+                      padding: MeetzyDesignTokens.badgePadding,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF10B981), Color(0xFF059669)],
+                        ),
+                        borderRadius: BorderRadius.circular(MeetzyDesignTokens.radiusFull),
+                        boxShadow: MeetzyDesignTokens.badgeShadow,
+                      ),
+                      child: const Text(
+                        'NEW',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: MeetzyDesignTokens.badgeFontSize,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
