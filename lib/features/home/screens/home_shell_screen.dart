@@ -11,11 +11,9 @@ import 'package:nearo_app/features/matching_board/screens/matching_board_screen.
 import 'package:nearo_app/features/matching_board/screens/mailbox_screen.dart';
 import 'package:nearo_app/features/matching_board/widgets/match_card_avatar.dart';
 import 'package:nearo_app/features/messages/screens/messages_screen.dart';
-import 'package:nearo_app/features/notifications/screens/notifications_screen.dart';
 import 'package:nearo_app/features/notifications/data/pending_match_accept_store.dart';
 import 'package:nearo_app/features/notifications/data/pending_take_note_store.dart';
 import 'package:nearo_app/features/profile/screens/my_profile_screen.dart';
-import 'package:nearo_app/features/ratings/screens/ratings_screen.dart';
 import 'package:nearo_app/features/settings/screens/settings_screen.dart';
 import 'package:nearo_app/features/matching_board/utils/board_note_sheet_launcher.dart';
 import 'package:nearo_app/shared/api/api_client.dart';
@@ -48,30 +46,48 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
   bool _randomMatchLoading = false;
   final List<String> _recentRandomUserIds = <String>[];
   final MatchingRepository _matchingRepository = MatchingRepository();
+  int _matchingTicket = 0;
+  int _inboxCount = 0;
 
   List<Widget> get _pages => [
         const CommunityTabScreen(),
         const MessagesScreen(),
-        MatchingBoardScreen(refreshTrigger: _boardRefreshTrigger),
+        MatchingBoardScreen(
+          refreshTrigger: _boardRefreshTrigger,
+          onRandomMatchTap: _onTapRandomMatch,
+        ),
         const MyProfileScreen(),
       ];
-
-  static const _purpleGradient = LinearGradient(
-    begin: Alignment.centerLeft,
-    end: Alignment.centerRight,
-    colors: [Color(0xFFA855F7), Color(0xFF6366F1)], // purple-500 to indigo-500
-  );
 
   @override
   void initState() {
     super.initState();
     _loadThemeAndProfile();
     _registerPushTokenIfNeeded();
+    _fetchMatchingStats();
     PendingTakeNoteStore.instance.pending.addListener(_onPendingTakeNote);
     PendingMatchAcceptStore.instance.pending
         .addListener(_onPendingMatchAccepted);
     _checkCoachMark();
     _checkAcceptedMatchesOnLaunch();
+  }
+
+  Future<void> _fetchMatchingStats() async {
+    try {
+      final summary = await _matchingBoardRepository.fetchMySummary();
+      if (!mounted) return;
+      setState(() => _matchingTicket = summary.tickets.matchingTicket);
+    } catch (e) {
+      debugPrint('Failed to fetch matching ticket: $e');
+    }
+    try {
+      final list = await _matchingBoardRepository.fetchMyTakeNoteRequests();
+      if (!mounted) return;
+      final count = list.where((r) => r['status']?.toString() == 'pending').length;
+      setState(() => _inboxCount = count);
+    } catch (e) {
+      debugPrint('Failed to fetch inbox count: $e');
+    }
   }
 
   /// 로그인 후 홈 진입 시 FCM 토큰을 서버에 등록 (매칭 요청 등 알림 수신용)
@@ -334,8 +350,8 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
 
   @override
   void didPopNext() {
-    // 설명 주석
     _boardRefreshTrigger.value++;
+    _fetchMatchingStats();
   }
 
   Future<void> _loadThemeAndProfile() async {
@@ -373,9 +389,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
   }
 
   Widget _buildTopBar() {
-    final isRanking = _currentIndex == 0;
-    final gradient =
-        isRanking ? _purpleGradient : ThemeController.getHeaderGradient();
+    final gradient = ThemeController.getHeaderGradient();
     String title = '';
     String? subtitle;
     switch (_currentIndex) {
@@ -455,15 +469,61 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
                 ],
               ),
             ),
-            IconButton(
-              icon: const Icon(LucideIcons.bell, color: Colors.white, size: 26),
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                      builder: (_) => const NotificationsScreen()),
-                );
-              },
-              tooltip: '알림',
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(LucideIcons.ticket, color: Colors.white, size: 13),
+                  const SizedBox(width: 4),
+                  Text(
+                    '$_matchingTicket',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 2),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                IconButton(
+                  icon: const Icon(LucideIcons.mail, color: Colors.white, size: 26),
+                  onPressed: _openMatchingInboxModal,
+                  tooltip: '매칭대기함',
+                ),
+                if (_inboxCount > 0)
+                  Positioned(
+                    right: 6,
+                    top: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                      child: Center(
+                        child: Text(
+                          _inboxCount > 99 ? '99+' : '$_inboxCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             IconButton(
               icon: const Icon(LucideIcons.settings,
@@ -733,13 +793,6 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
               _buildBottomNav(),
             ],
           ),
-          if (_currentIndex == 2)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: MediaQuery.of(context).padding.bottom + 88,
-              child: _buildRandomMatchButton(),
-            ),
           if (_showCoachMark)
             MeetzyCoachMark(
               onComplete: () => setState(() => _showCoachMark = false),

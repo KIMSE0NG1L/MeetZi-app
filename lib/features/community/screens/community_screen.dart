@@ -413,6 +413,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
+    final headerGradient = ThemeController.getHeaderGradient();
+    final accentGradient = ThemeController.getActiveAccentGradient();
+    final primary = Theme.of(context).colorScheme.primary;
     // ?꾩껜(?쒓렇) ?쇰뱶???뚮쭔 踰좎뒪??HOT ?곷떒 ?몄텧 (내 글쨌내 댓글 ?꾪꽣 以묒뿉??誘몃끂異?
     final showBest = _selectedScope.isEmpty;
     final sortedByLikes = List<Map<String, dynamic>>.from(_posts)
@@ -434,12 +437,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
           // 헤더
           Container(
             width: double.infinity,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [Color(0xFFA855F7), Color(0xFF6366F1)],
-              ),
+            decoration: BoxDecoration(
+              gradient: headerGradient,
             ),
             child: SafeArea(
               bottom: false,
@@ -588,18 +587,10 @@ class _CommunityScreenState extends State<CommunityScreen> {
         height: 56,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                NearoTheme.designRose300,
-                NearoTheme.designPink300,
-                NearoTheme.designRose400,
-              ],
-            ),
+            gradient: accentGradient,
           boxShadow: [
             BoxShadow(
-              color: NearoTheme.designPink500.withOpacity(0.4),
+              color: primary.withOpacity(0.4),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),

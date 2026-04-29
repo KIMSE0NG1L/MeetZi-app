@@ -3,7 +3,6 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/core/theme/meetzy_design_tokens.dart';
 import 'package:nearo_app/core/theme/university_theme.dart';
 import 'package:nearo_app/core/theme/app_text_styles.dart';
-import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/presentation/widgets/meetzy_profile_card.dart';
 import 'package:nearo_app/presentation/widgets/meetzy_stats_bar.dart';
@@ -13,39 +12,21 @@ import 'package:nearo_app/features/settings/screens/notice_list_screen.dart';
 class MeetzyBoardContent extends StatelessWidget {
   const MeetzyBoardContent({
     super.key,
-    this.myNickname,
-    this.myAvatarWidget,
-    this.matchingTicket = 0,
-    this.receivedRequestCount = 0,
     this.profiles = const [],
     this.onProfileTap,
     this.onRefresh,
-    this.onMatchingInboxTap,
     this.onDeveloperMatchTap,
-    this.onLoadAllUniversities,
-    this.onLoadMySchool,
-    this.isShowingAllUniversities = false,
-    this.mySchoolName,
-    this.onFilterTap,
+    this.onRandomMatchTap,
     this.isLoading = false,
     this.scrollController,
     this.isLoadingMore = false,
   });
 
-  final String? myNickname;
-  final Widget? myAvatarWidget;
-  final int matchingTicket;
-  final int receivedRequestCount;
   final List<MeetzyBoardProfileItem> profiles;
   final void Function(int index, MeetzyBoardProfileItem item)? onProfileTap;
   final Future<void> Function()? onRefresh;
-  final VoidCallback? onMatchingInboxTap;
   final VoidCallback? onDeveloperMatchTap;
-  final VoidCallback? onLoadAllUniversities;
-  final VoidCallback? onLoadMySchool;
-  final bool isShowingAllUniversities;
-  final String? mySchoolName;
-  final VoidCallback? onFilterTap;
+  final VoidCallback? onRandomMatchTap;
   final bool isLoading;
   final ScrollController? scrollController;
   final bool isLoadingMore;
@@ -71,86 +52,25 @@ class MeetzyBoardContent extends StatelessWidget {
               children: [
                 _buildNoticeBanner(context),
                 const SizedBox(height: MeetzyDesignTokens.space4),
-                MeetzyStatsBar(
-                  nickname: myNickname ?? '나',
-                  avatarWidget: myAvatarWidget ?? _defaultAvatar(),
-                  matchingTicket: matchingTicket,
-                  receivedRequestCount: receivedRequestCount,
-                  onMatchingInboxTap: onMatchingInboxTap,
-                ),
-                if (onLoadAllUniversities != null && onLoadMySchool != null) ...[
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(
-                        LucideIcons.school,
-                        size: 14,
-                        color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        isShowingAllUniversities ? '전체 대학' : (mySchoolName ?? '우리 학교'),
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-                const SizedBox(height: MeetzyDesignTokens.space4),
                 Row(
                   children: [
                     Expanded(
                       child: _ActionButton(
                         onTap: onDeveloperMatchTap,
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF6366F1), Color(0xFFE879F9)],
-                        ),
+                        color: Colors.white,
+                        borderColor: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
                         label: '개발자와\n매칭 신청',
-                        textColor: Colors.white,
+                        textColor: const Color(0xFF111827),
                       ),
                     ),
                     const SizedBox(width: 10),
-                    if (onLoadAllUniversities != null && onLoadMySchool != null) ...[
-                      Flexible(
-                        child: _ActionButton(
-                          onTap: isShowingAllUniversities ? onLoadMySchool : onLoadAllUniversities,
-                          color: Colors.white,
-                          borderColor: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
-                          icon: LucideIcons.school,
-                          label: isShowingAllUniversities ? '우리 대학\n불러오기' : '전체 대학\n불러오기',
-                          textColor: const Color(0xFF111827),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                    ],
-                    Material(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(18),
-                      child: InkWell(
-                        onTap: onFilterTap,
-                        borderRadius: BorderRadius.circular(18),
-                        child: Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(
-                              color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
-                            ),
-                            boxShadow: const [
-                              BoxShadow(color: Color(0x24000000), blurRadius: 8, offset: Offset(0, 2)),
-                            ],
-                          ),
-                          alignment: Alignment.center,
-                          child: Icon(
-                            LucideIcons.funnel,
-                            size: 20,
-                            color: const Color(0xFF111827),
-                          ),
-                        ),
+                    Expanded(
+                      child: _ActionButton(
+                        onTap: onRandomMatchTap,
+                        gradient: ThemeController.getActiveAccentGradient(),
+                        icon: LucideIcons.shuffle,
+                        label: '랜덤\n매칭',
+                        textColor: Colors.white,
                       ),
                     ),
                   ],
@@ -224,7 +144,6 @@ class MeetzyBoardContent extends StatelessWidget {
                         avatarWidget: p.avatarWidget,
                         avatarBgColor: p.avatarBgColor,
                         borderColor: p.borderColor,
-                        isNew: p.isNew,
                         onTap: () => onProfileTap?.call(index, p),
                       );
                     },
@@ -261,13 +180,6 @@ class MeetzyBoardContent extends StatelessWidget {
           Expanded(child: isLoading ? const Center(child: CircularProgressIndicator()) : body),
         ],
       ),
-    );
-  }
-
-  static Widget _defaultAvatar() {
-    return Container(
-      color: UniversityTheme.bgGradientStart,
-      child: const Icon(LucideIcons.user, size: 32, color: Colors.grey),
     );
   }
 
@@ -546,7 +458,6 @@ class MeetzyBoardPage extends StatelessWidget {
                                     tag: p.tag,
                                     avatarWidget: p.avatarWidget,
                                     avatarBgColor: p.avatarBgColor,
-                                    isNew: p.isNew,
                                     onTap: () => onProfileTap?.call(index, p),
                                   );
                                 },
@@ -639,7 +550,6 @@ class MeetzyBoardProfileItem {
     required this.avatarWidget,
     this.avatarBgColor,
     this.borderColor,
-    this.isNew = false,
   });
 
   final String nickname;
@@ -647,7 +557,6 @@ class MeetzyBoardProfileItem {
   final Widget avatarWidget;
   final Color? avatarBgColor;
   final Color? borderColor;
-  final bool isNew;
 }
 
 

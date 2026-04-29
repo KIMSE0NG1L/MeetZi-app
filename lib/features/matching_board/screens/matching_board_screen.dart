@@ -254,20 +254,22 @@ Future<void> showBoardNoteSheet(
 }
 
 class MatchingBoardScreen extends StatelessWidget {
-  const MatchingBoardScreen({super.key, this.refreshTrigger});
+  const MatchingBoardScreen({super.key, this.refreshTrigger, this.onRandomMatchTap});
 
   final ValueNotifier<int>? refreshTrigger;
+  final VoidCallback? onRandomMatchTap;
 
   @override
   Widget build(BuildContext context) {
-    return _MatchingBoardScreenBody(refreshTrigger: refreshTrigger);
+    return _MatchingBoardScreenBody(refreshTrigger: refreshTrigger, onRandomMatchTap: onRandomMatchTap);
   }
 }
 
 class _MatchingBoardScreenBody extends StatefulWidget {
-  const _MatchingBoardScreenBody({this.refreshTrigger});
+  const _MatchingBoardScreenBody({this.refreshTrigger, this.onRandomMatchTap});
 
   final ValueNotifier<int>? refreshTrigger;
+  final VoidCallback? onRandomMatchTap;
 
   @override
   State<_MatchingBoardScreenBody> createState() => _MatchingBoardScreenBodyState();
@@ -967,22 +969,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
         return Scaffold(
           backgroundColor: Colors.transparent,
           body: MeetzyBoardContent(
-            myNickname: myNickname,
-            myAvatarWidget: meProfile != null
-                ? FittedBox(
-                    fit: BoxFit.cover,
-                    child: SizedBox(
-                      width: 64,
-                      height: 64,
-                      child: _buildBoardAvatar(context, meProfile),
-                    ),
-                  )
-                : null,
-            matchingTicket: _myTickets?.matchingTicket ?? 0,
-            receivedRequestCount: _receivedRequestCount,
-            profiles: filteredProfiles.asMap().entries.map((e) {
-              final i = e.key;
-              final p = e.value;
+            profiles: filteredProfiles.map((p) {
               final nickname = p['nickname']?.toString().trim();
               final displayName = (nickname != null && nickname.isNotEmpty)
                   ? nickname
@@ -995,63 +982,16 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                 borderColor: _parseSchoolColor(
                   (p['user'] as Map<String, dynamic>?)?['schoolColor']?.toString(),
                 ),
-                isNew: i < 6,
               );
             }).toList(),
             onProfileTap: (index, _) => _openNoteSheet(context, index, filteredProfiles, myUserId),
             onRefresh: () async {
-              if (_isShowingAllUniversities) {
-                await _fetchProfilesAllUniversities();
-              } else {
-                await _fetchProfiles();
-              }
+              await _fetchProfilesAllUniversities();
               await _fetchMySummary();
               await _fetchReceivedRequestCount();
             },
-            onMatchingInboxTap: () {
-              final size = MediaQuery.of(context).size;
-              final padding = EdgeInsets.symmetric(
-                horizontal: size.width > 400 ? 24 : 16,
-                vertical: 48,
-              );
-              showGeneralDialog<void>(
-                context: context,
-                barrierDismissible: true,
-                barrierColor: Colors.black54,
-                barrierLabel: '?リ린',
-                pageBuilder: (_, __, ___) => Padding(
-                  padding: padding,
-                  child: Center(
-                    child: Material(
-                      color: Colors.transparent,
-                      child: Container(
-                        constraints: BoxConstraints(
-                          maxWidth: 420,
-                          maxHeight: size.height * 0.75,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? const Color(0xFF1F2937)
-                              : Colors.white,
-                          borderRadius: BorderRadius.circular(32),
-                          boxShadow: const [
-                            BoxShadow(color: Color(0x40000000), blurRadius: 24, offset: Offset(0, 8)),
-                          ],
-                        ),
-                        clipBehavior: Clip.antiAlias,
-                        child: const MailboxScreen(isModal: true),
-                      ),
-                    ),
-                  ),
-                ),
-              ).then((_) => _fetchReceivedRequestCount());
-            },
             onDeveloperMatchTap: _onDeveloperMatchTap,
-            onLoadAllUniversities: _fetchProfilesAllUniversities,
-            onLoadMySchool: _fetchProfiles,
-            isShowingAllUniversities: _isShowingAllUniversities,
-            mySchoolName: mySchoolNameOrNull,
-            onFilterTap: () => _openFilterDialog(displayProfiles),
+            onRandomMatchTap: widget.onRandomMatchTap,
             isLoading: _loading,
           ),
         );
