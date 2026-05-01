@@ -1013,6 +1013,12 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       final detailData = _profileMapToDetailData(tappedProfile);
       final (photoUrlForEnlarge, avatarUrlForEnlarge) = getEnlargeUrlsFromProfile(tappedProfile);
       final dark = Theme.of(context).brightness == Brightness.dark;
+
+      // 프로필 카드 오픈 전 전면 광고 표시
+      final interstitial = InterstitialAdService();
+      await interstitial.load();
+      if (mounted) await interstitial.show();
+
       // 설명 주석
       await showGeneralDialog<void>(
         context: context,
@@ -1129,11 +1135,6 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
       await _repository.takeNote(profileId, message: trimmed);
       if (!mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('요청을 보냈어요. 상대가 수락하면 매칭돼요.')));
-      // 매칭 신청 성공 시 전면 광고 표시
-      final interstitial = InterstitialAdService();
-      await interstitial.load();
-      await Future.delayed(const Duration(milliseconds: 500));
-      if (mounted) await interstitial.show();
       if (_isShowingAllUniversities) {
         _fetchProfilesAllUniversities();
       } else {

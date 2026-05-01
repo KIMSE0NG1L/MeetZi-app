@@ -22,6 +22,8 @@ import 'package:nearo_app/features/auth/data/environment_status_repository.dart'
 import 'package:nearo_app/presentation/widgets/meetzy_coach_mark.dart';
 import 'package:nearo_app/features/matching/data/matching_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:nearo_app/core/payment/matching_ticket_service.dart';
+import 'package:nearo_app/features/shop/screens/shop_screen.dart';
 
 /// 설명 주석
 class HomeShellScreen extends StatefulWidget {
@@ -57,6 +59,10 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
           onRandomMatchTap: _onTapRandomMatch,
         ),
         const MyProfileScreen(),
+        ShopScreen(
+          currentTickets: _matchingTicket,
+          onTicketUpdated: _fetchMatchingStats,
+        ),
       ];
 
   @override
@@ -65,6 +71,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
     _loadThemeAndProfile();
     _registerPushTokenIfNeeded();
     _fetchMatchingStats();
+    _initRevenueCat();
     PendingTakeNoteStore.instance.pending.addListener(_onPendingTakeNote);
     PendingMatchAcceptStore.instance.pending
         .addListener(_onPendingMatchAccepted);
@@ -87,6 +94,20 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
       setState(() => _inboxCount = count);
     } catch (e) {
       debugPrint('Failed to fetch inbox count: $e');
+    }
+  }
+
+  /// RevenueCat 초기화 (매칭권 결제용)
+  Future<void> _initRevenueCat() async {
+    try {
+      final profile = await _authRepository.getProfile();
+      final userId = (profile['user'] as Map?)?['id']?.toString() ??
+          profile['id']?.toString();
+      if (userId != null && userId.isNotEmpty) {
+        await MatchingTicketService.initialize(userId);
+      }
+    } catch (e) {
+      debugPrint('[HomeShell] RevenueCat init failed: $e');
     }
   }
 
@@ -546,12 +567,13 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
     const inactiveColor = Color(0xFF9CA3AF); // gray-400 (last)
     // last: active tab = bg-gradient-to-br themeColors.gradient (from-rose-300 via-pink-300 to-rose-400), text white
     final activeGradient = ThemeController.getActiveAccentGradient();
-    final labels = ['커뮤니티', '메시지함', '홈', 'My프로필'];
+    final labels = ['커뮤니티', '메시지함', '홈', 'My프로필', '상점'];
     final icons = [
       LucideIcons.users,
       LucideIcons.messageCircle,
       LucideIcons.house,
       LucideIcons.user,
+      LucideIcons.store,
     ];
     return Container(
       width: double.infinity,
@@ -571,7 +593,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: List.generate(4, (i) {
+            children: List.generate(5, (i) {
               final active = _currentIndex == i;
               return Expanded(
                 child: Material(
@@ -770,7 +792,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
 
   @override
   Widget build(BuildContext context) {
-    final hideTopBarForCommunity = _currentIndex == 0;
+    final hideTopBar = _currentIndex == 0 || _currentIndex == 4;
     return Scaffold(
       backgroundColor: Theme.of(context).brightness == Brightness.dark
           ? const Color(0xFF111827)
@@ -780,7 +802,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (!hideTopBarForCommunity) _buildTopBar(),
+              if (!hideTopBar) _buildTopBar(),
               Expanded(
                 child: PageView.builder(
                   controller: _pageController,

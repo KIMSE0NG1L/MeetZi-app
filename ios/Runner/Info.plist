@@ -28,6 +28,22 @@
 				<string>nearo</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<!-- TODO: YOUR_KAKAO_NATIVE_APP_KEY를 카카오 네이티브 앱 키로 교체 -->
+				<string>kakao6e0f10237e9d6d7472076f4257c4f88a</string>
+			</array>
+		</dict>
+	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>kakaokompassauth</string>
+		<string>kakaolink</string>
+		<!-- TODO: YOUR_KAKAO_NATIVE_APP_KEY를 카카오 네이티브 앱 키로 교체 -->
+		<string>kakao6e0f10237e9d6d7472076f4257c4f88a</string>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>

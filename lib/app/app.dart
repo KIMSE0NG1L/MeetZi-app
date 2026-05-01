@@ -281,21 +281,25 @@ class _NearoAppState extends State<NearoApp> {
       final token = uri.queryParameters['token'];
       final refreshToken = uri.queryParameters['refresh_token'];
       if (token != null && token.isNotEmpty) {
-        ReviewerFlowStorage.clear().then((_) {
-          if (refreshToken != null && refreshToken.isNotEmpty) {
-            _authRepository.saveTokens(
-                accessToken: token, refreshToken: refreshToken);
-          } else {
-            _tokenStorage.saveAccessToken(token);
-          }
-        });
+        // 토큰 저장 완료 후 세션 복원
+        _saveTokensAndRestore(token, refreshToken, isInitial: isInitial);
       }
-      // 코드 시작이 아닌 동안(앱이 이미 떠 있는 상태에서 링크로 복귀) 세션 복원 분기로 이동
-      if (!isInitial) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _restoreSession();
-        });
-      }
+    }
+  }
+
+  Future<void> _saveTokensAndRestore(String token, String? refreshToken, {bool isInitial = false}) async {
+    await ReviewerFlowStorage.clear();
+    if (refreshToken != null && refreshToken.isNotEmpty) {
+      await _authRepository.saveTokens(
+          accessToken: token, refreshToken: refreshToken);
+    } else {
+      await _tokenStorage.saveAccessToken(token);
+    }
+    // 앱이 이미 떠 있는 상태에서 링크로 복귀한 경우 세션 복원
+    if (!isInitial) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _restoreSession();
+      });
     }
   }
 

@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/app/app_routes.dart';
+import 'package:nearo_app/features/auth/data/apple_auth_service.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/settings/screens/open_source_licenses_screen.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
@@ -465,7 +468,51 @@ class _LoginScreenState extends State<LoginScreen> {
                             );
                           },
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
+                        // ── Apple 로그인 버튼 (iOS 전용) ──
+                        if (Platform.isIOS)
+                          TweenAnimationBuilder<double>(
+                            tween: Tween(begin: 0.0, end: 1.0),
+                            duration: const Duration(milliseconds: 600),
+                            builder: (context, value, child) {
+                              return Opacity(
+                                opacity: value.clamp(0.0, 1.0),
+                                child: Transform.translate(
+                                  offset: Offset(0, 20 * (1 - value)),
+                                  child: Material(
+                                    color: Colors.black,
+                                    borderRadius: BorderRadius.circular(24),
+                                    elevation: 8,
+                                    shadowColor: Colors.black.withValues(alpha: 0.3),
+                                    child: InkWell(
+                                      onTap: _handleAppleLogin,
+                                      borderRadius: BorderRadius.circular(24),
+                                      child: Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.symmetric(vertical: 20),
+                                        alignment: Alignment.center,
+                                        child: const Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(LucideIcons.apple, color: Colors.white, size: 22),
+                                            SizedBox(width: 8),
+                                            Text(
+                                              'Apple로 계속하기',
+                                              style: TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                         if (_showReviewerLogin) ...[
                           OutlinedButton(
                             onPressed: _openReviewerLoginDialog,
@@ -539,6 +586,22 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!launched && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('카카오 로그인 연결에 실패했습니다.')),
+      );
+    }
+  }
+
+  Future<void> _handleAppleLogin() async {
+    final appleAuthService = AppleAuthService();
+    final success = await appleAuthService.signInWithApple();
+    if (!mounted) return;
+    if (success) {
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        AppRoutes.onboarding,
+        (route) => false,
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Apple 로그인에 실패했습니다.')),
       );
     }
   }
