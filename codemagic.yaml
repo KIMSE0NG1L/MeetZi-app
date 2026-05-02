@@ -1,18 +1,36 @@
 workflows:
   ios-release:
     name: iOS Release Build
+    max_build_duration: 60
+    instance_type: mac_mini_m1
     environment:
       flutter: stable
       xcode: latest
+      cocoapods: default
+      vars:
+        BUNDLE_ID: com.nearo.nearoApp
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.nearo.nearoApp
+        bundle_identifier: $BUNDLE_ID
+
+    cache:
+      cache_paths:
+        - ~/.pub-cache
+        - ~/Library/Caches/CocoaPods
+        - ios/Pods
 
     scripts:
-      - flutter pub get
+      - name: Install Flutter dependencies
+        script: flutter pub get
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios
+          pod install
       - name: Set up code signing settings on Xcode project
         script: xcode-project use-profiles
-      - flutter build ipa --release
+      - name: Build signed IPA
+        script: flutter build ipa --release
 
     artifacts:
       - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
