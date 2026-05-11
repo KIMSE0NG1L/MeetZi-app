@@ -35,7 +35,7 @@ workflows:
       - name: Set up code signing settings on Xcode project
         script: xcode-project use-profiles
       - name: Build signed IPA
-        script: flutter build ipa --release --export-options-plist=$HOME/export_options.plist
+        script: flutter build ipa --release
 
     artifacts:
       - build/ios/ipa/*.ipa
