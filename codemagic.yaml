@@ -7,6 +7,11 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
+      vars:
+        BUNDLE_ID: com.nearo.nearoApp
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: $BUNDLE_ID
     cache:
       cache_paths:
         - ~/.pub-cache
@@ -20,6 +25,12 @@ workflows:
         script: |
           cd ios
           pod install
+      - name: Initialize keychain
+        script: keychain initialize
+      - name: Add certificates to keychain
+        script: keychain add-certificates
+      - name: Set up code signing settings on Xcode project
+        script: xcode-project use-profiles
       - name: Build signed IPA
         script: flutter build ipa --release --export-method app-store
 
