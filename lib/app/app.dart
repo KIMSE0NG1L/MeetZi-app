@@ -146,45 +146,17 @@ class _NearoAppState extends State<NearoApp> {
       if (await ReviewerFlowStorage.isActive()) {
         route = await _reviewerRouteAfterLogin();
       } else {
-      try {
-        // profile과 environment를 병렬로 요청하여 시작 시간 단축
-        final profileFuture = _authRepository.getProfile();
-        final envFuture =
-            _environmentStatusRepository.getMyEnvironmentStatus();
-
-        final profile = await profileFuture;
-        final user = (profile['user'] as Map?) ?? profile;
-        final hasProfile = user['nickname'] != null;
-        final hasAffiliation =
-            (user['affiliationText'] as String?)?.trim().isNotEmpty ?? false;
-        if (!hasProfile || !hasAffiliation) {
-          route = AppRoutes.universitySelect;
-        } else if (!_hasAvatarConfigured(user)) {
-          route = AppRoutes.avatarSetup;
+        // 캐시된 라우트가 home이면 서버 응답 기다리지 않고 즉시 진입
+        final cachedRoute = await _tokenStorage.readCachedRoute();
+        if (cachedRoute == AppRoutes.home ||
+            cachedRoute == AppRoutes.privacyConsentGate) {
+          route = cachedRoute;
+          // 서버 확인은 백그라운드에서 수행
+          _verifyRouteInBackground(route!);
         } else {
-          try {
-            final status = await envFuture;
-            if (status['environmentId'] == null) {
-              route = AppRoutes.environment;
-            } else if (status['verified'] == true) {
-              route = await _routeAfterVerified();
-            } else {
-              route = AppRoutes.environment;
-            }
-          } catch (e) {
-            debugPrint('Error getting environment status: $e');
-            route = AppRoutes.environment;
-          }
+          // 캐시가 없거나 설정 미완료 → 서버에서 확인 (기존 로직)
+          route = await _resolveRouteFromServer();
         }
-      } catch (e) {
-        debugPrint('Error fetching profile during init: $e');
-        if (_isAuthFailure(e)) {
-          await _tokenStorage.clear();
-          route = AppRoutes.onboarding;
-        } else {
-          route = await _routeAfterVerified();
-        }
-      }
       }
     }
     // 설명 주석
@@ -194,6 +166,66 @@ class _NearoAppState extends State<NearoApp> {
           Duration(milliseconds: _minSplashDurationMs - elapsed));
     }
     if (mounted) setState(() => _initialRoute = route);
+  }
+
+  /// 서버에서 프로필/환경 상태를 확인하여 라우트 결정 (최초 진입 or 캐시 미스 시)
+  Future<String> _resolveRouteFromServer() async {
+    try {
+      // profile과 environment를 병렬로 요청하여 시작 시간 단축
+      final profileFuture = _authRepository.getProfile();
+      final envFuture =
+          _environmentStatusRepository.getMyEnvironmentStatus();
+
+      final profile = await profileFuture;
+      final user = (profile['user'] as Map?) ?? profile;
+      final hasProfile = user['nickname'] != null;
+      final hasAffiliation =
+          (user['affiliationText'] as String?)?.trim().isNotEmpty ?? false;
+      if (!hasProfile || !hasAffiliation) {
+        return AppRoutes.universitySelect;
+      } else if (!_hasAvatarConfigured(user)) {
+        return AppRoutes.avatarSetup;
+      } else {
+        try {
+          final status = await envFuture;
+          if (status['environmentId'] == null) {
+            return AppRoutes.environment;
+          } else if (status['verified'] == true) {
+            final r = await _routeAfterVerified();
+            await _tokenStorage.saveCachedRoute(r);
+            return r;
+          } else {
+            return AppRoutes.environment;
+          }
+        } catch (e) {
+          debugPrint('Error getting environment status: $e');
+          return AppRoutes.environment;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching profile during init: $e');
+      if (_isAuthFailure(e)) {
+        await _tokenStorage.clear();
+        return AppRoutes.onboarding;
+      } else {
+        return await _routeAfterVerified();
+      }
+    }
+  }
+
+  /// 캐시된 라우트로 빠르게 진입한 후 백그라운드에서 상태 검증
+  Future<void> _verifyRouteInBackground(String cachedRoute) async {
+    try {
+      final correctRoute = await _resolveRouteFromServer();
+      if (correctRoute != cachedRoute && mounted) {
+        // 상태가 변경됨 → 올바른 화면으로 리라우팅
+        await _tokenStorage.saveCachedRoute(correctRoute);
+        _navigatorKey.currentState
+            ?.pushNamedAndRemoveUntil(correctRoute, (_) => false);
+      }
+    } catch (e) {
+      debugPrint('Background route verification failed: $e');
+    }
   }
 
   Future<void> _initDeepLinks() async {

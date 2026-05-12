@@ -228,13 +228,19 @@ class _PrivacyConsentGateScreenState extends State<PrivacyConsentGateScreen>
                             _DocButton(
                               icon: LucideIcons.fileText,
                               label: '서비스 이용약관 보기',
-                              onTap: () => _showDocModal('terms'),
+                              onTap: () => launchUrl(
+                                Uri.parse('https://www.notion.so/32a97b83a0ac80f4b7a2ebac146f3113'),
+                                mode: LaunchMode.externalApplication,
+                              ),
                             ),
                             const SizedBox(height: 8),
                             _DocButton(
                               icon: LucideIcons.shield,
                               label: '개인정보 처리방침 보기',
-                              onTap: () => _showDocModal('privacy'),
+                              onTap: () => launchUrl(
+                                Uri.parse('https://www.notion.so/32a97b83a0ac80d098ccd09e715df3d2'),
+                                mode: LaunchMode.externalApplication,
+                              ),
                             ),
                             const SizedBox(height: 20),
 

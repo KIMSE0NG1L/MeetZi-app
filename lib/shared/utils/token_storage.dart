@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 class TokenStorage {
   static const _accessTokenKey = 'access_token';
   static const _refreshTokenKey = 'refresh_token';
+  static const _cachedRouteKey = 'cached_route';
 
   final FlutterSecureStorage _storage;
 
@@ -32,10 +33,20 @@ class TokenStorage {
     return _storage.read(key: _refreshTokenKey);
   }
 
+  /// 마지막 성공 라우트 캐시 (앱 재시작 시 빠른 진입용)
+  Future<void> saveCachedRoute(String route) {
+    return _storage.write(key: _cachedRouteKey, value: route);
+  }
+
+  Future<String?> readCachedRoute() {
+    return _storage.read(key: _cachedRouteKey);
+  }
+
   Future<void> clear() async {
     await Future.wait([
       _storage.delete(key: _accessTokenKey),
       _storage.delete(key: _refreshTokenKey),
+      _storage.delete(key: _cachedRouteKey),
     ]);
   }
 }

@@ -141,7 +141,7 @@ class _ShopScreenState extends State<ShopScreen> {
 
             // ── 매칭권 상품 카드 ──
             Expanded(
-              child: Padding(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
                   children: [

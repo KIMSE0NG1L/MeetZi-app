@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/community/data/community_repository.dart';
@@ -417,7 +417,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
     final accentGradient = ThemeController.getActiveAccentGradient();
     final primary = Theme.of(context).colorScheme.primary;
     // ?꾩껜(?쒓렇) ?쇰뱶???뚮쭔 踰좎뒪??HOT ?곷떒 ?몄텧 (내 글쨌내 댓글 ?꾪꽣 以묒뿉??誘몃끂異?
-    final showBest = _selectedScope.isEmpty;
+    final showBest = _selectedScope.isEmpty && _selectedTag == 'all';
     final sortedByLikes = List<Map<String, dynamic>>.from(_posts)
       ..sort((a, b) => ((b['likeCount'] as int?) ?? 0).compareTo((a['likeCount'] as int?) ?? 0));
     final bestPosts = showBest ? sortedByLikes.take(3).toList() : <Map<String, dynamic>>[];
@@ -479,6 +479,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
               ),
             ),
           ),
+          _buildBottomTagBar(dark),
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
@@ -502,7 +503,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         child: ListView(
                           padding: const EdgeInsets.fromLTRB(16, 8, 16, 92),
                           children: [
-                            _buildScopeBar(dark),
                             if (bestPosts.isNotEmpty) ...[
                               Row(
                                 children: [
@@ -607,7 +607,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: _buildBottomTagBar(dark),
     );
   }
 

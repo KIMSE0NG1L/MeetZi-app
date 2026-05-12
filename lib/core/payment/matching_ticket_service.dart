@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:nearo_app/shared/api/api_client.dart';
@@ -8,8 +9,10 @@ class MatchingTicketService {
   /// ──────────────────────────────────────────────
   /// RevenueCat 설정값
   /// ──────────────────────────────────────────────
-  /// TODO: RevenueCat 대시보드에서 발급받은 실제 API 키로 교체
-  static const _revenueCatApiKey = 'goog_uXqxzRKIRNWqyRfRCzyNSwmDvCC';
+  static const _androidApiKey = 'goog_uXqxzRKIRNWqyRfRCzyNSwmDvCC';
+  static const _iosApiKey = 'appl_AIOeNTEmsiHEbdmzVpmDXyRkEJe';
+  static String get _revenueCatApiKey =>
+      Platform.isIOS ? _iosApiKey : _androidApiKey;
 
   /// RevenueCat 대시보드 설정:
   ///   Offering ID  : default

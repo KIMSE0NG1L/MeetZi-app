@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
@@ -26,10 +27,19 @@ class AdUnitIds {
   static const String _testInterstitial = 'ca-app-pub-3940256099942544/1033173712';
   static const String _testRewarded     = 'ca-app-pub-3940256099942544/5224354917';
 
-  // ── 실제 광고 유닛 ID ────────────────────────────────────────
-  static const String _liveBanner       = 'ca-app-pub-4896108937305290/6990287089';
-  static const String _liveInterstitial = 'ca-app-pub-4896108937305290/3190868213';
-  static const String _liveRewarded     = 'ca-app-pub-4896108937305290/1861563965';
+  // ── Android 실제 광고 유닛 ID ──────────────────────────────
+  static const String _androidBanner       = 'ca-app-pub-4896108937305290/6990287089';
+  static const String _androidInterstitial = 'ca-app-pub-4896108937305290/3190868213';
+  static const String _androidRewarded     = 'ca-app-pub-4896108937305290/1861563965';
+
+  // ── iOS 실제 광고 유닛 ID ──────────────────────────────────
+  static const String _iosBanner       = 'ca-app-pub-4896108937305290/9452815779';
+  static const String _iosInterstitial = 'ca-app-pub-4896108937305290/8139734100';
+  static const String _iosRewarded     = 'ca-app-pub-4896108937305290/7183315041';
+
+  static String get _liveBanner       => Platform.isIOS ? _iosBanner       : _androidBanner;
+  static String get _liveInterstitial => Platform.isIOS ? _iosInterstitial : _androidInterstitial;
+  static String get _liveRewarded     => Platform.isIOS ? _iosRewarded     : _androidRewarded;
 
   static String get banner       => kDebugMode ? _testBanner       : _liveBanner;
   static String get interstitial => kDebugMode ? _testInterstitial : _liveInterstitial;

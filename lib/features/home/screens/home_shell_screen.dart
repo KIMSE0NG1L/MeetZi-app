@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/app/app_routes.dart';
@@ -778,7 +779,32 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
   @override
   Widget build(BuildContext context) {
     final hideTopBar = _currentIndex == 0 || _currentIndex == 4;
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final shouldExit = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('앱 종료'),
+            content: const Text('앱을 종료하시겠습니까?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('취소'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('종료'),
+              ),
+            ],
+          ),
+        );
+        if (shouldExit == true) {
+          SystemNavigator.pop();
+        }
+      },
+      child: Scaffold(
       backgroundColor: Theme.of(context).brightness == Brightness.dark
           ? const Color(0xFF111827)
           : const Color(0xFFF9FAFB),
@@ -806,6 +832,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
               onSkip: () => setState(() => _showCoachMark = false),
             ),
         ],
+      ),
       ),
     );
   }
