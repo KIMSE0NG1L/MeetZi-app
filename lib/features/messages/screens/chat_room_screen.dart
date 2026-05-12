@@ -94,17 +94,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
   Future<void> _loadMuteStatus() async {
     if (_roomId == null) return;
-    try {
-      final room = await _repository.getRoom(roomId: _roomId!);
-      final muted = room['muted'] == true;
-      if (mounted) setState(() => _isMuted = muted);
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('chat_mute_${_roomId!}', muted);
-    } catch (_) {
-      final prefs = await SharedPreferences.getInstance();
-      final muted = prefs.getBool('chat_mute_${_roomId!}') ?? false;
-      if (mounted) setState(() => _isMuted = muted);
-    }
+    // SharedPreferences에서만 읽음 (서버 최신값은 _loadRoomState에서 갱신)
+    final prefs = await SharedPreferences.getInstance();
+    final muted = prefs.getBool('chat_mute_${_roomId!}') ?? false;
+    if (mounted) setState(() => _isMuted = muted);
   }
 
   String _formatMessageTime(DateTime? dateTime) {
@@ -357,7 +350,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           'userId': _myUserId,
           'readAt': DateTime.now().toIso8601String(),
         };
-        print('[?뚯폆 ?쎌쓬 emit] $payload');
         _socket!.emit('read', payload);
       }
     }
@@ -376,8 +368,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           ..addAll(result.map((m) {
             final senderId = m['senderId']?.toString();
             final isMine = senderId == _myUserId;
-            print(
-                '[isMine ?먮퀎] senderId=$senderId, _myUserId=$_myUserId, isMine=$isMine, text=${m['content']}');
             return _ChatMessage(
               id: m['id']?.toString() ?? '',
               text: m['content']?.toString() ?? '',
@@ -394,26 +384,31 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           }));
         _loading = false;
       });
-      // ?쎌? ?딆? ?곷? 硫붿떆吏 ?쎌쓬 泥섎━
-      for (int i = 0; i < _messages.length; i++) {
-        final msg = _messages[i];
-        if (!msg.isMine && msg.readAt == null) {
-          await _repository.readMessage(roomId: _roomId!, messageId: msg.id);
-          final now = DateTime.now();
-          // ?쎌쓬 泥섎━ ??readAt??利됱떆 媛깆떊?섏뿬 UI?먯꽌 諭껋? ?щ씪吏寃?
-          setState(() {
-            _messages[i] = _ChatMessage(
-              id: msg.id,
-              text: msg.text,
-              isMine: msg.isMine,
-              senderId: msg.senderId,
-              isSystem: msg.isSystem,
-              readAt: now,
-              createdAt: msg.createdAt,
-            );
-          });
-          // ?뚯폆?쇰줈 ?쎌쓬 ?대깽?몃룄 媛숈씠 ?꾩넚
-          if (_socket != null && _socket!.connected) {
+      // 안 읽은 메시지 일괄 처리 (N+1 API 호출 → 단건 일괄 요청)
+      final unreadMsgs = _messages
+          .where((m) => !m.isMine && m.readAt == null)
+          .toList();
+      if (unreadMsgs.isNotEmpty && _roomId != null && _myUserId != null) {
+        final now = DateTime.now();
+        setState(() {
+          for (int i = 0; i < _messages.length; i++) {
+            final msg = _messages[i];
+            if (!msg.isMine && msg.readAt == null) {
+              _messages[i] = _ChatMessage(
+                id: msg.id,
+                text: msg.text,
+                isMine: msg.isMine,
+                senderId: msg.senderId,
+                isSystem: msg.isSystem,
+                readAt: now,
+                createdAt: msg.createdAt,
+              );
+            }
+          }
+        });
+        if (_socket != null && _socket!.connected) {
+          // 소켓 연결 중: 게이트웨이가 DB 업데이트 + 발신자에게 broadcast
+          for (final msg in unreadMsgs) {
             _socket!.emit('read', {
               'roomId': _roomId,
               'messageId': msg.id,
@@ -421,9 +416,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
               'readAt': now.toIso8601String(),
             });
           }
+        } else {
+          // 소켓 미연결: HTTP 일괄 API로 폴백
+          unawaited(_repository.readAllMessages(roomId: _roomId!));
         }
-      }
-      // ?뚮┝/諭껋? ?대━??
+      }      // ?뚮┝/諭껋? ?대━??
       await clearAllNotifications();
       unawaited(_prefetchSharedChatRequestDetails());
       await _loadRoomState();
@@ -445,7 +442,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     }
     _disposeSocketConnection();
     final completer = Completer<void>();
-    print('[?뚯폆 ?곌껐 ?쒕룄] roomId=$_roomId, myUserId=$_myUserId');
     _socket = IO.io(
       '${AppConfig.baseUrl}/chat',
       IO.OptionBuilder()
@@ -455,10 +451,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           .build(),
     );
     _socket!.onConnect((_) {
-      print('[?뚯폆 ?곌껐 ?깃났]');
       _socket!.emit('joinRoom', {'roomId': _roomId});
       if (!completer.isCompleted) completer.complete();
-      print('[?뚯폆 joinRoom emit] roomId=$_roomId');
     });
     _socket!.onDisconnect((reason) {
       debugPrint('[chat socket disconnected] $reason');
@@ -473,7 +467,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       debugPrint('[chat socket error] $error');
     });
     _socket!.on('newMessage', (data) {
-      print('[?뚯폆 newMessage ?몃뱾???깅줉?? data=$data');
       if (!mounted) return;
       final messageId = data['id']?.toString() ?? '';
       final isMine = data['senderId']?.toString() == _myUserId;
@@ -526,7 +519,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         });
       }
     });
-    print('[?뚯폆 read ?몃뱾???깅줉??');
     // ?쎌쓬 ?대깽??泥섎━: ?대떦 硫붿떆吏??readAt 媛깆떊
     _socket!.on('read', (data) {
       debugPrint(
@@ -562,7 +554,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       });
     });
     _socket!.connect();
-    print('[?뚯폆 connect ?몄텧??');
     await completer.future.timeout(const Duration(seconds: 10));
   }
 

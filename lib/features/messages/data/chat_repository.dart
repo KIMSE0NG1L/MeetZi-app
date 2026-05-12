@@ -124,6 +124,16 @@ class ChatRepository {
     return Map<String, dynamic>.from(response.data as Map);
   }
 
+  Future<Map<String, dynamic>> readAllMessages({required String roomId}) async {
+    final response = await _client.dio.post(
+      ApiEndpoints.chatsMessagesReadAll(roomId),
+    );
+    clearRoomCache(roomId);
+    _cache.remove('listRooms');
+    _cacheTime.remove('listRooms');
+    return Map<String, dynamic>.from(response.data as Map);
+  }
+
   Future<Map<String, dynamic>> readMessage({
     required String roomId,
     required String messageId,

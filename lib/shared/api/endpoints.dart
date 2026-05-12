@@ -17,6 +17,8 @@ class ApiEndpoints {
   static String chatsMessages(String roomId) => '/chats/rooms/$roomId/messages';
   static String chatsMessageRead(String roomId, String messageId) =>
       '/chats/rooms/$roomId/messages/$messageId/read';
+  static String chatsMessagesReadAll(String roomId) =>
+      '/chats/rooms/$roomId/messages/read-all';
   static const String sharedChatPosts = '/shared-chat-posts';
   static const String sharedChatMine = '/shared-chat-posts/me';
   static String sharedChatPost(String id) => '/shared-chat-posts/$id';

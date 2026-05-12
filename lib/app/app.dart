@@ -45,7 +45,7 @@ class NearoApp extends StatefulWidget {
 }
 
 class _NearoAppState extends State<NearoApp> {
-  static const int _minSplashDurationMs = 3300;
+  static const int _minSplashDurationMs = 1500;
   final _fallbackNavigatorKey = GlobalKey<NavigatorState>();
   final _appLinks = AppLinks();
   final _tokenStorage = TokenStorage();

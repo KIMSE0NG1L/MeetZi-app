@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:app_badge_plus/app_badge_plus.dart';
@@ -66,13 +67,11 @@ class NotificationService {
     final token = await messaging.getToken();
     debugPrint('FCM Token: $token');
     if (token != null && token.isNotEmpty) {
-      try {
-        final apiClient = ApiClient();
-        await apiClient.dio.post('/users/push-token', data: {'token': token});
-        debugPrint('FCM token registered to server');
-      } catch (e) {
-        debugPrint('FCM token registration failed: $e');
-      }
+      // 토큰 등록은 백그라운드로 처리 (초기화 블로킹 방지)
+      unawaited(ApiClient().dio.post('/users/push-token', data: {'token': token}).then(
+        (_) => debugPrint('FCM token registered to server'),
+        onError: (e) => debugPrint('FCM token registration failed: $e'),
+      ));
     }
 
     final initialMessage = await FirebaseMessaging.instance.getInitialMessage();

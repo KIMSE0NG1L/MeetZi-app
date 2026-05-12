@@ -55,8 +55,7 @@ class _SplashScreenState extends State<SplashScreen>
     );
     _controller.forward();
 
-    // last: Auto complete after animation (delay 2.5 + 800ms)
-    _completeTimer = Timer(const Duration(milliseconds: 3300), () {
+    _completeTimer = Timer(const Duration(milliseconds: 1500), () {
       if (mounted) widget.onComplete();
     });
   }
