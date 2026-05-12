@@ -454,6 +454,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       _socket!.emit('joinRoom', {'roomId': _roomId});
       if (!completer.isCompleted) completer.complete();
     });
+    _socket!.onReconnect((_) {
+      // 재연결 시 소켓.io 방 재join (연결 끊기면 방 멤버십 사라짐)
+      if (_roomId != null) {
+        _socket!.emit('joinRoom', {'roomId': _roomId});
+      }
+    });
     _socket!.onDisconnect((reason) {
       debugPrint('[chat socket disconnected] $reason');
     });
