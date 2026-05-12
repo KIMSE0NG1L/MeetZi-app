@@ -69,7 +69,6 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
   void initState() {
     super.initState();
     _loadThemeAndProfile();
-    _registerPushTokenIfNeeded();
     _fetchMatchingStats();
     _initRevenueCat();
     PendingTakeNoteStore.instance.pending.addListener(_onPendingTakeNote);
@@ -111,21 +110,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
     }
   }
 
-  /// 로그인 후 홈 진입 시 FCM 토큰을 서버에 등록 (매칭 요청 등 알림 수신용)
-  Future<void> _registerPushTokenIfNeeded() async {
-    try {
-      final token = await FirebaseMessaging.instance.getToken();
-      if (token == null || token.isEmpty) return;
-      final client = ApiClient();
-      await client.dio.post(
-        '/users/push-token',
-        data: {'token': token, 'platform': 'android'},
-      );
-    } catch (e) {
-      debugPrint('Failed to register push token: $e');
-      // 로그인 전이거나 네트워크 오류 시 무시
-    }
-  }
+  /// FCM 토큰 등록은 NotificationService.initialize()에서 이미 처리하므로 중복 제거됨
 
   Future<void> _checkCoachMark() async {
     final shouldShow = await MeetzyCoachMark.shouldShow();

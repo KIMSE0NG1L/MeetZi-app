@@ -147,7 +147,12 @@ class _NearoAppState extends State<NearoApp> {
         route = await _reviewerRouteAfterLogin();
       } else {
       try {
-        final profile = await _authRepository.getProfile();
+        // profile과 environment를 병렬로 요청하여 시작 시간 단축
+        final profileFuture = _authRepository.getProfile();
+        final envFuture =
+            _environmentStatusRepository.getMyEnvironmentStatus();
+
+        final profile = await profileFuture;
         final user = (profile['user'] as Map?) ?? profile;
         final hasProfile = user['nickname'] != null;
         final hasAffiliation =
@@ -158,8 +163,7 @@ class _NearoAppState extends State<NearoApp> {
           route = AppRoutes.avatarSetup;
         } else {
           try {
-            final status =
-                await _environmentStatusRepository.getMyEnvironmentStatus();
+            final status = await envFuture;
             if (status['environmentId'] == null) {
               route = AppRoutes.environment;
             } else if (status['verified'] == true) {
@@ -193,10 +197,7 @@ class _NearoAppState extends State<NearoApp> {
   }
 
   Future<void> _initDeepLinks() async {
-    final initialLink = await _appLinks.getInitialLink();
-    if (initialLink != null) {
-      _handleLink(initialLink, isInitial: true);
-    }
+    // 초기 링크는 _resolveInitialRoute()에서 이미 처리하므로 중복 호출 제거
     _linkSub = _appLinks.uriLinkStream.listen((uri) => _handleLink(uri));
   }
 
