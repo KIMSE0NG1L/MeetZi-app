@@ -87,4 +87,11 @@ class ApiEndpoints {
   static const String reportCommunityPost = '/report/community-post';
   static const String reportCommunityComment = '/report/community-comment';
   static const String notices = '/notices';
+
+  // Event (출석체크 + 친구초대)
+  static const String eventAttendance = '/events/attendance';
+  static const String eventAttendanceStatus = '/events/attendance/status';
+  static const String eventReferralMyCode = '/events/referral/my-code';
+  static const String eventReferralApply = '/events/referral/apply';
+  static const String eventReferralStatus = '/events/referral/status';
 }
