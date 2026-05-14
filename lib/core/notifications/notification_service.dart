@@ -46,7 +46,10 @@ class NotificationService {
       sound: true,
     );
 
-    await messaging.subscribeToTopic('notices');
+    // 토픽 구독은 네트워크 의존적이므로 블로킹하지 않음
+    unawaited(messaging.subscribeToTopic('notices').catchError(
+      (e) => debugPrint('subscribeToTopic error: $e'),
+    ));
 
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
@@ -64,15 +67,24 @@ class NotificationService {
         >()
         ?.createNotificationChannel(_channel);
 
-    final token = await messaging.getToken();
-    debugPrint('FCM Token: $token');
-    if (token != null && token.isNotEmpty) {
-      // 토큰 등록은 백그라운드로 처리 (초기화 블로킹 방지)
-      unawaited(ApiClient().dio.post('/users/push-token', data: {'token': token}).then(
-        (_) => debugPrint('FCM token registered to server'),
-        onError: (e) => debugPrint('FCM token registration failed: $e'),
-      ));
-    }
+    // FCM 토큰 발급은 네트워크 의존적이므로 타임아웃 및 비블로킹 처리
+    unawaited(
+      messaging
+          .getToken()
+          .timeout(const Duration(seconds: 10))
+          .then((token) {
+            debugPrint('FCM Token: $token');
+            if (token != null && token.isNotEmpty) {
+              unawaited(
+                ApiClient().dio.post('/users/push-token', data: {'token': token}).then(
+                  (_) => debugPrint('FCM token registered to server'),
+                  onError: (e) => debugPrint('FCM token registration failed: $e'),
+                ),
+              );
+            }
+          })
+          .catchError((e) => debugPrint('getToken error: $e')),
+    );
 
     final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
     if (initialMessage != null && initialMessage.data.isNotEmpty) {

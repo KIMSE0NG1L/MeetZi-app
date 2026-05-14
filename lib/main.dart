@@ -20,14 +20,22 @@ final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
 
-  // AdMob과 알림 서비스는 Firebase와 무관하므로 병렬 초기화
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    debugPrint('Firebase init error: $e');
+  }
+
   final notificationService = NotificationService();
-  await Future.wait([
-    initializeAdMob(),
-    notificationService.initialize(rootNavigatorKey),
-  ]);
+  try {
+    await Future.wait([
+      initializeAdMob(),
+      notificationService.initialize(rootNavigatorKey),
+    ]).timeout(const Duration(seconds: 15));
+  } catch (e) {
+    debugPrint('Service init error: $e');
+  }
 
   runApp(NearoApp(navigatorKey: rootNavigatorKey));
 }
