@@ -93,19 +93,28 @@ class AppleAuthService {
           debugPrint('[AppleAuth] Login success, tokens saved');
           return true;
         }
+        debugPrint('[AppleAuth] Missing accessToken in response: ${response.data}');
+      } else {
+        debugPrint('[AppleAuth] Backend error response: ${response.statusCode} - ${response.data}');
       }
 
-      debugPrint('[AppleAuth] Backend returned unexpected response');
       return false;
     } on SignInWithAppleAuthorizationException catch (e) {
       if (e.code == AuthorizationErrorCode.canceled) {
         debugPrint('[AppleAuth] User cancelled');
       } else {
-        debugPrint('[AppleAuth] Authorization error: ${e.code} - ${e.message}');
+        debugPrint('[AppleAuth] Authorization error: code=${e.code}, message=${e.message}');
       }
       return false;
-    } catch (e) {
+    } on DioException catch (e) {
+      debugPrint('[AppleAuth] Network/Server error during backend callback:');
+      debugPrint('  - Status: ${e.response?.statusCode}');
+      debugPrint('  - Data: ${e.response?.data}');
+      debugPrint('  - Message: ${e.message}');
+      return false;
+    } catch (e, stackTrace) {
       debugPrint('[AppleAuth] Unexpected error: $e');
+      debugPrint('[AppleAuth] StackTrace: $stackTrace');
       return false;
     }
   }

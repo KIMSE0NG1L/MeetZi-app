@@ -579,9 +579,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _handleKakaoLogin() async {
     final uri = Uri.parse('${AppConfig.baseUrl}/auth/kakao');
+    
+    // 카카오톡 앱 설치 여부 확인
+    final kakaoTalkScheme = Uri.parse('kakaokompassauth://authorize');
+    final isKakaoTalkInstalled = await canLaunchUrl(kakaoTalkScheme);
+
     final launched = await launchUrl(
       uri,
-      mode: LaunchMode.externalApplication,
+      // 카카오톡 설치 시: 외부 앱 연동
+      // 미설치 시: iOS는 SFSafariViewController, Android는 Custom Tabs 사용
+      mode: isKakaoTalkInstalled
+          ? LaunchMode.externalApplication
+          : LaunchMode.inAppBrowserView,
     );
     if (!launched && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
