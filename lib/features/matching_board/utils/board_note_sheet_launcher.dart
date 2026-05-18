@@ -14,9 +14,17 @@ Future<void> launchBoardNoteSheet({
   VoidCallback? onPop,
   bool showTertiaryCloseButton = false,
   Future<Map<String, dynamic>?> Function(List<String> excludeUserIds)? onRequestNextProfile,
+  int? myMatchingTicket, // 이미 알고 있는 티켓 수를 넘기면 API 호출 생략
 }) async {
   if (!context.mounted) return;
-  final tickets = await repo.fetchMyTickets();
+  // 호출부에서 이미 티켓 수를 갖고 있으면 추가 API 호출 없이 바로 사용
+  final tickets = myMatchingTicket != null
+      ? MyTickets(
+          viewTicket: 0,
+          matchingTicket: myMatchingTicket,
+          registerTicket: 0,
+        )
+      : await repo.fetchMyTickets();
   if (!context.mounted) return;
 
   await showBoardNoteSheet(

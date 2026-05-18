@@ -975,6 +975,9 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                   ? nickname
                   : (p['user'] as Map<String, dynamic>?)?['nickname']?.toString().trim() ?? '-';
               final tag = (p['idealType'] ?? (p['user'] as Map<String, dynamic>?)?['idealType'])?.toString() ?? '-';
+              String school = (p['user'] as Map<String, dynamic>?)?['affiliationText']?.toString() ?? '';
+              if (school.endsWith('대학교')) school = school.substring(0, school.length - 2);
+              
               return MeetzyBoardProfileItem(
                 nickname: displayName.isEmpty ? '-' : displayName,
                 tag: tag,
@@ -982,6 +985,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                 borderColor: _parseSchoolColor(
                   (p['user'] as Map<String, dynamic>?)?['schoolColor']?.toString(),
                 ),
+                school: school,
               );
             }).toList(),
             onProfileTap: (index, _) => _openNoteSheet(context, index, filteredProfiles, myUserId),

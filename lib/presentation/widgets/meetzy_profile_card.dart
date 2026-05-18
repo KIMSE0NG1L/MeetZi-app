@@ -11,6 +11,7 @@ class MeetzyProfileCard extends StatelessWidget {
     required this.avatarWidget,
     this.avatarBgColor,
     this.borderColor,
+    this.school,
     this.onTap,
   });
 
@@ -19,6 +20,7 @@ class MeetzyProfileCard extends StatelessWidget {
   final Widget avatarWidget;
   final Color? avatarBgColor;
   final Color? borderColor;
+  final String? school;
   final VoidCallback? onTap;
 
   @override
@@ -154,6 +156,30 @@ class MeetzyProfileCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    if (school != null && school!.isNotEmpty) ...[
+                      const SizedBox(height: 5),
+                      ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: maxTagWidth),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: primary.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            school!,
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              color: primary.withOpacity(0.85),
+                            ),
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                    ],
                     const Spacer(),
                   ],
                 );

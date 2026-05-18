@@ -1,4 +1,4 @@
-import 'package:dio/dio.dart';
+﻿import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -51,24 +51,26 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
   final MatchingRepository _matchingRepository = MatchingRepository();
   int _matchingTicket = 0;
   int _inboxCount = 0;
+  bool _isSheetOpen = false; // 바텀시트(프로필 카드)가 열려있는 동안 didPopNext 새로고침 방지
 
-  List<Widget> get _pages => [
-        const CommunityTabScreen(),
-        const MessagesScreen(),
-        MatchingBoardScreen(
-          refreshTrigger: _boardRefreshTrigger,
-          onRandomMatchTap: _onTapRandomMatch,
-        ),
-        const MyProfileScreen(),
-        ShopScreen(
-          currentTickets: _matchingTicket,
-          onTicketUpdated: _fetchMatchingStats,
-        ),
-      ];
+  // setState() 호출 때마다 재생성되지 않도록 고정 필드로 관리
+  // (getter로 선언하면 setState마다 새 인스턴스가 생겨 화면이 새로고침됨)
+  late final List<Widget> _fixedPages;
+
 
   @override
   void initState() {
     super.initState();
+    _fixedPages = [
+      const CommunityTabScreen(),
+      const MessagesScreen(),
+      MatchingBoardScreen(
+        refreshTrigger: _boardRefreshTrigger,
+        onRandomMatchTap: _onTapRandomMatch,
+      ),
+      const MyProfileScreen(),
+      // index 4: ShopScreen — currentTickets가 변하므로 build()에서 동적 생성
+    ];
     _loadThemeAndProfile();
     _fetchMatchingStats();
     _initRevenueCat();
@@ -357,6 +359,11 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
 
   @override
   void didPopNext() {
+    // 바텀시트(showGeneralDialog)가 닫힌 경우는 무시 — 실제 화면 전환 시에만 새로고침
+    if (_isSheetOpen) {
+      _isSheetOpen = false;
+      return;
+    }
     _boardRefreshTrigger.value++;
     _fetchMatchingStats();
   }
@@ -663,15 +670,15 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
         excludeUserIds: _recentRandomUserIds,
       );
       if (!mounted) return;
+      _isSheetOpen = true; // 시트 열림 플래그 — didPopNext 새로고침 억제
       await launchBoardNoteSheet(
         context: context,
         repo: _matchingBoardRepository,
         profile: profile,
         buildAvatar: (ctx, p) => buildMatchCardAvatar(p),
         showTertiaryCloseButton: true,
-        onPop: () {
-          if (mounted) setState(() {});
-        },
+        myMatchingTicket: _matchingTicket, // 이미 알고 있는 티켓 수 전달 → 추가 API 호출 생략
+        onPop: () {},  // setState 제거 — 불필요한 rebuild 방지
         onRequestNextProfile: (excludeUserIds) async {
           try {
             final next = await _matchingBoardRepository.fetchRandomProfile(
@@ -817,10 +824,19 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
               Expanded(
                 child: PageView.builder(
                   controller: _pageController,
-                  itemCount: _pages.length,
+                  itemCount: 5,
                   onPageChanged: (index) =>
                       setState(() => _currentIndex = index),
-                    itemBuilder: (_, index) => _pages[index],
+                  itemBuilder: (_, index) {
+                    // ShopScreen만 티켓 수가 바뀌므로 동적 생성; 나머지는 고정 인스턴스 사용
+                    if (index == 4) {
+                      return ShopScreen(
+                        currentTickets: _matchingTicket,
+                        onTicketUpdated: _fetchMatchingStats,
+                      );
+                    }
+                    return _fixedPages[index];
+                  },
                 ),
               ),
               _buildBottomNav(),
