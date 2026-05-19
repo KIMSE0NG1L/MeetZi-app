@@ -343,7 +343,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     // TODO: 노션 개인정보 처리방침 링크로 변경
                     final url = Uri.parse('https://www.notion.so/32a97b83a0ac80f4b7a2ebac146f3113');
                     if (await canLaunchUrl(url)) {
-                      await launchUrl(url, mode: LaunchMode.externalApplication);
+                      await launchUrl(url, mode: LaunchMode.inAppBrowserView);
                     }
                   },
                 ),
@@ -358,7 +358,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     // TODO: 노션 이용약관 링크로 변경
                     final url = Uri.parse('https://www.notion.so/32a97b83a0ac80d098ccd09e715df3d2');
                     if (await canLaunchUrl(url)) {
-                      await launchUrl(url);
+                      await launchUrl(url, mode: LaunchMode.inAppBrowserView);
                     }
                   },
                 ),

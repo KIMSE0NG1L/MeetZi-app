@@ -48,14 +48,14 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _openPrivacyNotice() async {
     final url = Uri.parse('https://www.notion.so/32a97b83a0ac80f4b7a2ebac146f3113');
     if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
+      await launchUrl(url, mode: LaunchMode.inAppBrowserView);
     }
   }
 
   Future<void> _openTermsOfService() async {
     final url = Uri.parse('https://www.notion.so/32a97b83a0ac80d098ccd09e715df3d2');
     if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
+      await launchUrl(url, mode: LaunchMode.inAppBrowserView);
     }
   }
 
@@ -579,39 +579,61 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _handleKakaoLogin() async {
     final uri = Uri.parse('${AppConfig.baseUrl}/auth/kakao');
-    
-    // 카카오톡 앱 설치 여부 확인
-    final kakaoTalkScheme = Uri.parse('kakaokompassauth://authorize');
-    final isKakaoTalkInstalled = await canLaunchUrl(kakaoTalkScheme);
 
+    // Apple Guideline 4: 항상 인앱 브라우저(SFSafariViewController)를 사용하여
+    // 사용자가 앱 내에서 로그인할 수 있도록 함.
+    // SFSafariViewController는 URL과 SSL 인증서를 표시하여 보안성을 보장.
     final launched = await launchUrl(
       uri,
-      // 카카오톡 설치 시: 외부 앱 연동
-      // 미설치 시: iOS는 SFSafariViewController, Android는 Custom Tabs 사용
-      mode: isKakaoTalkInstalled
-          ? LaunchMode.externalApplication
-          : LaunchMode.inAppBrowserView,
+      mode: LaunchMode.inAppBrowserView,
     );
     if (!launched && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('카카오 로그인 연결에 실패했습니다.')),
+      // inAppBrowserView 실패 시 외부 브라우저로 fallback
+      final fallbackLaunched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
       );
+      if (!fallbackLaunched && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('카카오 로그인 연결에 실패했습니다.')),
+        );
+      }
     }
   }
 
+  bool _isAppleLoginLoading = false;
+
   Future<void> _handleAppleLogin() async {
-    final appleAuthService = AppleAuthService();
-    final success = await appleAuthService.signInWithApple();
-    if (!mounted) return;
-    if (success) {
-      Navigator.of(context).pushNamedAndRemoveUntil(
-        AppRoutes.onboarding,
-        (route) => false,
-      );
-    } else {
+    if (_isAppleLoginLoading) return;
+    setState(() => _isAppleLoginLoading = true);
+    try {
+      final appleAuthService = AppleAuthService();
+      final success = await appleAuthService.signInWithApple();
+      if (!mounted) return;
+      if (success) {
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          AppRoutes.onboarding,
+          (route) => false,
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Apple 로그인에 실패했습니다. 다시 시도해 주세요.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      debugPrint('[AppleLogin] Unexpected error in handler: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Apple 로그인에 실패했습니다.')),
+        const SnackBar(
+          content: Text('Apple 로그인 중 오류가 발생했습니다.'),
+          duration: Duration(seconds: 3),
+        ),
       );
+    } finally {
+      if (mounted) setState(() => _isAppleLoginLoading = false);
     }
   }
 }

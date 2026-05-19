@@ -81,10 +81,10 @@ class AppleAuthService {
         },
       );
 
-      if (response.statusCode == 200 && response.data is Map) {
+      if ((response.statusCode == 200 || response.statusCode == 201) && response.data is Map) {
         final data = response.data as Map<String, dynamic>;
-        final accessToken = data['accessToken'] as String?;
-        final refreshToken = data['refreshToken'] as String?;
+        final accessToken = (data['accessToken'] ?? data['access_token']) as String?;
+        final refreshToken = (data['refreshToken'] ?? data['refresh_token']) as String?;
 
         if (accessToken != null && accessToken.isNotEmpty) {
           await _tokenStorage.saveAccessToken(accessToken);
