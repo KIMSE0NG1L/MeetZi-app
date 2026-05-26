@@ -225,7 +225,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       final userId = profile['id']?.toString();
       if (userId != null && userId.isNotEmpty) {
         _myUserId = userId;
-        await _initSocket();
+        // 소켓 연결과 메시지 로딩을 병렬로 실행 — 소켓 핸드셰이크를 기다리지 않고 즉시 메시지 표시
+        unawaited(_initSocket());
         await _loadMessages();
         _sendReadReceipts();
         _scrollToBottom();
@@ -423,7 +424,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       }      // ?뚮┝/諭껋? ?대━??
       await clearAllNotifications();
       unawaited(_prefetchSharedChatRequestDetails());
-      await _loadRoomState();
+      // 룸 상태(파트너 정보, 읽음 동기화)는 메시지 렌더 후 백그라운드에서 갱신
+      unawaited(_loadRoomState());
     } catch (e) {
       debugPrint('[loadMessages] failed: $e');
       if (!mounted) return;

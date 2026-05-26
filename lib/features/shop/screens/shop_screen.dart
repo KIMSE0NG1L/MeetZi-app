@@ -44,6 +44,7 @@ class _ShopScreenState extends State<ShopScreen> {
           ),
         );
       } else {
+        // result == -1: 사용자가 직접 취소한 경우
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('구매가 취소되었습니다.'),
@@ -52,8 +53,11 @@ class _ShopScreenState extends State<ShopScreen> {
       }
     } catch (e) {
       if (!mounted) return;
+      final msg = (e is Exception)
+          ? e.toString().replaceFirst('Exception: ', '')
+          : '구매에 실패했습니다. 잠시 후 다시 시도해 주세요.';
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('오류가 발생했습니다: $e')),
+        SnackBar(content: Text(msg)),
       );
     } finally {
       if (mounted) setState(() => _purchasing = false);

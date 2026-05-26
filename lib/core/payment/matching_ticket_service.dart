@@ -68,7 +68,7 @@ class MatchingTicketService {
       final current = offerings.current;
       if (current == null || current.availablePackages.isEmpty) {
         debugPrint('[MatchingTicketService] No offerings available');
-        return false;
+        throw Exception('구매 가능한 상품을 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.');
       }
 
       // Package ID가 'single_ticket'인 패키지를 우선 탐색
@@ -94,13 +94,6 @@ class MatchingTicketService {
         debugPrint('[MatchingTicketService] Entitlement "$_entitlementId" not active (소모성 아이템이므로 정상)');
       }
 
-      // ──────────────────────────────────────────
-      // TODO: 백엔드(Supabase)에 매칭권 개수 +1 API 호출
-      // RevenueCat 웹훅이 서버에 도달하면 자동으로 처리되지만,
-      // 즉시 반영이 필요한 경우 아래처럼 직접 호출 가능:
-      //   await _apiClient.dio.post('/users/add-ticket', data: {'quantity': 1});
-      // ──────────────────────────────────────────
-
       // 웹훅 처리 대기 (보통 1~3초)
       await Future.delayed(const Duration(seconds: 2));
 
@@ -108,13 +101,14 @@ class MatchingTicketService {
     } on PurchasesErrorCode catch (e) {
       if (e == PurchasesErrorCode.purchaseCancelledError) {
         debugPrint('[MatchingTicketService] User cancelled purchase');
-      } else {
-        debugPrint('[MatchingTicketService] Purchase error: $e');
+        return false; // 사용자 취소 → false 반환 (정상 흐름)
       }
-      return false;
+      debugPrint('[MatchingTicketService] Purchase error: $e');
+      throw Exception('구매에 실패했습니다. 잠시 후 다시 시도해 주세요.');
     } catch (e) {
+      if (e is Exception) rethrow; // 직접 throw한 Exception은 그대로 전파
       debugPrint('[MatchingTicketService] Unexpected error: $e');
-      return false;
+      throw Exception('구매 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
     }
   }
 

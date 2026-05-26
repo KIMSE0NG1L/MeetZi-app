@@ -428,7 +428,14 @@ class _NearoAppState extends State<NearoApp> {
                         );
                         return;
                       }
-                      Navigator.of(context).pushReplacementNamed(AppRoutes.login);
+                      // Apple/Kakao 로그인으로 이미 토큰이 저장된 경우 프로필 설정으로 이동
+                      final token = await _tokenStorage.readAccessToken();
+                      if (!context.mounted) return;
+                      if (token != null && token.isNotEmpty) {
+                        Navigator.of(context).pushReplacementNamed(AppRoutes.universitySelect);
+                      } else {
+                        Navigator.of(context).pushReplacementNamed(AppRoutes.login);
+                      }
                     });
                   },
                 ),
