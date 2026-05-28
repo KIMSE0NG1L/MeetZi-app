@@ -134,6 +134,9 @@ class MatchingTicketService {
   /// 구매 → 웹훅 대기 → 최신 matchingTicket 반환
   /// 실패 시 -1 반환
   Future<int> purchaseAndSync() async {
+    // 구매 전 현재 보유 개수 미리 조회
+    final initialCount = await getTicketCount();
+
     final success = await purchaseTicket();
     if (!success) return -1;
 
@@ -142,7 +145,7 @@ class MatchingTicketService {
     for (int i = 0; i < 3; i++) {
       await Future.delayed(const Duration(seconds: 2));
       final count = await getTicketCount();
-      if (count > 0) return count;
+      if (count > initialCount) return count;
     }
 
     return await getTicketCount();
