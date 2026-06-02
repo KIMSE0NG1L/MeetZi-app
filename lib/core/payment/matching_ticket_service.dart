@@ -1,5 +1,6 @@
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:nearo_app/shared/api/api_client.dart';
 
@@ -98,17 +99,49 @@ class MatchingTicketService {
       await Future.delayed(const Duration(seconds: 2));
 
       return true;
-    } on PurchasesErrorCode catch (e) {
-      if (e == PurchasesErrorCode.purchaseCancelledError) {
+    } on PlatformException catch (e) {
+      final errorCode = PurchasesErrorHelper.getErrorCode(e);
+      debugPrint('[MatchingTicketService] PlatformException error code: ${e.code}, message: ${e.message}, details: ${e.details}');
+      debugPrint('[MatchingTicketService] Mapped PurchasesErrorCode: $errorCode');
+
+      if (errorCode == PurchasesErrorCode.purchaseCancelledError) {
         debugPrint('[MatchingTicketService] User cancelled purchase');
-        return false; // 사용자 취소 → false 반환 (정상 흐름)
+        return false; // 사용자 취소 → false 반환 (정상 흐름, 에러 팝업 띄우지 않음)
       }
-      debugPrint('[MatchingTicketService] Purchase error: $e');
-      throw Exception('구매에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+
+      // 그 외의 에러는 친절한 한글 메시지로 커스텀 Exception 발생 (UI 노출용)
+      String userFriendlyMessage;
+      switch (errorCode) {
+        case PurchasesErrorCode.networkError:
+          userFriendlyMessage = '네트워크 연결 상태가 좋지 않습니다. 인터넷 연결을 확인하고 다시 시도해 주세요.';
+          break;
+        case PurchasesErrorCode.purchaseNotAllowedError:
+          userFriendlyMessage = '이 기기에서는 결제가 허용되지 않았습니다. 앱 내 구입 차단 설정을 확인해 주세요.';
+          break;
+        case PurchasesErrorCode.paymentPendingError:
+          userFriendlyMessage = '이전 결제가 아직 대기 중입니다. 완료될 때까지 잠시만 기다려 주세요.';
+          break;
+        case PurchasesErrorCode.productAlreadyPurchasedError:
+          userFriendlyMessage = '이미 구매 완료된 상품입니다.';
+          break;
+        case PurchasesErrorCode.configurationError:
+          userFriendlyMessage = '앱 스토어 설정 오류로 결제를 진행할 수 없습니다. 고객센터로 문의해 주세요.';
+          break;
+        case PurchasesErrorCode.storeProblemError:
+          userFriendlyMessage = '앱 스토어 연결에 실패했습니다. App Store 또는 Google Play 서비스 상태를 확인해 주세요.';
+          break;
+        case PurchasesErrorCode.productNotAvailableForPurchaseError:
+          userFriendlyMessage = '현재 이 상품은 구매할 수 없습니다. 잠시 후 다시 시도해 주세요.';
+          break;
+        default:
+          userFriendlyMessage = '결제를 처리할 수 없습니다. 잠시 후 다시 시도해 주세요.';
+          break;
+      }
+      throw Exception(userFriendlyMessage);
     } catch (e) {
       if (e is Exception) rethrow; // 직접 throw한 Exception은 그대로 전파
       debugPrint('[MatchingTicketService] Unexpected error: $e');
-      throw Exception('구매 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+      throw Exception('결제를 진행하는 중 알 수 없는 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
     }
   }
 

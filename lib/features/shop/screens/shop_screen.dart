@@ -53,9 +53,19 @@ class _ShopScreenState extends State<ShopScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      final msg = (e is Exception)
-          ? e.toString().replaceFirst('Exception: ', '')
-          : '구매에 실패했습니다. 잠시 후 다시 시도해 주세요.';
+      String msg = '구매에 실패했습니다. 잠시 후 다시 시도해 주세요.';
+      if (e is Exception) {
+        final errorStr = e.toString();
+        // PlatformException 또는 개발자용 시스템 에러 문구가 포함된 경우 필터링
+        if (errorStr.contains('PlatformException') ||
+            errorStr.contains('CONFIGURATION_ERROR') ||
+            errorStr.contains('PurchasesErrorCode') ||
+            errorStr.contains('purchases_flutter')) {
+          msg = '결제를 처리할 수 없습니다. 잠시 후 다시 시도해 주세요.';
+        } else {
+          msg = errorStr.replaceFirst('Exception: ', '');
+        }
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(msg)),
       );
