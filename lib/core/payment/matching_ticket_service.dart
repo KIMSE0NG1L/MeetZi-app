@@ -62,7 +62,7 @@ class MatchingTicketService {
   // ──────────────────────────────────────────────
   /// 구매 성공 시 true 반환
   /// RevenueCat이 자동으로 서버 웹훅을 보냄 → 서버에서 matchingTicket +1 처리
-  Future<bool> purchaseTicket() async {
+  Future<CustomerInfo?> purchaseTicket() async {
     try {
       // 'default' offering에서 'single_ticket' 패키지 찾기
       final offerings = await Purchases.getOfferings();
@@ -95,10 +95,7 @@ class MatchingTicketService {
         debugPrint('[MatchingTicketService] Entitlement "$_entitlementId" not active (소모성 아이템이므로 정상)');
       }
 
-      // 웹훅 처리 대기 (보통 1~3초)
-      await Future.delayed(const Duration(seconds: 2));
-
-      return true;
+      return customerInfo;
     } on PlatformException catch (e) {
       final errorCode = PurchasesErrorHelper.getErrorCode(e);
       debugPrint('[MatchingTicketService] PlatformException error code: ${e.code}, message: ${e.message}, details: ${e.details}');
@@ -106,7 +103,7 @@ class MatchingTicketService {
 
       if (errorCode == PurchasesErrorCode.purchaseCancelledError) {
         debugPrint('[MatchingTicketService] User cancelled purchase');
-        return false; // 사용자 취소 → false 반환 (정상 흐름, 에러 팝업 띄우지 않음)
+        return null; // 사용자 취소 → null 반환 (정상 흐름, 에러 팝업 띄우지 않음)
       }
 
       // 그 외의 에러는 친절한 한글 메시지로 커스텀 Exception 발생 (UI 노출용)
@@ -164,23 +161,44 @@ class MatchingTicketService {
   // ──────────────────────────────────────────────
   // 5. 구매 + 서버 갱신 확인 (한 번에)
   // ──────────────────────────────────────────────
-  /// 구매 → 웹훅 대기 → 최신 matchingTicket 반환
+  /// 구매 → 즉시 서버 영수증 검증 → 최신 matchingTicket 반환
   /// 실패 시 -1 반환
   Future<int> purchaseAndSync() async {
-    // 구매 전 현재 보유 개수 미리 조회
-    final initialCount = await getTicketCount();
+    final customerInfo = await purchaseTicket();
+    if (customerInfo == null) return -1; // 취소됨
 
-    final success = await purchaseTicket();
-    if (!success) return -1;
+    final nonSubTransactions = customerInfo.nonSubscriptionTransactions;
+    if (nonSubTransactions.isNotEmpty) {
+      final latestTx = nonSubTransactions.last;
+      final transactionId = latestTx.transactionIdentifier;
+      final productId = latestTx.productIdentifier;
 
-    // 웹훅 처리 후 서버에서 최신 matchingTicket 가져오기
-    // 최대 3회 폴링 (총 ~6초)
-    for (int i = 0; i < 3; i++) {
-      await Future.delayed(const Duration(seconds: 2));
-      final count = await getTicketCount();
-      if (count > initialCount) return count;
+      debugPrint('[MatchingTicketService] Starting synchronous verification on server: $transactionId');
+
+      try {
+        final response = await _apiClient.dio.post(
+          '/subscription/verify-purchase',
+          data: {
+            'transactionId': transactionId,
+            'productId': productId,
+          },
+        );
+
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          if (response.data is Map) {
+            final updatedCount = (response.data as Map<String, dynamic>)['matchingTicket'] as int? ?? 0;
+            debugPrint('[MatchingTicketService] Synchronous verification success. New ticket count: $updatedCount');
+            return updatedCount;
+          }
+        }
+      } catch (e) {
+        debugPrint('[MatchingTicketService] Server verification failed: $e. Fallback to general count query.');
+      }
+    } else {
+      debugPrint('[MatchingTicketService] No non-subscription transactions found. Falling back.');
     }
 
+    // 서버 API 호출 실패 시 또는 트랜잭션이 비어있는 경우, Fallback으로 일반 조회 결과 반환
     return await getTicketCount();
   }
 }
