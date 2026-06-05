@@ -1,9 +1,21 @@
 import 'dart:io' show Platform;
+import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
+/// iOS 14+ ATT 권한 요청 (AdMob 초기화 전에 반드시 호출)
+Future<void> requestTrackingAuthorization() async {
+  if (!Platform.isIOS) return;
+  final status = await AppTrackingTransparency.trackingAuthorizationStatus;
+  if (status == TrackingStatus.notDetermined) {
+    await Future.delayed(const Duration(milliseconds: 200));
+    await AppTrackingTransparency.requestTrackingAuthorization();
+  }
+}
+
 /// AdMob 초기화 - main.dart의 MobileAds.instance.initialize() 대신 이것을 호출하세요
 Future<void> initializeAdMob() async {
+  await requestTrackingAuthorization();
   await MobileAds.instance.initialize();
   if (kDebugMode) {
     // 디버그 모드에서 테스트 기기 설정 (실기기에서 테스트 광고가 뜨게 함)
