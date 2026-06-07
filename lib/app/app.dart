@@ -32,6 +32,7 @@ import 'package:nearo_app/features/settings/screens/customer_support_screen.dart
 import 'package:nearo_app/presentation/pages/meetzy_university_select_page.dart';
 import 'package:nearo_app/presentation/pages/meetzy_email_verification_page.dart';
 import 'package:nearo_app/shared/utils/privacy_consent_storage.dart';
+import 'package:nearo_app/core/ads/ad_service.dart';
 
 final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
 
@@ -108,6 +109,11 @@ class _NearoAppState extends State<NearoApp> {
     _authService.init();
     _resolveInitialRoute();
     _initDeepLinks();
+
+    // ATT는 UI 첫 프레임 이후에 요청해야 iOS 17+에서 팝업이 표시됨
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      requestTrackingAuthorization();
+    });
   }
 
   /// 설명 주석

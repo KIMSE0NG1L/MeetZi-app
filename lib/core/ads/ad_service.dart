@@ -14,8 +14,8 @@ Future<void> requestTrackingAuthorization() async {
 }
 
 /// AdMob 초기화 - main.dart의 MobileAds.instance.initialize() 대신 이것을 호출하세요
+/// ATT 요청은 UI가 준비된 후 별도로 호출해야 하므로 여기서 제외
 Future<void> initializeAdMob() async {
-  await requestTrackingAuthorization();
   await MobileAds.instance.initialize();
   if (kDebugMode) {
     // 디버그 모드에서 테스트 기기 설정 (실기기에서 테스트 광고가 뜨게 함)

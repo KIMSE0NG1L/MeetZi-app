@@ -69,7 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_showReviewerLogin) return;
     setState(() {
       _logoTapCount += 1;
-      if (_logoTapCount >= 5) {
+      if (_logoTapCount >= 3) {
         _showReviewerLogin = true;
       }
     });
@@ -514,6 +514,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             },
                           ),
                         if (_showReviewerLogin) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'App Review Login',
+                            style: TextStyle(fontSize: 11, color: Colors.grey.shade400),
+                          ),
+                          const SizedBox(height: 4),
                           OutlinedButton(
                             onPressed: _openReviewerLoginDialog,
                             child: const Text('리뷰어 로그인'),
