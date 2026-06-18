@@ -21,7 +21,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _authRepository = AuthRepository();
   int _logoTapCount = 0;
-  bool _showReviewerLogin = false;
+  bool _showReviewerLogin = true;
   bool _isReviewerLoginLoading = false;
 
   static const List<Map<String, dynamic>> _features = [
