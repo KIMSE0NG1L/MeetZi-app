@@ -7,6 +7,8 @@ import 'package:nearo_app/features/matching_board/screens/matching_board_screen.
 import 'package:nearo_app/features/matching_board/utils/board_note_sheet_launcher.dart';
 import 'package:nearo_app/features/matching_board/widgets/match_card_avatar.dart';
 import 'package:nearo_app/features/messages/data/report_repository.dart';
+import 'package:nearo_app/features/users/data/block_repository.dart';
+import 'package:dio/dio.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/post_time_format.dart';
@@ -208,6 +210,43 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _blockAuthor(String authorId, String authorNickname) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('사용자 차단'),
+        content: Text('$authorNickname님을 차단하시겠어요? 차단하면 이 사용자의 게시글이 피드에 표시되지 않아요.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text('차단', style: TextStyle(color: Colors.red.shade600)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await BlockRepository().blockUser(authorId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('차단했습니다. 이 사용자의 게시글이 피드에서 사라집니다.')),
+      );
+      Navigator.of(context).pop({'blockedUserId': authorId});
+    } catch (e) {
+      if (!mounted) return;
+      String msg = '차단에 실패했어요. 잠시 후 다시 시도해 주세요.';
+      if (e is DioException && e.response?.data is Map) {
+        final d = e.response!.data as Map<String, dynamic>;
+        if (d['message'] != null) msg = d['message'].toString();
+      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     }
   }
 
@@ -915,6 +954,8 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
                 _deletePost();
               } else if (value == 'report') {
                 _showReportSheet(context);
+              } else if (value == 'block') {
+                if (authorId != null) _blockAuthor(authorId, nickname);
               }
             },
             itemBuilder: (ctx) => [
@@ -927,6 +968,11 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
                 value: 'report',
                 child: Text('신고'),
               ),
+              if (!isPostAuthorMe)
+                const PopupMenuItem<String>(
+                  value: 'block',
+                  child: Text('차단', style: TextStyle(color: Colors.red)),
+                ),
             ],
           ),
         ],

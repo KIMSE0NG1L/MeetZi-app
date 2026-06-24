@@ -138,8 +138,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
   void _openPost(Map<String, dynamic> post) {
     final postId = post['id']?.toString();
     if (postId == null || postId.isEmpty) return;
-    Navigator.of(context).push<bool?>(
-      MaterialPageRoute<bool?>(
+    Navigator.of(context).push<dynamic>(
+      MaterialPageRoute<dynamic>(
         builder: (_) => CommunityPostDetailScreen(
           environmentId: widget.environmentId,
           schoolName: widget.schoolName,
@@ -148,9 +148,20 @@ class _CommunityScreenState extends State<CommunityScreen> {
           myUserId: _myUserId,
         ),
       ),
-    ).then((deleted) {
+    ).then((result) {
+      if (result is Map<String, dynamic> && result['blockedUserId'] != null) {
+        final blockedId = result['blockedUserId'] as String;
+        if (mounted) {
+          setState(() {
+            _posts.removeWhere((p) {
+              final a = p['author'] as Map<String, dynamic>?;
+              return a?['id']?.toString() == blockedId;
+            });
+          });
+        }
+      }
       _load();
-      if (deleted == true && mounted) {
+      if (result == true && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('글을 삭제했어요')),
         );
