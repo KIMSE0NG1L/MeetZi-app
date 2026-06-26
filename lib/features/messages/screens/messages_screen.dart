@@ -32,6 +32,7 @@ class _MessagesScreenState extends State<MessagesScreen>
   bool _loading = true;
   bool _routeObserverSubscribed = false;
   List<Map<String, dynamic>> _rooms = [];
+  final Set<String> _blockedRoomIds = {};
   Timer? _refreshTimer;
   final _rewardedAd = RewardedAdService();
 
@@ -93,7 +94,12 @@ class _MessagesScreenState extends State<MessagesScreen>
       final rooms = await _repository.listRooms();
       if (!mounted) return;
       setState(() {
-        _rooms = rooms;
+        _rooms = _blockedRoomIds.isEmpty
+            ? rooms
+            : rooms
+                .where((r) =>
+                    !_blockedRoomIds.contains(r['roomId']?.toString()))
+                .toList();
         _loading = false;
       });
     } catch (e) {
@@ -337,7 +343,18 @@ class _MessagesScreenState extends State<MessagesScreen>
           'partnerAvatarSeed': avatarSeed,
           'partnerAvatarOptions': avatarOptionsRaw,
         },
-      ).then((_) => _loadRooms(showLoader: false));
+      ).then((result) {
+        if (result is Map && result['blocked'] == true) {
+          final blockedRoomId = result['roomId']?.toString();
+          if (blockedRoomId != null && mounted) {
+            setState(() {
+              _blockedRoomIds.add(blockedRoomId);
+              _rooms.removeWhere((r) => r['roomId']?.toString() == blockedRoomId);
+            });
+          }
+        }
+        _loadRooms(showLoader: false);
+      });
     }
 
     // 최대 5초 대기하며 광고 로드 확인

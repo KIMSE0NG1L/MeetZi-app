@@ -812,7 +812,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('차단했습니다')),
       );
-      Navigator.of(context).pop(true);
+      Navigator.of(context).pop({'blocked': true, 'roomId': _roomId});
     } catch (e) {
       if (!mounted) return;
       String msg = '차단에 실패했어요';
