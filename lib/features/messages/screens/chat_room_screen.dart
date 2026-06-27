@@ -3,7 +3,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:nearo_app/core/supabase/supabase_service.dart';
 import 'package:nearo_app/features/matching/data/matching_repository.dart';
 import 'package:nearo_app/features/messages/data/chat_repository.dart';
 import 'package:nearo_app/features/messages/data/partner_profile_repository.dart';
@@ -112,7 +113,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     return parsed.isUtc ? parsed.toLocal() : parsed;
   }
 
-  IO.Socket? _socket;
+  RealtimeChannel? _realtimeChannel;
   String? _myUserId;
   final _partnerProfileRepository = PartnerProfileRepository();
   final _repository = ChatRepository();
@@ -226,7 +227,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       if (userId != null && userId.isNotEmpty) {
         _myUserId = userId;
         // 소켓 연결과 메시지 로딩을 병렬로 실행 — 소켓 핸드셰이크를 기다리지 않고 즉시 메시지 표시
-        unawaited(_initSocket());
+        unawaited(_initRealtime());
         await _loadMessages();
         _sendReadReceipts();
         _scrollToBottom();
@@ -242,15 +243,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   }
 
   /// getRoom ?묐떟??messageReadAts濡?'1' 媛깆떊 (listMessages ???媛踰쇱슫 getRoom ?ъ슜)
-  void _disposeSocketConnection({bool emitOutRoom = false}) {
-    final socket = _socket;
-    if (socket == null) return;
-    if (emitOutRoom && socket.connected && _roomId != null) {
-      socket.emit('outRoom', {'roomId': _roomId});
+  void _disposeRealtimeChannel() {
+    if (_realtimeChannel != null) {
+      _realtimeChannel!.unsubscribe();
+      _realtimeChannel = null;
     }
-    socket.dispose();
-    socket.destroy();
-    _socket = null;
   }
 
   Future<void> _restoreRoomConnection() async {
@@ -261,8 +258,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     try {
       final socket = _socket;
       if (socket == null || !socket.connected) {
-        _disposeSocketConnection();
-        await _initSocket();
+        _disposeRealtimeChannel();
+        await _initRealtime();
       } else {
         socket.emit('joinRoom', {'roomId': _roomId});
       }
@@ -339,19 +336,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
   // ?쎌? ?딆? 硫붿떆吏??????뚯폆?쇰줈 ?쎌쓬 ?대깽???꾩넚
   void _sendReadReceipts() {
-    if (_socket == null ||
-        !_socket!.connected ||
-        _roomId == null ||
-        _myUserId == null) return;
+    if (_roomId == null || _myUserId == null) return;
     for (final msg in _messages) {
       if (!msg.isMine && msg.readAt == null) {
-        final payload = {
-          'roomId': _roomId,
-          'messageId': msg.id,
-          'userId': _myUserId,
-          'readAt': DateTime.now().toIso8601String(),
-        };
-        _socket!.emit('read', payload);
+        unawaited(_repository.readMessage(roomId: _roomId!, messageId: msg.id));
       }
     }
   }
@@ -407,20 +395,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
             }
           }
         });
-        if (_socket != null && _socket!.connected) {
-          // 소켓 연결 중: 게이트웨이가 DB 업데이트 + 발신자에게 broadcast
-          for (final msg in unreadMsgs) {
-            _socket!.emit('read', {
-              'roomId': _roomId,
-              'messageId': msg.id,
-              'userId': _myUserId,
-              'readAt': now.toIso8601String(),
-            });
-          }
-        } else {
-          // 소켓 미연결: HTTP 일괄 API로 폴백
-          unawaited(_repository.readAllMessages(roomId: _roomId!));
-        }
+        unawaited(_repository.readAllMessages(roomId: _roomId!));
       }      // ?뚮┝/諭껋? ?대━??
       await clearAllNotifications();
       unawaited(_prefetchSharedChatRequestDetails());
@@ -433,138 +408,119 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     }
   }
 
-  Future<void> _initSocket() async {
+  Future<void> _initRealtime() async {
     if (_roomId == null || _myUserId == null || _myUserId!.isEmpty) return;
-    final accessToken = await _tokenStorage.readAccessToken();
-    if (accessToken == null || accessToken.isEmpty) {
-      if (mounted) {
-        setState(() => _loading = false);
-      }
-      return;
+    
+    _disposeRealtimeChannel();
+    
+    try {
+      _realtimeChannel = SupabaseService.client
+          .channel('chat_room_$_roomId')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.insert,
+            schema: 'public',
+            table: 'ChatMessage',
+            filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'roomId',
+              value: _roomId!,
+            ),
+            callback: (payload) {
+              if (!mounted) return;
+              final data = payload.newRecord;
+              final messageId = data['id']?.toString() ?? '';
+              final senderId = data['senderId']?.toString();
+              final isMine = senderId == _myUserId;
+              
+              setState(() {
+                _appendOrMergeIncomingMessage(_ChatMessage(
+                  id: messageId,
+                  text: data['content'] ?? '',
+                  isMine: isMine,
+                  senderId: senderId ?? '',
+                  isSystem: data['content']?.toString().startsWith('[system]') == true ||
+                      data['content']?.toString().startsWith('[shared_chat_request]') == true,
+                  readAt: data['readAt'] != null
+                      ? _parseServerDateTime(data['readAt'])
+                      : null,
+                  createdAt: data['createdAt'] != null
+                      ? _parseServerDateTime(data['createdAt'])
+                      : null,
+                ));
+              });
+              _scrollToBottom();
+              
+              if (!isMine && messageId.isNotEmpty && _roomId != null && _myUserId != null) {
+                final now = DateTime.now();
+                _repository.readMessage(roomId: _roomId!, messageId: messageId);
+                
+                if (!mounted) return;
+                setState(() {
+                  final idx = _messages.indexWhere((m) => m.id == messageId);
+                  if (idx >= 0) {
+                    final msg = _messages[idx];
+                    _messages[idx] = _ChatMessage(
+                      id: msg.id,
+                      text: msg.text,
+                      isMine: msg.isMine,
+                      senderId: msg.senderId,
+                      isSystem: msg.isSystem,
+                      readAt: now,
+                      createdAt: msg.createdAt,
+                    );
+                  }
+                });
+              }
+            },
+          )
+          .onPostgresChanges(
+            event: PostgresChangeEvent.update,
+            schema: 'public',
+            table: 'ChatMessage',
+            filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'roomId',
+              value: _roomId!,
+            ),
+            callback: (payload) {
+              if (!mounted) return;
+              final data = payload.newRecord;
+              final String? messageId = data['id']?.toString();
+              final DateTime? readAt = data['readAt'] != null
+                  ? _parseServerDateTime(data['readAt'])
+                  : null;
+                  
+              if (messageId == null || readAt == null) return;
+              
+              setState(() {
+                final newList = <_ChatMessage>[];
+                for (final msg in _messages) {
+                  if (msg.id == messageId && msg.isMine && msg.readAt == null) {
+                    newList.add(_ChatMessage(
+                      id: msg.id,
+                      text: msg.text,
+                      isMine: msg.isMine,
+                      senderId: msg.senderId,
+                      isSystem: msg.isSystem,
+                      readAt: readAt,
+                      createdAt: msg.createdAt,
+                    ));
+                  } else {
+                    newList.add(msg);
+                  }
+                }
+                _messages
+                  ..clear()
+                  ..addAll(newList);
+              });
+            },
+          );
+          
+      await _realtimeChannel!.subscribe();
+      debugPrint('[SupabaseRealtime] 채널 구독 완료 - 방 ID: $_roomId');
+    } catch (e) {
+      debugPrint('[SupabaseRealtime] 채널 구독 에러: $e');
     }
-    _disposeSocketConnection();
-    final completer = Completer<void>();
-    _socket = IO.io(
-      '${AppConfig.baseUrl}/chat',
-      IO.OptionBuilder()
-          .setTransports(['websocket'])
-          .setAuth({'accessToken': accessToken})
-          .disableAutoConnect()
-          .build(),
-    );
-    _socket!.onConnect((_) {
-      _socket!.emit('joinRoom', {'roomId': _roomId});
-      if (!completer.isCompleted) completer.complete();
-    });
-    _socket!.onReconnect((_) {
-      // 재연결 시 소켓.io 방 재join (연결 끊기면 방 멤버십 사라짐)
-      debugPrint('[chat socket reconnected] re-joining room $_roomId');
-      if (_roomId != null) {
-        _socket!.emit('joinRoom', {'roomId': _roomId});
-        _socket!.emit('inRoom', {'roomId': _roomId});
-      }
-    });
-    _socket!.onDisconnect((reason) {
-      debugPrint('[chat socket disconnected] $reason');
-    });
-    _socket!.onConnectError((error) {
-      debugPrint('[chat socket connect error] $error');
-      if (!completer.isCompleted) {
-        completer.completeError(error ?? 'connect error');
-      }
-    });
-    _socket!.onError((error) {
-      debugPrint('[chat socket error] $error');
-    });
-    _socket!.on('newMessage', (data) {
-      if (!mounted) return;
-      final messageId = data['id']?.toString() ?? '';
-      final isMine = data['senderId']?.toString() == _myUserId;
-      setState(() {
-        _appendOrMergeIncomingMessage(_ChatMessage(
-          id: messageId,
-          text: data['content'] ?? '',
-          isMine: isMine,
-          senderId: data['senderId']?.toString() ?? '',
-          isSystem: data['isSystem'] == true || _isSystemContent(data['content']?.toString() ?? ''),
-          readAt: data['readAt'] != null
-              ? _parseServerDateTime(data['readAt'])
-              : null,
-          createdAt: data['createdAt'] != null
-              ? _parseServerDateTime(data['createdAt'])
-              : null,
-        ));
-      });
-      _scrollToBottom();
-      // ?곷?媛 蹂대궦 硫붿떆吏硫??쎌쓬 泥섎━ + ?뚯폆 ?쎌쓬 ?꾩넚 ??蹂대궦 ?щ엺 ?붾㈃?먯꽌 "1" ?щ씪吏?
-      if (!isMine &&
-          messageId.isNotEmpty &&
-          _roomId != null &&
-          _myUserId != null) {
-        final now = DateTime.now();
-        _repository.readMessage(roomId: _roomId!, messageId: messageId);
-        if (_socket != null && _socket!.connected) {
-          _socket!.emit('read', {
-            'roomId': _roomId,
-            'messageId': messageId,
-            'userId': _myUserId,
-            'readAt': now.toIso8601String(),
-          });
-        }
-        if (!mounted) return;
-        setState(() {
-          final idx = _messages.indexWhere((m) => m.id == messageId);
-          if (idx >= 0) {
-            final msg = _messages[idx];
-            _messages[idx] = _ChatMessage(
-              id: msg.id,
-              text: msg.text,
-              isMine: msg.isMine,
-              senderId: msg.senderId,
-              isSystem: msg.isSystem,
-              readAt: now,
-              createdAt: msg.createdAt,
-            );
-          }
-        });
-      }
-    });
-    // ?쎌쓬 ?대깽??泥섎━: ?대떦 硫붿떆吏??readAt 媛깆떊
-    _socket!.on('read', (data) {
-      debugPrint(
-          '[read ?대깽???섏떊] messageId=${data['messageId']}, userId=${data['userId']}, ??硫붿떆吏 ??${_messages.where((m) => m.isMine && m.readAt == null).length}');
-      if (!mounted) return;
-      final String? messageId = data['messageId']?.toString();
-      final String? userId = data['userId']?.toString();
-      final DateTime? readAt = data['readAt'] != null
-          ? _parseServerDateTime(data['readAt'])
-          : null;
-      if (messageId == null || userId == null || readAt == null) return;
-      // ?닿? 蹂대궦 硫붿떆吏媛 ?곷??먭쾶 ?쏀삍???뚮쭔 媛깆떊 (userId = ?쎌? ?щ엺 = ?곷?)
-      setState(() {
-        final newList = <_ChatMessage>[];
-        for (final msg in _messages) {
-          if (msg.id == messageId && msg.isMine && msg.readAt == null) {
-            newList.add(_ChatMessage(
-              id: msg.id,
-              text: msg.text,
-              isMine: msg.isMine,
-              senderId: msg.senderId,
-              isSystem: msg.isSystem,
-              readAt: readAt,
-              createdAt: msg.createdAt,
-            ));
-          } else {
-            newList.add(msg);
-          }
-        }
-        _messages
-          ..clear()
-          ..addAll(newList);
-      });
-    });
-    _socket!.connect();
-    await completer.future.timeout(const Duration(seconds: 10));
   }
 
   Future<void> _loadRoomState() async {
@@ -830,16 +786,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       unawaited(_restoreRoomConnection());
     } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
-      final socket = _socket;
-      if (socket != null && socket.connected && _roomId != null) {
-        socket.emit('outRoom', {'roomId': _roomId});
-      }
+      _disposeRealtimeChannel();
     }
   }
 
   @override
   void dispose() {
-    _disposeSocketConnection(emitOutRoom: true);
+    _disposeRealtimeChannel();
     WidgetsBinding.instance.removeObserver(this);
     _controller.dispose();
     super.dispose();
