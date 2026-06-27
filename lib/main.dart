@@ -10,6 +10,7 @@ import 'package:nearo_app/app/app.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/core/ads/ad_service.dart';
 import 'package:nearo_app/core/notifications/notification_service.dart';
+import 'package:nearo_app/core/supabase/supabase_service.dart';
 import 'package:nearo_app/features/community/screens/community_post_detail_screen.dart';
 import 'package:nearo_app/features/matching_board/screens/mailbox_screen.dart';
 import 'package:nearo_app/features/notifications/data/notification_history_store.dart';
@@ -32,6 +33,7 @@ void main() async {
     await Future.wait([
       initializeAdMob(),
       notificationService.initialize(rootNavigatorKey),
+      SupabaseService.initialize(),
     ]).timeout(const Duration(seconds: 15));
   } catch (e) {
     debugPrint('Service init error: $e');
