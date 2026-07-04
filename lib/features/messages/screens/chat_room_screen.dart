@@ -249,20 +249,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       _realtimeChannel = null;
     }
   }
-
   Future<void> _restoreRoomConnection() async {
     if (!mounted || _roomId == null || _myUserId == null || _isReconnecting) {
       return;
     }
     _isReconnecting = true;
     try {
-      final socket = _socket;
-      if (socket == null || !socket.connected) {
-        _disposeRealtimeChannel();
-        await _initRealtime();
-      } else {
-        socket.emit('joinRoom', {'roomId': _roomId});
-      }
+      _disposeRealtimeChannel();
+      await _initRealtime();
       await _loadMessages();
       await _syncReadAt();
       if (!mounted) return;
@@ -274,7 +268,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       _isReconnecting = false;
     }
   }
-
   void _applyMessageReadAts(List<dynamic>? messageReadAts) {
     if (messageReadAts == null || messageReadAts.isEmpty || !mounted) return;
     final serverReadAt = <String, DateTime>{};

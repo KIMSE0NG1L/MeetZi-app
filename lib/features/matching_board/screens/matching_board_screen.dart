@@ -977,6 +977,28 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
               final tag = (p['idealType'] ?? (p['user'] as Map<String, dynamic>?)?['idealType'])?.toString() ?? '-';
               String school = (p['user'] as Map<String, dynamic>?)?['affiliationText']?.toString() ?? '';
               if (school.endsWith('대학교')) school = school.substring(0, school.length - 2);
+
+              final user = p['user'] as Map<String, dynamic>?;
+              final photos = user?['photos'];
+              String? primaryPhotoKey;
+              if (photos is List && photos.isNotEmpty && photos[0] is Map) {
+                primaryPhotoKey = (photos[0] as Map<String, dynamic>)['storageKey']?.toString();
+              }
+              final photoUrl = primaryPhotoKey != null ? photoUrlFromStorageKey(primaryPhotoKey) : null;
+
+              final seed = user?['avatarSeed']?.toString() ?? p['userId']?.toString();
+              final options = _parseAvatarOptions(user?['avatarOptions']);
+              final avatarUrl = seed != null && seed.isNotEmpty ? diceBearAvatarUrl(seed, options: options.isNotEmpty ? options : null) : null;
+
+              final List<String> tags = [];
+              if (school.isNotEmpty) tags.add(school);
+              final gender = user?['gender']?.toString();
+              if (gender != null) tags.add(gender == 'male' ? '남자' : '여자');
+              final height = user?['heightCm']?.toString() ?? p['heightCm']?.toString();
+              if (height != null && height != 'null') tags.add('${height}cm');
+              final mbti = user?['mbti']?.toString() ?? p['mbti']?.toString();
+              if (mbti != null && mbti.isNotEmpty && mbti != 'null') tags.add(mbti);
+              if (tag != '-' && tag.isNotEmpty) tags.add(tag);
               
               return MeetzyBoardProfileItem(
                 nickname: displayName.isEmpty ? '-' : displayName,
@@ -986,6 +1008,9 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
                   (p['user'] as Map<String, dynamic>?)?['schoolColor']?.toString(),
                 ),
                 school: school,
+                photoUrl: photoUrl,
+                avatarUrl: avatarUrl,
+                tags: tags,
               );
             }).toList(),
             onProfileTap: (index, _) => _openNoteSheet(context, index, filteredProfiles, myUserId),
@@ -994,7 +1019,7 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
               await _fetchMySummary();
               await _fetchReceivedRequestCount();
             },
-            onDeveloperMatchTap: _onDeveloperMatchTap,
+            onConditionMatchTap: () => _openFilterDialog(displayProfiles),
             onRandomMatchTap: widget.onRandomMatchTap,
             isLoading: _loading,
           ),

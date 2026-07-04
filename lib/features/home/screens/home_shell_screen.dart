@@ -1,4 +1,4 @@
-﻿import 'package:dio/dio.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -403,6 +403,82 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
   }
 
   Widget _buildTopBar() {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    
+    if (_currentIndex == 2) {
+      final topInset = MediaQuery.of(context).padding.top;
+      final pt = topInset > 0 ? topInset : 56.0;
+      return Container(
+        height: pt + 20 + 36,
+        width: double.infinity,
+        color: dark ? const Color(0xFF111827) : Colors.white,
+        child: Padding(
+          padding: EdgeInsets.only(left: 16, right: 16, top: pt, bottom: 12),
+          child: NavigationToolbar(
+            centerMiddle: true,
+            middle: Image.asset(
+              'assets/images/meetzi_logo.png',
+              height: 28,
+              fit: BoxFit.contain,
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    IconButton(
+                      icon: Icon(
+                        LucideIcons.bell,
+                        color: dark ? Colors.white : const Color(0xFF1F2937),
+                        size: 24,
+                      ),
+                      onPressed: _openMatchingInboxModal,
+                    ),
+                    if (_inboxCount > 0)
+                      Positioned(
+                        right: 4,
+                        top: 4,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE11D48),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                          child: Center(
+                            child: Text(
+                              _inboxCount > 99 ? '99+' : '$_inboxCount',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                IconButton(
+                  icon: Icon(
+                    LucideIcons.settings,
+                    color: dark ? Colors.white : const Color(0xFF1F2937),
+                    size: 24,
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     final gradient = ThemeController.getHeaderGradient();
     String title = '';
     String? subtitle;
@@ -415,21 +491,15 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
         title = '메시지함';
         subtitle = null;
         break;
-      case 2:
-        title = 'Meetzi';
-        subtitle = _affiliationShort.isNotEmpty ? _affiliationShort : null;
-        break;
       case 3:
         title = 'My프로필';
         subtitle = null;
         break;
       default:
         title = 'Meetzi';
-        subtitle = _affiliationShort.isNotEmpty ? _affiliationShort : null;
         break;
     }
 
-    // AppDesign: px-5 pt-14 pb-5 shadow-md; pt-14=56, pb-5=20, px-5=20
     final topInset = MediaQuery.of(context).padding.top;
     final pt = topInset > 0 ? topInset : 56.0;
     return Container(
@@ -558,7 +628,6 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
   Widget _buildBottomNav() {
     final dark = Theme.of(context).brightness == Brightness.dark;
     const inactiveColor = Color(0xFF9CA3AF); // gray-400 (last)
-    // last: active tab = bg-gradient-to-br themeColors.gradient (from-rose-300 via-pink-300 to-rose-400), text white
     final activeGradient = ThemeController.getActiveAccentGradient();
     final labels = ['커뮤니티', '메시지함', '홈', 'My프로필', '상점'];
     final icons = [
@@ -568,22 +637,29 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
       LucideIcons.user,
       LucideIcons.store,
     ];
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: dark ? const Color(0xFF1F2937) : Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 8,
-              offset: const Offset(0, -2)),
-        ],
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        bottom: bottomPadding > 0 ? bottomPadding : 16,
       ),
-      child: SafeArea(
-        top: false,
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: dark ? const Color(0xFF1F2937).withOpacity(0.95) : Colors.white.withOpacity(0.9),
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.12),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: List.generate(5, (i) {
@@ -601,19 +677,19 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
                         }
                       });
                     },
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(20),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
                       decoration: BoxDecoration(
                         gradient: active ? activeGradient : null,
                         color: active ? null : Colors.transparent,
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(20),
                         boxShadow: active
                             ? [
                                 BoxShadow(
-                                    color: Colors.black.withOpacity(0.15),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2))
+                                  color: Colors.black.withOpacity(0.15),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2))
                               ]
                             : null,
                       ),
@@ -623,14 +699,14 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
                         children: [
                           Icon(
                             icons[i],
-                            size: 24,
+                            size: 22,
                             color: active ? Colors.white : inactiveColor,
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 3),
                           Text(
                             labels[i],
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 10,
                               fontWeight:
                                   active ? FontWeight.bold : FontWeight.w500,
                               color: active ? Colors.white : inactiveColor,
@@ -817,30 +893,37 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
           : const Color(0xFFF9FAFB),
       body: Stack(
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (!hideTopBar) _buildTopBar(),
-              Expanded(
-                child: PageView.builder(
-                  controller: _pageController,
-                  itemCount: 5,
-                  onPageChanged: (index) =>
-                      setState(() => _currentIndex = index),
-                  itemBuilder: (_, index) {
-                    // ShopScreen만 티켓 수가 바뀌므로 동적 생성; 나머지는 고정 인스턴스 사용
-                    if (index == 4) {
-                      return ShopScreen(
-                        currentTickets: _matchingTicket,
-                        onTicketUpdated: _fetchMatchingStats,
-                      );
-                    }
-                    return _fixedPages[index];
-                  },
+          Positioned.fill(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (!hideTopBar) _buildTopBar(),
+                Expanded(
+                  child: PageView.builder(
+                    controller: _pageController,
+                    itemCount: 5,
+                    onPageChanged: (index) =>
+                        setState(() => _currentIndex = index),
+                    itemBuilder: (_, index) {
+                      // ShopScreen만 티켓 수가 바뀌므로 동적 생성; 나머지는 고정 인스턴스 사용
+                      if (index == 4) {
+                        return ShopScreen(
+                          currentTickets: _matchingTicket,
+                          onTicketUpdated: _fetchMatchingStats,
+                        );
+                      }
+                      return _fixedPages[index];
+                    },
+                  ),
                 ),
-              ),
-              _buildBottomNav(),
-            ],
+              ],
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: _buildBottomNav(),
           ),
           if (_showCoachMark)
             MeetzyCoachMark(
