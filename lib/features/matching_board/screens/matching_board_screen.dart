@@ -1019,13 +1019,35 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
               await _fetchMySummary();
               await _fetchReceivedRequestCount();
             },
-            onConditionMatchTap: () => _openFilterDialog(displayProfiles),
-            onRandomMatchTap: widget.onRandomMatchTap,
+            onSwipeLike: (index, _) => _handleSwipeLike(index, filteredProfiles),
             isLoading: _loading,
           ),
         );
       },
     );
+  }
+
+  /// 홈 카드 오른쪽 스와이프(또는 하트 버튼) → 즉시 매칭 신청 전송.
+  /// 성공하면 null, 실패하면 사용자에게 보여줄 에러 메시지를 반환한다.
+  Future<String?> _handleSwipeLike(int index, List<Map<String, dynamic>> profiles) async {
+    if (index < 0 || index >= profiles.length) {
+      return '프로필을 찾을 수 없어요.';
+    }
+    if ((_myTickets?.matchingTicket ?? 0) <= 0) {
+      return '매칭권이 부족합니다. 매칭권을 구매한 뒤 요청을 보내 주세요.';
+    }
+    final profileId = profiles[index]['id']?.toString();
+    if (profileId == null || profileId.isEmpty) {
+      return '프로필 ID를 찾을 수 없습니다.';
+    }
+    try {
+      await _repository.takeNote(profileId);
+      await _fetchMySummary();
+      await _fetchReceivedRequestCount();
+      return null;
+    } catch (e) {
+      return e.toString().replaceFirst('Exception: ', '');
+    }
   }
 
   Future<void> _openNoteSheet(BuildContext context, int startIndex, List<Map<String, dynamic>> displayProfiles, String? myUserId) async {

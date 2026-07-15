@@ -135,10 +135,16 @@ class _NearoAppState extends State<NearoApp> {
       final tokenFromLink = (initialLink.queryParameters['token'] ?? '').trim();
       final refreshFromLink =
           (initialLink.queryParameters['refresh_token'] ?? '').trim();
+      final supabaseTokenFromLink =
+          (initialLink.queryParameters['supabase_token'] ?? '').trim();
       await ReviewerFlowStorage.clear();
       if (tokenFromLink.isNotEmpty && refreshFromLink.isNotEmpty) {
         await _authRepository.saveTokens(
-            accessToken: tokenFromLink, refreshToken: refreshFromLink);
+          accessToken: tokenFromLink,
+          refreshToken: refreshFromLink,
+          supabaseAccessToken:
+              supabaseTokenFromLink.isNotEmpty ? supabaseTokenFromLink : null,
+        );
       } else if (tokenFromLink.isNotEmpty) {
         // 기존 동작 유지 (구버전 호환)
         await _tokenStorage.saveAccessToken(tokenFromLink);
@@ -319,18 +325,26 @@ class _NearoAppState extends State<NearoApp> {
     if (uri.scheme == 'nearo' && uri.host == 'login-success') {
       final token = uri.queryParameters['token'];
       final refreshToken = uri.queryParameters['refresh_token'];
+      final supabaseToken = uri.queryParameters['supabase_token'];
       if (token != null && token.isNotEmpty) {
         // 토큰 저장 완료 후 세션 복원
-        _saveTokensAndRestore(token, refreshToken, isInitial: isInitial);
+        _saveTokensAndRestore(token, refreshToken, supabaseToken,
+            isInitial: isInitial);
       }
     }
   }
 
-  Future<void> _saveTokensAndRestore(String token, String? refreshToken, {bool isInitial = false}) async {
+  Future<void> _saveTokensAndRestore(
+      String token, String? refreshToken, String? supabaseToken,
+      {bool isInitial = false}) async {
     await ReviewerFlowStorage.clear();
     if (refreshToken != null && refreshToken.isNotEmpty) {
       await _authRepository.saveTokens(
-          accessToken: token, refreshToken: refreshToken);
+        accessToken: token,
+        refreshToken: refreshToken,
+        supabaseAccessToken:
+            (supabaseToken != null && supabaseToken.isNotEmpty) ? supabaseToken : null,
+      );
     } else {
       await _tokenStorage.saveAccessToken(token);
     }

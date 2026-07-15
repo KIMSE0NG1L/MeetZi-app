@@ -16,8 +16,16 @@ class AuthRepository {
       : _client = client ?? ApiClient(),
         _tokenStorage = tokenStorage ?? TokenStorage();
 
-  Future<void> saveTokens({required String accessToken, required String refreshToken}) {
-    return _tokenStorage.saveTokens(accessToken: accessToken, refreshToken: refreshToken);
+  Future<void> saveTokens({
+    required String accessToken,
+    required String refreshToken,
+    String? supabaseAccessToken,
+  }) {
+    return _tokenStorage.saveTokens(
+      accessToken: accessToken,
+      refreshToken: refreshToken,
+      supabaseAccessToken: supabaseAccessToken,
+    );
   }
 
   Future<void> reviewerLogin({
@@ -35,6 +43,7 @@ class AuthRepository {
     final data = response.data as Map<String, dynamic>;
     final accessToken = (data['accessToken'] ?? data['access_token'])?.toString();
     final refreshToken = (data['refreshToken'] ?? data['refresh_token'])?.toString();
+    final supabaseAccessToken = data['supabaseAccessToken']?.toString();
 
     if (accessToken == null ||
         accessToken.isEmpty ||
@@ -46,6 +55,7 @@ class AuthRepository {
     await _tokenStorage.saveTokens(
       accessToken: accessToken,
       refreshToken: refreshToken,
+      supabaseAccessToken: supabaseAccessToken,
     );
     await ReviewerFlowStorage.startFreshFlow();
   }

@@ -206,6 +206,14 @@ class NearoTheme {
   );
   static const Color designScreenBgDark = Color(0xFF111827);
 
+  /// 하단 탭(커뮤니티/메시지함/홈/My프로필/상점) 공통 배경. 흰색 → rose-50, 위→아래.
+  /// HomeShellScreen 한 곳에서만 그려지며, 각 탭 화면은 투명 배경으로 이 위에 얹힌다.
+  static const LinearGradient tabScreenBgGradient = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [Colors.white, designRose50],
+  );
+
   static ThemeData light({Color? seedColor}) {
     final base = seedColor ?? primary;
     final colorScheme = ColorScheme.fromSeed(

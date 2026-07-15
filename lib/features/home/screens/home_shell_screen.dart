@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -18,6 +20,7 @@ import 'package:nearo_app/features/profile/screens/my_profile_screen.dart';
 import 'package:nearo_app/features/settings/screens/settings_screen.dart';
 import 'package:nearo_app/features/matching_board/utils/board_note_sheet_launcher.dart';
 import 'package:nearo_app/shared/api/api_client.dart';
+import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/features/auth/data/environment_status_repository.dart';
 import 'package:nearo_app/presentation/widgets/meetzy_coach_mark.dart';
@@ -271,36 +274,58 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
     await showGeneralDialog<void>(
       context: context,
       barrierDismissible: true,
-      barrierColor: Colors.black54,
+      barrierColor: Colors.black.withOpacity(0.22),
       barrierLabel: '닫기',
-      pageBuilder: (_, __, ___) => Padding(
-        padding: padding,
-        child: Center(
-          child: Material(
-            color: Colors.transparent,
-            child: Container(
-              constraints: BoxConstraints(
-                maxWidth: 420,
-                maxHeight: size.height * 0.75,
+      pageBuilder: (_, __, ___) {
+        final dark = Theme.of(context).brightness == Brightness.dark;
+        final tint = ThemeController.seedColor.value;
+        return Padding(
+          padding: padding,
+          child: Center(
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                constraints: BoxConstraints(
+                  maxWidth: 420,
+                  maxHeight: size.height * 0.75,
+                ),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(32),
+                  boxShadow: const [
+                    BoxShadow(
+                        color: Color(0x40000000),
+                        blurRadius: 24,
+                        offset: Offset(0, 8)),
+                  ],
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(32),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        // 완전 무채색 유리가 아니라 브랜드 색이 아주 옅게 비치도록 살짝 틴트
+                        color: dark
+                            ? Color.lerp(const Color(0xFF1F2937), tint, 0.15)!
+                                .withOpacity(0.62)
+                            : Color.lerp(Colors.white, tint, 0.08)!
+                                .withOpacity(0.68),
+                        borderRadius: BorderRadius.circular(32),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(dark ? 0.10 : 0.55),
+                          width: 1,
+                        ),
+                      ),
+                      child: const MailboxScreen(isModal: true),
+                    ),
+                  ),
+                ),
               ),
-              decoration: BoxDecoration(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? const Color(0xFF1F2937)
-                    : Colors.white,
-                borderRadius: BorderRadius.circular(32),
-                boxShadow: const [
-                  BoxShadow(
-                      color: Color(0x40000000),
-                      blurRadius: 24,
-                      offset: Offset(0, 8)),
-                ],
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: const MailboxScreen(isModal: true),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -402,224 +427,77 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
         : affiliation;
   }
 
+  /// 5개 탭 공통 상단바. 홈 탭과 동일한 스타일(로고 + 알림벨 + 설정)을 모든 탭에 적용한다.
   Widget _buildTopBar() {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    
-    if (_currentIndex == 2) {
-      final topInset = MediaQuery.of(context).padding.top;
-      final pt = topInset > 0 ? topInset : 56.0;
-      return Container(
-        height: pt + 20 + 36,
-        width: double.infinity,
-        color: dark ? const Color(0xFF111827) : Colors.white,
-        child: Padding(
-          padding: EdgeInsets.only(left: 16, right: 16, top: pt, bottom: 12),
-          child: NavigationToolbar(
-            centerMiddle: true,
-            middle: Image.asset(
-              'assets/images/meetzi_logo.png',
-              height: 28,
-              fit: BoxFit.contain,
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    IconButton(
-                      icon: Icon(
-                        LucideIcons.bell,
-                        color: dark ? Colors.white : const Color(0xFF1F2937),
-                        size: 24,
-                      ),
-                      onPressed: _openMatchingInboxModal,
-                    ),
-                    if (_inboxCount > 0)
-                      Positioned(
-                        right: 4,
-                        top: 4,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE11D48),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                          child: Center(
-                            child: Text(
-                              _inboxCount > 99 ? '99+' : '$_inboxCount',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                IconButton(
-                  icon: Icon(
-                    LucideIcons.settings,
-                    color: dark ? Colors.white : const Color(0xFF1F2937),
-                    size: 24,
-                  ),
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    final gradient = ThemeController.getHeaderGradient();
-    String title = '';
-    String? subtitle;
-    switch (_currentIndex) {
-      case 0:
-        title = '커뮤니티';
-        subtitle = null;
-        break;
-      case 1:
-        title = '메시지함';
-        subtitle = null;
-        break;
-      case 3:
-        title = 'My프로필';
-        subtitle = null;
-        break;
-      default:
-        title = 'Meetzi';
-        break;
-    }
-
     final topInset = MediaQuery.of(context).padding.top;
     final pt = topInset > 0 ? topInset : 56.0;
     return Container(
       height: pt + 20 + 36,
       width: double.infinity,
-      decoration: BoxDecoration(gradient: gradient, boxShadow: [
-        BoxShadow(
-            color: Colors.black.withOpacity(0.15),
-            blurRadius: 8,
-            offset: const Offset(0, 2)),
-      ]),
+      color: dark ? const Color(0xFF111827) : Colors.white,
       child: Padding(
-        padding: EdgeInsets.only(left: 20, right: 20, top: pt, bottom: 20),
-        child: Row(
-          children: [
-            Expanded(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+        padding: EdgeInsets.only(left: 16, right: 16, top: pt, bottom: 12),
+        child: NavigationToolbar(
+          centerMiddle: true,
+          middle: Image.asset(
+            'assets/images/meetzi_logo.png',
+            height: 28,
+            fit: BoxFit.contain,
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
                 children: [
-                  if (subtitle != null) ...[
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 24,
-                      ),
-                      overflow: TextOverflow.ellipsis,
+                  IconButton(
+                    icon: Icon(
+                      LucideIcons.bell,
+                      color: dark ? Colors.white : const Color(0xFF1F2937),
+                      size: 24,
                     ),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        subtitle,
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.9),
-                          fontSize: 14,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ] else
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 24,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(LucideIcons.ticket, color: Colors.white, size: 13),
-                  const SizedBox(width: 4),
-                  Text(
-                    '$_matchingTicket',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                    ),
+                    onPressed: _openMatchingInboxModal,
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 2),
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                IconButton(
-                  icon: const Icon(LucideIcons.mail, color: Colors.white, size: 26),
-                  onPressed: _openMatchingInboxModal,
-                  tooltip: '매칭대기함',
-                ),
-                if (_inboxCount > 0)
-                  Positioned(
-                    right: 6,
-                    top: 6,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                      child: Center(
-                        child: Text(
-                          _inboxCount > 99 ? '99+' : '$_inboxCount',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w700,
+                  if (_inboxCount > 0)
+                    Positioned(
+                      right: 4,
+                      top: 4,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE11D48),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                        child: Center(
+                          child: Text(
+                            _inboxCount > 99 ? '99+' : '$_inboxCount',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-              ],
-            ),
-            IconButton(
-              icon: const Icon(LucideIcons.settings,
-                  color: Colors.white, size: 26),
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                );
-              },
-              tooltip: '설정',
-            ),
-          ],
+                ],
+              ),
+              IconButton(
+                icon: Icon(
+                  LucideIcons.settings,
+                  color: dark ? Colors.white : const Color(0xFF1F2937),
+                  size: 24,
+                ),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -628,7 +506,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
   Widget _buildBottomNav() {
     final dark = Theme.of(context).brightness == Brightness.dark;
     const inactiveColor = Color(0xFF9CA3AF); // gray-400 (last)
-    final activeGradient = ThemeController.getActiveAccentGradient();
+    final activeColor = ThemeController.seedColor.value;
     final labels = ['커뮤니티', '메시지함', '홈', 'My프로필', '상점'];
     final icons = [
       LucideIcons.users,
@@ -645,82 +523,100 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
         right: 16,
         bottom: bottomPadding > 0 ? bottomPadding : 16,
       ),
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: dark ? const Color(0xFF1F2937).withOpacity(0.95) : Colors.white.withOpacity(0.9),
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.12),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: dark
+                  ? Colors.white.withOpacity(0.08)
+                  : Colors.white.withOpacity(0.55),
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(
+                color: Colors.white.withOpacity(dark ? 0.14 : 0.6),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.12),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: List.generate(5, (i) {
-              final active = _currentIndex == i;
-              return Expanded(
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      if (i == _currentIndex) return;
-                      setState(() => _currentIndex = i);
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (_pageController.hasClients && _currentIndex == i) {
-                          _pageController.jumpToPage(i);
-                        }
-                      });
-                    },
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        gradient: active ? activeGradient : null,
-                        color: active ? null : Colors.transparent,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: active
-                            ? [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.15),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2))
-                              ]
-                            : null,
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            icons[i],
-                            size: 22,
-                            color: active ? Colors.white : inactiveColor,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: List.generate(5, (i) {
+                  final active = _currentIndex == i;
+                  final color = active ? activeColor : inactiveColor;
+                  return Expanded(
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          if (i == _currentIndex) return;
+                          setState(() => _currentIndex = i);
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (_pageController.hasClients &&
+                                _currentIndex == i) {
+                              _pageController.jumpToPage(i);
+                            }
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(16),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: active
+                                      ? Colors.white
+                                      : Colors.transparent,
+                                  boxShadow: active
+                                      ? [
+                                          BoxShadow(
+                                            color:
+                                                Colors.black.withOpacity(0.15),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 3),
+                                          ),
+                                        ]
+                                      : null,
+                                ),
+                                child: Icon(icons[i], size: 22, color: color),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                labels[i],
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: active
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                  color: color,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 3),
-                          Text(
-                            labels[i],
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight:
-                                  active ? FontWeight.bold : FontWeight.w500,
-                              color: active ? Colors.white : inactiveColor,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                ),
-              );
-            }),
+                  );
+                }),
+              ),
+            ),
           ),
         ),
       ),
@@ -861,7 +757,6 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
 
   @override
   Widget build(BuildContext context) {
-    final hideTopBar = _currentIndex == 0 || _currentIndex == 4;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) async {
@@ -890,33 +785,44 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
       child: Scaffold(
       backgroundColor: Theme.of(context).brightness == Brightness.dark
           ? const Color(0xFF111827)
-          : const Color(0xFFF9FAFB),
+          : const Color(0xFFFFF1F2),
       body: Stack(
         children: [
           Positioned.fill(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (!hideTopBar) _buildTopBar(),
-                Expanded(
-                  child: PageView.builder(
-                    controller: _pageController,
-                    itemCount: 5,
-                    onPageChanged: (index) =>
-                        setState(() => _currentIndex = index),
-                    itemBuilder: (_, index) {
-                      // ShopScreen만 티켓 수가 바뀌므로 동적 생성; 나머지는 고정 인스턴스 사용
-                      if (index == 4) {
-                        return ShopScreen(
-                          currentTickets: _matchingTicket,
-                          onTicketUpdated: _fetchMatchingStats,
-                        );
-                      }
-                      return _fixedPages[index];
-                    },
+            // 5개 탭 공통 배경. 각 탭 화면은 투명 배경으로 이 위에 얹힌다.
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: Theme.of(context).brightness == Brightness.dark
+                    ? null
+                    : NearoTheme.tabScreenBgGradient,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF111827)
+                    : null,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildTopBar(),
+                  Expanded(
+                    child: PageView.builder(
+                      controller: _pageController,
+                      itemCount: 5,
+                      onPageChanged: (index) =>
+                          setState(() => _currentIndex = index),
+                      itemBuilder: (_, index) {
+                        // ShopScreen만 티켓 수가 바뀌므로 동적 생성; 나머지는 고정 인스턴스 사용
+                        if (index == 4) {
+                          return ShopScreen(
+                            currentTickets: _matchingTicket,
+                            onTicketUpdated: _fetchMatchingStats,
+                          );
+                        }
+                        return _fixedPages[index];
+                      },
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           Positioned(

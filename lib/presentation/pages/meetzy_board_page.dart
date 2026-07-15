@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/core/theme/meetzy_design_tokens.dart';
@@ -17,8 +19,7 @@ class MeetzyBoardContent extends StatefulWidget {
     this.onProfileTap,
     this.onRefresh,
     this.onDeveloperMatchTap,
-    this.onRandomMatchTap,
-    this.onConditionMatchTap,
+    this.onSwipeLike,
     this.isLoading = false,
     this.scrollController,
     this.isLoadingMore = false,
@@ -28,8 +29,9 @@ class MeetzyBoardContent extends StatefulWidget {
   final void Function(int index, MeetzyBoardProfileItem item)? onProfileTap;
   final Future<void> Function()? onRefresh;
   final VoidCallback? onDeveloperMatchTap;
-  final VoidCallback? onRandomMatchTap;
-  final VoidCallback? onConditionMatchTap;
+  /// 오른쪽 스와이프(또는 하트 버튼) 시 실제 매칭 신청을 전송한다.
+  /// 성공하면 null, 실패하면 사용자에게 보여줄 에러 메시지를 반환한다.
+  final Future<String?> Function(int index, MeetzyBoardProfileItem item)? onSwipeLike;
   final bool isLoading;
   final ScrollController? scrollController;
   final bool isLoadingMore;
@@ -38,8 +40,21 @@ class MeetzyBoardContent extends StatefulWidget {
   State<MeetzyBoardContent> createState() => _MeetzyBoardContentState();
 }
 
-class _MeetzyBoardContentState extends State<MeetzyBoardContent> {
+class _MeetzyBoardContentState extends State<MeetzyBoardContent>
+    with SingleTickerProviderStateMixin {
   int _currentProfileIndex = 0;
+  double _dragX = 0;
+  bool _cardBusy = false;
+  late final AnimationController _cardAnimController;
+
+  @override
+  void initState() {
+    super.initState();
+    _cardAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 260),
+    );
+  }
 
   @override
   void didUpdateWidget(covariant MeetzyBoardContent oldWidget) {
@@ -50,17 +65,111 @@ class _MeetzyBoardContentState extends State<MeetzyBoardContent> {
   }
 
   @override
+  void dispose() {
+    _cardAnimController.dispose();
+    super.dispose();
+  }
+
+  void _advanceCard() {
+    if (widget.profiles.isEmpty) return;
+    if (_currentProfileIndex < widget.profiles.length - 1) {
+      _currentProfileIndex++;
+    } else {
+      _currentProfileIndex = 0;
+    }
+  }
+
+  Future<void> _flyTo(double target) async {
+    final start = _dragX;
+    _cardAnimController.reset();
+    final anim = Tween<double>(begin: start, end: target).animate(
+      CurvedAnimation(parent: _cardAnimController, curve: Curves.easeIn),
+    );
+    void tick() => setState(() => _dragX = anim.value);
+    anim.addListener(tick);
+    await _cardAnimController.forward();
+    anim.removeListener(tick);
+  }
+
+  Future<void> _springBack() async {
+    final start = _dragX;
+    _cardAnimController.reset();
+    final anim = Tween<double>(begin: start, end: 0).animate(
+      CurvedAnimation(parent: _cardAnimController, curve: Curves.easeOutCubic),
+    );
+    void tick() => setState(() => _dragX = anim.value);
+    anim.addListener(tick);
+    await _cardAnimController.forward();
+    anim.removeListener(tick);
+  }
+
+  void _onCardDragUpdate(DragUpdateDetails details) {
+    if (_cardBusy) return;
+    setState(() => _dragX += details.delta.dx);
+  }
+
+  Future<void> _onCardDragEnd(DragEndDetails details) async {
+    if (_cardBusy || widget.profiles.isEmpty) return;
+    final width = MediaQuery.of(context).size.width;
+    final velocity = details.velocity.pixelsPerSecond.dx;
+    final threshold = width * 0.28;
+    if (_dragX > threshold || velocity > 900) {
+      await _commitSwipeRight();
+    } else if (_dragX < -threshold || velocity < -900) {
+      await _commitSwipeLeft();
+    } else {
+      await _springBack();
+    }
+  }
+
+  Future<void> _commitSwipeLeft() async {
+    if (widget.profiles.isEmpty || _cardBusy) return;
+    setState(() => _cardBusy = true);
+    final width = MediaQuery.of(context).size.width;
+    await _flyTo(-width * 1.3);
+    _advanceCard();
+    if (!mounted) return;
+    setState(() {
+      _dragX = 0;
+      _cardBusy = false;
+    });
+  }
+
+  Future<void> _commitSwipeRight() async {
+    if (widget.profiles.isEmpty || _cardBusy) return;
+    if (widget.onSwipeLike == null) {
+      await _springBack();
+      return;
+    }
+    setState(() => _cardBusy = true);
+    final idx = _currentProfileIndex < widget.profiles.length ? _currentProfileIndex : 0;
+    final item = widget.profiles[idx];
+    final width = MediaQuery.of(context).size.width;
+    final errorFuture = widget.onSwipeLike!(idx, item);
+    await _flyTo(width * 1.3);
+    final error = await errorFuture;
+    if (!mounted) return;
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error), backgroundColor: Colors.red.shade600),
+      );
+      setState(() {
+        _dragX = 0;
+        _cardBusy = false;
+      });
+      return;
+    }
+    _advanceCard();
+    setState(() {
+      _dragX = 0;
+      _cardBusy = false;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final bgGradient = isDark
-        ? null
-        : const LinearGradient(
-            colors: [Colors.white, Color(0xFFFFF1F2)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          );
-    final surface = isDark ? const Color(0xFF111827) : Colors.white;
 
     Widget body = LayoutBuilder(
       builder: (context, constraints) {
@@ -88,16 +197,24 @@ class _MeetzyBoardContentState extends State<MeetzyBoardContent> {
                 ),
                 const SizedBox(height: 12),
 
-                // 대표 추천 카드
+                // 대표 추천 카드 (틴더식 스와이프: 오른쪽 = 매칭 신청, 왼쪽 = 패스)
                 if (widget.profiles.isNotEmpty) ...[
                   Builder(
                     builder: (context) {
                       final idx = _currentProfileIndex < widget.profiles.length ? _currentProfileIndex : 0;
                       final currentProfile = widget.profiles[idx];
+                      final likeOpacity = (_dragX / 100).clamp(0.0, 1.0);
+                      final nopeOpacity = (-_dragX / 100).clamp(0.0, 1.0);
 
                       return GestureDetector(
-                        onTap: () => widget.onProfileTap?.call(idx, currentProfile),
-                        child: Container(
+                        onTap: _cardBusy ? null : () => widget.onProfileTap?.call(idx, currentProfile),
+                        onHorizontalDragUpdate: _onCardDragUpdate,
+                        onHorizontalDragEnd: _onCardDragEnd,
+                        child: Transform.translate(
+                          offset: Offset(_dragX, 0),
+                          child: Transform.rotate(
+                            angle: (_dragX / 1200).clamp(-0.2, 0.2),
+                            child: Container(
                           margin: const EdgeInsets.only(bottom: 20),
                           padding: const EdgeInsets.all(3),
                           decoration: BoxDecoration(
@@ -114,7 +231,7 @@ class _MeetzyBoardContentState extends State<MeetzyBoardContent> {
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(21),
                             child: AspectRatio(
-                              aspectRatio: 4 / 3,
+                              aspectRatio: 3 / 4,
                               child: Stack(
                                 fit: StackFit.expand,
                                 children: [
@@ -163,7 +280,7 @@ class _MeetzyBoardContentState extends State<MeetzyBoardContent> {
                                   // 이름 & 20대 초반 표시
                                   Positioned(
                                     left: 16,
-                                    bottom: 64,
+                                    bottom: 128,
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       mainAxisSize: MainAxisSize.min,
@@ -193,7 +310,7 @@ class _MeetzyBoardContentState extends State<MeetzyBoardContent> {
                                   Positioned(
                                     left: 16,
                                     right: 16,
-                                    bottom: 16,
+                                    bottom: 88,
                                     child: Wrap(
                                       spacing: 6,
                                       runSpacing: 6,
@@ -220,61 +337,142 @@ class _MeetzyBoardContentState extends State<MeetzyBoardContent> {
                                     ),
                                   ),
 
-                                  // Left navigation button
-                                  if (idx > 0)
-                                    Positioned(
-                                      left: 12,
-                                      top: 0,
-                                      bottom: 0,
-                                      child: Center(
-                                        child: Material(
-                                          color: Colors.black.withOpacity(0.35),
-                                          shape: const CircleBorder(),
-                                          clipBehavior: Clip.antiAlias,
-                                          child: IconButton(
-                                            icon: const Icon(
-                                              LucideIcons.chevronLeft,
-                                              color: Colors.white,
-                                              size: 24,
+                                  // LIKE 스탬프 (오른쪽으로 드래그할수록 진해짐)
+                                  Positioned(
+                                    top: 20,
+                                    left: 20,
+                                    child: Opacity(
+                                      opacity: likeOpacity,
+                                      child: Transform.rotate(
+                                        angle: -0.3,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            border: Border.all(color: const Color(0xFF22C55E), width: 3),
+                                            borderRadius: BorderRadius.circular(8),
+                                            color: Colors.black.withOpacity(0.1),
+                                          ),
+                                          child: const Text(
+                                            'LIKE',
+                                            style: TextStyle(
+                                              color: Color(0xFF22C55E),
+                                              fontSize: 26,
+                                              fontWeight: FontWeight.w900,
+                                              letterSpacing: 1,
                                             ),
-                                            onPressed: () {
-                                              setState(() {
-                                                _currentProfileIndex = idx - 1;
-                                              });
-                                            },
                                           ),
                                         ),
                                       ),
                                     ),
+                                  ),
 
-                                  // Right navigation button
-                                  if (idx < widget.profiles.length - 1)
-                                    Positioned(
-                                      right: 12,
-                                      top: 0,
-                                      bottom: 0,
-                                      child: Center(
-                                        child: Material(
-                                          color: Colors.black.withOpacity(0.35),
-                                          shape: const CircleBorder(),
-                                          clipBehavior: Clip.antiAlias,
-                                          child: IconButton(
-                                            icon: const Icon(
-                                              LucideIcons.chevronRight,
-                                              color: Colors.white,
-                                              size: 24,
+                                  // NOPE 스탬프 (왼쪽으로 드래그할수록 진해짐)
+                                  Positioned(
+                                    top: 20,
+                                    right: 20,
+                                    child: Opacity(
+                                      opacity: nopeOpacity,
+                                      child: Transform.rotate(
+                                        angle: 0.3,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            border: Border.all(color: const Color(0xFFEF4444), width: 3),
+                                            borderRadius: BorderRadius.circular(8),
+                                            color: Colors.black.withOpacity(0.1),
+                                          ),
+                                          child: const Text(
+                                            'NOPE',
+                                            style: TextStyle(
+                                              color: Color(0xFFEF4444),
+                                              fontSize: 26,
+                                              fontWeight: FontWeight.w900,
+                                              letterSpacing: 1,
                                             ),
-                                            onPressed: () {
-                                              setState(() {
-                                                _currentProfileIndex = idx + 1;
-                                              });
-                                            },
                                           ),
                                         ),
                                       ),
                                     ),
+                                  ),
+
+                                  // 넘기기 / 매칭 — 사진 하단을 가리는 글래스모피즘 액션 바
+                                  Positioned(
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    child: ClipRect(
+                                      child: BackdropFilter(
+                                        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withOpacity(0.16),
+                                            border: Border(
+                                              top: BorderSide(color: Colors.white.withOpacity(0.28)),
+                                            ),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Expanded(
+                                                child: InkWell(
+                                                  onTap: _cardBusy ? null : _commitSwipeLeft,
+                                                  child: Padding(
+                                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                                    child: Row(
+                                                      mainAxisAlignment: MainAxisAlignment.center,
+                                                      children: const [
+                                                        Icon(LucideIcons.x, color: Colors.white, size: 18),
+                                                        SizedBox(width: 6),
+                                                        Text(
+                                                          '넘기기',
+                                                          style: TextStyle(
+                                                            color: Colors.white,
+                                                            fontSize: 15,
+                                                            fontWeight: FontWeight.w700,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              Container(
+                                                width: 1,
+                                                height: 24,
+                                                color: Colors.white.withOpacity(0.3),
+                                              ),
+                                              Expanded(
+                                                child: InkWell(
+                                                  onTap: _cardBusy ? null : _commitSwipeRight,
+                                                  child: Padding(
+                                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                                    child: Row(
+                                                      mainAxisAlignment: MainAxisAlignment.center,
+                                                      children: const [
+                                                        Icon(LucideIcons.heart, color: Colors.white, size: 18),
+                                                        SizedBox(width: 6),
+                                                        Text(
+                                                          '매칭',
+                                                          style: TextStyle(
+                                                            color: Colors.white,
+                                                            fontSize: 15,
+                                                            fontWeight: FontWeight.w700,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                 ],
                               ),
+                            ),
+                          ),
                             ),
                           ),
                         ),
@@ -300,126 +498,6 @@ class _MeetzyBoardContentState extends State<MeetzyBoardContent> {
                     ),
                   ),
 
-                // 매칭 버튼 (조건 매칭 / 랜덤 매칭)
-                Row(
-                  children: [
-                    // 조건 매칭
-                    Expanded(
-                      child: Material(
-                        color: Colors.transparent,
-                        borderRadius: BorderRadius.circular(24),
-                        child: InkWell(
-                          onTap: widget.onConditionMatchTap,
-                          borderRadius: BorderRadius.circular(24),
-                          child: Ink(
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFFFB923C), Color(0xFFF97316)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(24),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFFF97316).withOpacity(0.35),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  width: 44,
-                                  height: 44,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.25),
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: const Icon(
-                                    LucideIcons.target,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                const Text(
-                                  '조건 매칭',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    // 랜덤 매칭
-                    Expanded(
-                      child: Material(
-                        color: Colors.transparent,
-                        borderRadius: BorderRadius.circular(24),
-                        child: InkWell(
-                          onTap: widget.onRandomMatchTap,
-                          borderRadius: BorderRadius.circular(24),
-                          child: Ink(
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFFF472B6), Color(0xFFE11D48)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(24),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFFE11D48).withOpacity(0.35),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  width: 44,
-                                  height: 44,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.25),
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: const Icon(
-                                    LucideIcons.shuffle,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                const Text(
-                                  '랜덤 매칭',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
                 const SizedBox(height: MeetzyDesignTokens.gridBottomSpace),
               ],
             ),
@@ -435,17 +513,11 @@ class _MeetzyBoardContentState extends State<MeetzyBoardContent> {
       );
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? surface : null,
-        gradient: bgGradient,
-      ),
-      child: Column(
+    return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(child: widget.isLoading ? const Center(child: CircularProgressIndicator()) : body),
         ],
-      ),
     );
   }
 

@@ -1,11 +1,11 @@
 import 'dart:convert';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
-import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/shared/utils/photo_url.dart';
@@ -274,7 +274,6 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final surface = dark ? const Color(0xFF1F2937) : Colors.white;
     final onSurface = dark ? Colors.white : const Color(0xFF111827);
     final onSurfaceVariant = dark ? Colors.grey.shade400 : Colors.grey.shade600;
     final primary = Theme.of(context).colorScheme.primary;
@@ -285,13 +284,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: dark ? null : ThemeController.getScreenBgGradient(),
-          color: dark ? NearoTheme.designScreenBgDark : null,
-        ),
+      body: SizedBox.expand(
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
@@ -303,17 +296,20 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                         child: ListView(
                           padding: const EdgeInsets.fromLTRB(24, 16, 24, 100),
                           children: [
-                            // ad: 한 장의 카드 — 아바타·닉네임 + 태그·키워드·프로필 수정
+                            // ad: 한 장의 카드 — 아바타·닉네임 + 태그·키워드·프로필 수정 (글래스모피즘)
                             Container(
                               width: double.infinity,
                               decoration: BoxDecoration(
-                                color: surface,
                                 borderRadius: BorderRadius.circular(24),
                                 boxShadow: [
                                   BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, 4)),
                                 ],
                               ),
-                              child: Column(
+                              child: _glass(
+                                borderRadius: BorderRadius.circular(24),
+                                dark: dark,
+                                color: dark ? Colors.white.withOpacity(0.06) : Colors.white.withOpacity(0.55),
+                                child: Column(
                                 children: [
                                   // 아바타·닉네임·학교
                                   Padding(
@@ -456,20 +452,26 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                             onTap: () => Navigator.of(context).pushNamed(AppRoutes.profileSetup, arguments: true),
                                             borderRadius: BorderRadius.circular(12),
                                             child: Container(
-                                              width: double.infinity,
-                                              padding: const EdgeInsets.symmetric(vertical: 16),
                                               decoration: BoxDecoration(
-                                                gradient: ThemeController.getHeaderGradient(),
                                                 borderRadius: BorderRadius.circular(12),
                                                 boxShadow: [BoxShadow(color: primary.withValues(alpha: 0.35), blurRadius: 12, offset: const Offset(0, 4))],
                                               ),
-                                              child: const Row(
-                                                mainAxisAlignment: MainAxisAlignment.center,
-                                                children: [
-                                                  Icon(LucideIcons.pencil, color: Colors.white, size: 20),
-                                                  SizedBox(width: 8),
-                                                  Text('프로필 수정하기', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                                                ],
+                                              child: _glass(
+                                                borderRadius: BorderRadius.circular(12),
+                                                dark: dark,
+                                                color: primary.withOpacity(0.55),
+                                                child: Container(
+                                                  width: double.infinity,
+                                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                                  child: const Row(
+                                                    mainAxisAlignment: MainAxisAlignment.center,
+                                                    children: [
+                                                      Icon(LucideIcons.pencil, color: Colors.white, size: 20),
+                                                      SizedBox(width: 8),
+                                                      Text('프로필 수정하기', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                                                    ],
+                                                  ),
+                                                ),
                                               ),
                                             ),
                                           ),
@@ -480,9 +482,32 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                 ],
                               ),
                             ),
+                            ),
                           ],
                         ),
                       ),
+      ),
+    );
+  }
+
+  /// 카드/버튼 공통 글래스모피즘 래퍼. 그림자는 바깥에서 그리고, 여기선 블러+반투명만 담당한다.
+  Widget _glass({
+    required Widget child,
+    required BorderRadius borderRadius,
+    Color? color,
+    bool dark = false,
+  }) {
+    return ClipRRect(
+      borderRadius: borderRadius,
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Container(
+          decoration: BoxDecoration(
+            color: color,
+            border: Border.all(color: Colors.white.withOpacity(dark ? 0.08 : 0.55)),
+          ),
+          child: child,
+        ),
       ),
     );
   }
@@ -547,15 +572,12 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
           );
         },
         borderRadius: BorderRadius.circular(12),
-        child: Container(
+        child: _glass(
+          borderRadius: BorderRadius.circular(12),
+          dark: dark,
+          color: dark ? Colors.white.withOpacity(0.05) : Colors.white.withOpacity(0.4),
+          child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-          decoration: BoxDecoration(
-            color: dark ? Colors.white.withOpacity(0.05) : Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: dark ? Colors.white10 : Colors.grey.shade300,
-            ),
-          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -571,6 +593,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

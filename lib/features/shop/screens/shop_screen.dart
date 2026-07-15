@@ -77,77 +77,58 @@ class _ShopScreenState extends State<ShopScreen> {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      decoration: BoxDecoration(
-        gradient: dark
-            ? null
-            : UniversityTheme.screenBgGradient,
-        color: dark ? const Color(0xFF111827) : null,
-      ),
-      child: SafeArea(
+    return SafeArea(
         child: Column(
           children: [
-            // ── 헤더 ──
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-              decoration: const BoxDecoration(
-                gradient: UniversityTheme.designPinkGradient,
-                borderRadius: BorderRadius.vertical(
-                  bottom: Radius.circular(24),
+            const SizedBox(height: 16),
+
+            // ── 보유 매칭권 카드 ──
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: BoxDecoration(
+                  gradient: UniversityTheme.designPinkGradient,
+                  borderRadius: BorderRadius.circular(20),
                 ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(LucideIcons.store, color: Colors.white, size: 26),
-                      const SizedBox(width: 10),
-                      const Text(
-                        '상점',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(LucideIcons.ticket, color: Colors.white, size: 20),
+                        const SizedBox(width: 8),
+                        const Text(
+                          '보유 매칭권',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                      ),
-                      const Spacer(),
-                      // 보유 매칭권 표시
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.25),
-                          borderRadius: BorderRadius.circular(20),
+                        const Spacer(),
+                        Text(
+                          '${widget.currentTickets}개',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(LucideIcons.ticket, color: Colors.white, size: 16),
-                            const SizedBox(width: 6),
-                            Text(
-                              '${widget.currentTickets}개',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '매칭권을 구매해서 마음에 드는 상대에게 매칭을 신청해 보세요!',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
+                      ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 6),
+                    Text(
+                      '매칭권을 구매해서 마음에 드는 상대에게 매칭을 신청해 보세요!',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
 
@@ -348,7 +329,6 @@ class _ShopScreenState extends State<ShopScreen> {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 }

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/settings/data/support_repository.dart';
 import 'package:nearo_app/features/settings/screens/faq_screen.dart';
-import 'package:nearo_app/shared/theme/theme_controller.dart';
+import 'package:nearo_app/shared/widgets/meetzy_sub_page_scaffold.dart';
 
 /// AppDesign CustomerSupport: 로즈 그라데이션 헤더 + 빠른 도움말 + 문의하기 폼 + 연락처
 class CustomerSupportScreen extends StatefulWidget {
@@ -96,53 +96,10 @@ class _CustomerSupportScreenState extends State<CustomerSupportScreen> {
     final onSurface = dark ? Colors.white : const Color(0xFF111827);
     final onSurfaceVariant = dark ? Colors.grey.shade400 : Colors.grey.shade600;
     final primary = Theme.of(context).colorScheme.primary;
-    final topInset = MediaQuery.of(context).padding.top;
-    final headerHeight = (topInset > 0 ? topInset : 56.0) + 20 + 36;
 
-    return Scaffold(
-      backgroundColor: dark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
-      body: Column(
-        children: [
-          Container(
-            height: headerHeight,
-            decoration: BoxDecoration(
-              gradient: ThemeController.getHeaderGradient(),
-              boxShadow: const [
-                BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2)),
-              ],
-            ),
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(LucideIcons.arrowLeft, color: Colors.white, size: 24),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                    const Expanded(
-                      child: Text(
-                        '고객센터',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 48),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Expanded(
-            child: _submitted ? _buildSuccessContent(dark, onSurface, onSurfaceVariant) : _buildFormContent(context, dark, surface, surfaceCard, onSurface, onSurfaceVariant, primary),
-          ),
-        ],
-      ),
+    return MeetzySubPageScaffold(
+      title: '고객센터',
+      body: _submitted ? _buildSuccessContent(dark, onSurface, onSurfaceVariant) : _buildFormContent(context, dark, surface, surfaceCard, onSurface, onSurfaceVariant, primary),
     );
   }
 

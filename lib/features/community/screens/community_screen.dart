@@ -326,55 +326,75 @@ class _CommunityScreenState extends State<CommunityScreen> {
           color: bgColor,
           border: Border(top: BorderSide(color: borderColor)),
         ),
-        padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: _tabs.map((tab) {
-              final selected = _selectedTag == tab.key;
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(14),
-                  onTap: () {
-                    if (_selectedTag == tab.key) return;
-                    setState(() => _selectedTag = tab.key);
-                    _load();
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    curve: Curves.easeOut,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: selected ? activeColor.withOpacity(0.14) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: selected ? activeColor : (dark ? Colors.grey.shade700 : Colors.grey.shade300),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          _tabIcon(tab.key),
-                          size: 14,
-                          color: selected ? activeColor : (dark ? Colors.grey.shade300 : Colors.grey.shade700),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          tab.value,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: selected ? activeColor : (dark ? Colors.grey.shade300 : Colors.grey.shade700),
+        padding: const EdgeInsets.fromLTRB(8, 6, 4, 8),
+        child: Row(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: _tabs.map((tab) {
+                    final selected = _selectedTag == tab.key;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () {
+                          if (_selectedTag == tab.key) return;
+                          setState(() => _selectedTag = tab.key);
+                          _load();
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          curve: Curves.easeOut,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: selected ? activeColor.withOpacity(0.14) : Colors.transparent,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: selected ? activeColor : (dark ? Colors.grey.shade700 : Colors.grey.shade300),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                _tabIcon(tab.key),
+                                size: 14,
+                                color: selected ? activeColor : (dark ? Colors.grey.shade300 : Colors.grey.shade700),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                tab.value,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: selected ? activeColor : (dark ? Colors.grey.shade300 : Colors.grey.shade700),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
-                  ),
+                      ),
+                    );
+                  }).toList(),
                 ),
-              );
-            }).toList(),
-          ),
+              ),
+            ),
+            // 다른 학교 커뮤니티로 push된 경우엔 자체 헤더에 이미 있으므로 중복 방지
+            if (widget.isRootTab)
+              IconButton(
+                icon: Icon(LucideIcons.messagesSquare,
+                    color: dark ? Colors.grey.shade300 : const Color(0xFF1F2937)),
+                tooltip: '쪽지함',
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const SharedChatRequestsScreen(),
+                    ),
+                  );
+                },
+              ),
+          ],
         ),
       ),
     );
@@ -435,61 +455,68 @@ class _CommunityScreenState extends State<CommunityScreen> {
     final bestIds = bestPosts.map((e) => e['id']).toSet();
     final regularPosts = _posts.where((p) => !bestIds.contains(p['id'])).toList();
 
+    // 루트 탭(하단 5개 탭 중 하나)일 때는 HomeShellScreen이 배경/상단바를 이미 그려주므로
+    // 이 화면 자체의 헤더·배경은 다른 학교 커뮤니티로 push되어 들어온 경우에만 그린다.
     return Scaffold(
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: dark ? null : ThemeController.getScreenBgGradient(),
-          color: dark ? NearoTheme.designScreenBgDark : null,
-        ),
+        decoration: widget.isRootTab
+            ? null
+            : BoxDecoration(
+                gradient: dark
+                    ? null
+                    : const LinearGradient(
+                        colors: [Colors.white, Color(0xFFFFF1F2)],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
+                color: dark ? NearoTheme.designScreenBgDark : null,
+              ),
         child: Column(
           children: [
-          // 헤더
-          Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              gradient: headerGradient,
-            ),
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-                child: Row(
-                  children: [
-                    if (widget.isRootTab)
-                      const SizedBox(width: 48)
-                    else
+          if (!widget.isRootTab)
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                gradient: headerGradient,
+              ),
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                  child: Row(
+                    children: [
                       IconButton(
                         icon: const Icon(LucideIcons.arrowLeft, color: Colors.white),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
-                    Expanded(
-                      child: Text(
-                        _communityTitle,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(LucideIcons.messagesSquare, color: Colors.white),
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => const SharedChatRequestsScreen(),
+                      Expanded(
+                        child: Text(
+                          _communityTitle,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
                           ),
-                        );
-                      },
-                    ),
-                  ],
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(LucideIcons.messagesSquare, color: Colors.white),
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const SharedChatRequestsScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
           _buildBottomTagBar(dark),
           Expanded(
             child: _loading

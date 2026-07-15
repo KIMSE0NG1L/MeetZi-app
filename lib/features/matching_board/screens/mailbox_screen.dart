@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/matching_board/data/matching_board_repository.dart';
@@ -221,10 +223,13 @@ class _MailboxScreenState extends State<MailboxScreen>
     final onSurfaceVariant = dark ? Colors.grey.shade400 : Colors.grey.shade600;
 
     return Scaffold(
-      backgroundColor: dark ? const Color(0xFF111827) : Colors.transparent,
+      // 모달(팝업)로 열릴 때는 배경을 완전히 투명하게 둬서 바깥의 글래스모피즘 컨테이너가 비치도록 한다.
+      backgroundColor: _isModal
+          ? Colors.transparent
+          : (dark ? const Color(0xFF111827) : Colors.transparent),
       body: Container(
         decoration: BoxDecoration(
-          gradient: dark ? null : ThemeController.getScreenBgGradient(),
+          gradient: (dark || _isModal) ? null : ThemeController.getScreenBgGradient(),
         ),
         child: SafeArea(
           top: !_isModal,
@@ -256,9 +261,20 @@ class _MailboxScreenState extends State<MailboxScreen>
   Widget _buildHeader(BuildContext context, bool dark) {
     final receivedCount = _receivedRequests.length;
     final sentCount = _sentRequests.length;
+    final tint = ThemeController.seedColor.value;
 
-    return Container(
-      decoration: BoxDecoration(gradient: ThemeController.getHeaderGradient()),
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+      decoration: BoxDecoration(
+        color: dark
+            ? Color.lerp(const Color(0xFF1F2937), tint, 0.28)!.withOpacity(0.55)
+            : Color.lerp(Colors.white, tint, 0.42)!.withOpacity(0.55),
+        border: Border(
+          bottom: BorderSide(color: Colors.white.withOpacity(dark ? 0.08 : 0.4)),
+        ),
+      ),
       padding: const EdgeInsets.fromLTRB(20, 14, 12, 16),
       child: Column(
         children: [
@@ -321,6 +337,8 @@ class _MailboxScreenState extends State<MailboxScreen>
             ),
           ),
         ],
+      ),
+        ),
       ),
     );
   }

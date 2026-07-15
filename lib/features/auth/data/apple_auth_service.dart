@@ -85,11 +85,15 @@ class AppleAuthService {
         final data = response.data as Map<String, dynamic>;
         final accessToken = (data['accessToken'] ?? data['access_token']) as String?;
         final refreshToken = (data['refreshToken'] ?? data['refresh_token']) as String?;
+        final supabaseAccessToken = data['supabaseAccessToken'] as String?;
 
         if (accessToken != null && accessToken.isNotEmpty) {
           await _tokenStorage.saveAccessToken(accessToken);
           if (refreshToken != null && refreshToken.isNotEmpty) {
             await _tokenStorage.saveRefreshToken(refreshToken);
+          }
+          if (supabaseAccessToken != null && supabaseAccessToken.isNotEmpty) {
+            await _tokenStorage.saveSupabaseAccessToken(supabaseAccessToken);
           }
           debugPrint('[AppleAuth] Login success, tokens saved');
           return true;

@@ -116,12 +116,16 @@ class ApiClient {
             (data['accessToken'] ?? data['access_token'])?.toString();
         final refreshTokenNew =
             (data['refreshToken'] ?? data['refresh_token'])?.toString();
+        final supabaseAccessToken = data['supabaseAccessToken']?.toString();
         if (accessToken != null &&
             accessToken.isNotEmpty &&
             refreshTokenNew != null &&
             refreshTokenNew.isNotEmpty) {
           await _tokenStorage.saveTokens(
-              accessToken: accessToken, refreshToken: refreshTokenNew);
+            accessToken: accessToken,
+            refreshToken: refreshTokenNew,
+            supabaseAccessToken: supabaseAccessToken,
+          );
           return true;
         }
       }

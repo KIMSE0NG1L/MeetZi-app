@@ -11,7 +11,6 @@ import 'package:nearo_app/core/ads/banner_ad_widget.dart';
 import 'package:nearo_app/features/matching_board/profile_detail_sheet.dart';
 import 'package:nearo_app/features/messages/data/chat_repository.dart';
 import 'package:nearo_app/features/messages/data/partner_profile_repository.dart';
-import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
 import 'package:nearo_app/shared/utils/photo_url.dart';
@@ -390,13 +389,7 @@ class _MessagesScreenState extends State<MessagesScreen>
       body: Column(
         children: [
           Expanded(
-            child: Container(
-              width: double.infinity,
-              height: double.infinity,
-              decoration: BoxDecoration(
-                gradient: dark ? null : ThemeController.getScreenBgGradient(),
-                color: dark ? NearoTheme.designScreenBgDark : null,
-              ),
+            child: SizedBox.expand(
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
                   : _rooms.isEmpty

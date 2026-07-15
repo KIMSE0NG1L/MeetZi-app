@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 /// 공통 카드 컴포넌트 (ad 디자인)
@@ -27,7 +29,7 @@ class RequestCardWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final outerBg =
-        dark ? const Color(0xFF374151).withOpacity(0.55) : Colors.white;
+        dark ? const Color(0xFF374151).withOpacity(0.35) : Colors.white.withOpacity(0.45);
     final innerBg = dark
         ? const Color(0xFF4B5563).withOpacity(0.50)
         : const Color(0xFFF9FAFB);
@@ -35,28 +37,39 @@ class RequestCardWidget extends StatelessWidget {
     final onSub = dark ? Colors.grey.shade300 : Colors.grey.shade600;
     final onMsg = dark ? Colors.grey.shade200 : const Color(0xFF374151);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: outerBg,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: dark
-            ? null
-            : const [
-                BoxShadow(
-                    color: Color(0x1A000000),
-                    blurRadius: 16,
-                    offset: Offset(0, 6)),
-              ],
-      ),
-      child: Material(
-        type: MaterialType.transparency,
-        child: InkWell(
-          onTap: onTap,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
+          boxShadow: dark
+              ? null
+              : const [
+                  BoxShadow(
+                      color: Color(0x1A000000),
+                      blurRadius: 16,
+                      offset: Offset(0, 6)),
+                ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+            child: Container(
+              decoration: BoxDecoration(
+                color: outerBg,
+                border: Border.all(
+                  color: Colors.white.withOpacity(dark ? 0.08 : 0.5),
+                ),
+              ),
+              child: Material(
+                type: MaterialType.transparency,
+                child: InkWell(
+                  onTap: onTap,
+                  borderRadius: BorderRadius.circular(20),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Row(
@@ -158,6 +171,10 @@ class RequestCardWidget extends StatelessWidget {
                 const SizedBox(height: 12),
                 footer,
               ],
+            ),
+          ),
+        ),
+      ),
             ),
           ),
         ),

@@ -9,6 +9,7 @@ import 'package:nearo_app/shared/utils/token_storage.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/features/settings/screens/customer_support_screen.dart';
 import 'package:nearo_app/features/settings/screens/open_source_licenses_screen.dart';
+import 'package:nearo_app/shared/widgets/meetzy_sub_page_scaffold.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// AppDesign SettingsScreen: 로즈 그라데이션 헤더 + 카드형 메뉴 (일반/다크 모드, 로그아웃, 계정 삭제)
@@ -160,52 +161,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final surface = dark ? const Color(0xFF1F2937) : Colors.white;
     final onSurface = dark ? Colors.white : const Color(0xFF111827);
     final onSurfaceVariant = dark ? Colors.grey.shade400 : Colors.grey.shade600;
-    final topInset = MediaQuery.of(context).padding.top;
-    final headerHeight = (topInset > 0 ? topInset : 56.0) + 20 + 36;
 
-    return Scaffold(
-      backgroundColor: dark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
+    return MeetzySubPageScaffold(
+      title: '설정',
       body: Column(
         children: [
-          // AppDesign 헤더: 메시지함 등과 동일 높이 (pt + 20 + 36)
-          Container(
-            height: headerHeight,
-            decoration: BoxDecoration(
-              gradient: ThemeController.getHeaderGradient(),
-              boxShadow: const [
-                BoxShadow(
-                    color: Colors.black26, blurRadius: 8, offset: Offset(0, 2)),
-              ],
-            ),
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(LucideIcons.arrowLeft,
-                          color: Colors.white, size: 22),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                    const Expanded(
-                      child: Text(
-                        '설정',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 48),
-                  ],
-                ),
-              ),
-            ),
-          ),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),

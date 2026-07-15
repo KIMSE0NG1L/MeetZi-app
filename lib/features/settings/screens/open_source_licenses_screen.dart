@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:nearo_app/shared/theme/theme_controller.dart';
+import 'package:nearo_app/shared/widgets/meetzy_sub_page_scaffold.dart';
 
 class OpenSourceLicensesScreen extends StatelessWidget {
   const OpenSourceLicensesScreen({super.key});
@@ -16,53 +15,10 @@ class OpenSourceLicensesScreen extends StatelessWidget {
     final surfaceCard = dark ? const Color(0xFF374151) : Colors.white;
     final onSurface = dark ? Colors.white : const Color(0xFF111827);
     final onSurfaceVariant = dark ? Colors.grey.shade400 : Colors.grey.shade600;
-    final topInset = MediaQuery.of(context).padding.top;
-    final headerHeight = (topInset > 0 ? topInset : 56.0) + 20 + 36;
 
-    return Scaffold(
-      backgroundColor: dark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
-      body: Column(
-        children: [
-          Container(
-            height: headerHeight,
-            decoration: BoxDecoration(
-              gradient: ThemeController.getHeaderGradient(),
-              boxShadow: const [
-                BoxShadow(
-                    color: Colors.black26, blurRadius: 8, offset: Offset(0, 2)),
-              ],
-            ),
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(LucideIcons.arrowLeft,
-                          color: Colors.white, size: 24),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                    const Expanded(
-                      child: Text(
-                        '오픈소스 라이선스',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 48),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Expanded(
-            child: ListView(
+    return MeetzySubPageScaffold(
+      title: '오픈소스 라이선스',
+      body: ListView(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
               children: [
                 Container(
@@ -102,9 +58,6 @@ class OpenSourceLicensesScreen extends StatelessWidget {
                   ),
                 ),
               ],
-            ),
-          ),
-        ],
       ),
     );
   }
