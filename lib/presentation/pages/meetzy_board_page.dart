@@ -1,6 +1,8 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
+import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/core/theme/meetzy_design_tokens.dart';
 import 'package:nearo_app/core/theme/university_theme.dart';
@@ -47,6 +49,7 @@ class _MeetzyBoardContentState extends State<MeetzyBoardContent>
   int _currentProfileIndex = 0;
   double _dragX = 0;
   bool _cardBusy = false;
+  bool _hapticThresholdCrossed = false;
   late final AnimationController _cardAnimController;
 
   @override
@@ -93,21 +96,25 @@ class _MeetzyBoardContentState extends State<MeetzyBoardContent>
     anim.removeListener(tick);
   }
 
-  Future<void> _springBack() async {
-    final start = _dragX;
-    _cardAnimController.reset();
-    final anim = Tween<double>(begin: start, end: 0).animate(
-      CurvedAnimation(parent: _cardAnimController, curve: Curves.easeOutCubic),
-    );
-    void tick() => setState(() => _dragX = anim.value);
-    anim.addListener(tick);
-    await _cardAnimController.forward();
-    anim.removeListener(tick);
+  Future<void> _springBack([double velocity = 0]) async {
+    _cardAnimController.stop();
+    const spring = SpringDescription(mass: 1, stiffness: 500, damping: 22);
+    final simulation = SpringSimulation(spring, _dragX, 0, velocity);
+    void tick() => setState(() => _dragX = _cardAnimController.value);
+    _cardAnimController.addListener(tick);
+    await _cardAnimController.animateWith(simulation);
+    _cardAnimController.removeListener(tick);
   }
 
   void _onCardDragUpdate(DragUpdateDetails details) {
     if (_cardBusy) return;
     setState(() => _dragX += details.delta.dx);
+    final threshold = MediaQuery.of(context).size.width * 0.28;
+    final crossed = _dragX.abs() > threshold;
+    if (crossed != _hapticThresholdCrossed) {
+      _hapticThresholdCrossed = crossed;
+      HapticFeedback.lightImpact();
+    }
   }
 
   Future<void> _onCardDragEnd(DragEndDetails details) async {
@@ -120,13 +127,15 @@ class _MeetzyBoardContentState extends State<MeetzyBoardContent>
     } else if (_dragX < -threshold || velocity < -900) {
       await _commitSwipeLeft();
     } else {
-      await _springBack();
+      await _springBack(velocity);
+      _hapticThresholdCrossed = false;
     }
   }
 
   Future<void> _commitSwipeLeft() async {
     if (widget.profiles.isEmpty || _cardBusy) return;
     setState(() => _cardBusy = true);
+    HapticFeedback.mediumImpact();
     final width = MediaQuery.of(context).size.width;
     await _flyTo(-width * 1.3);
     _advanceCard();
@@ -134,6 +143,7 @@ class _MeetzyBoardContentState extends State<MeetzyBoardContent>
     setState(() {
       _dragX = 0;
       _cardBusy = false;
+      _hapticThresholdCrossed = false;
     });
   }
 
@@ -141,9 +151,11 @@ class _MeetzyBoardContentState extends State<MeetzyBoardContent>
     if (widget.profiles.isEmpty || _cardBusy) return;
     if (widget.onSwipeLike == null) {
       await _springBack();
+      _hapticThresholdCrossed = false;
       return;
     }
     setState(() => _cardBusy = true);
+    HapticFeedback.mediumImpact();
     final idx = _currentProfileIndex < widget.profiles.length ? _currentProfileIndex : 0;
     final item = widget.profiles[idx];
     final width = MediaQuery.of(context).size.width;
@@ -158,6 +170,7 @@ class _MeetzyBoardContentState extends State<MeetzyBoardContent>
       setState(() {
         _dragX = 0;
         _cardBusy = false;
+        _hapticThresholdCrossed = false;
       });
       return;
     }
@@ -165,6 +178,7 @@ class _MeetzyBoardContentState extends State<MeetzyBoardContent>
     setState(() {
       _dragX = 0;
       _cardBusy = false;
+      _hapticThresholdCrossed = false;
     });
   }
 
@@ -181,12 +195,14 @@ class _MeetzyBoardContentState extends State<MeetzyBoardContent>
     if (!mounted) return;
 
     if (error == null) {
+      HapticFeedback.mediumImpact();
       final width = MediaQuery.of(context).size.width;
       await _flyTo(width * 1.3);
       _advanceCard();
       setState(() {
         _dragX = 0;
         _cardBusy = false;
+        _hapticThresholdCrossed = false;
       });
     } else {
       if (error != 'cancelled') {
@@ -195,11 +211,85 @@ class _MeetzyBoardContentState extends State<MeetzyBoardContent>
         );
       }
       await _springBack();
+      _hapticThresholdCrossed = false;
       setState(() {
         _dragX = 0;
         _cardBusy = false;
       });
     }
+  }
+
+  /// 대표 카드 뒤로 살짝 보이는 다음 프로필 카드 (틴더식 카드 스택)
+  Widget _buildBackgroundCard(
+    MeetzyBoardProfileItem profile, {
+    required double scale,
+    required double translateY,
+  }) {
+    return IgnorePointer(
+      child: Transform.translate(
+        offset: Offset(0, translateY),
+        child: Transform.scale(
+          scale: scale,
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 20),
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              gradient: ThemeController.getActiveAccentGradient(),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.10),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(21),
+              child: AspectRatio(
+                aspectRatio: 3 / 4,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (profile.photoUrl != null && profile.photoUrl!.isNotEmpty)
+                      Image.network(profile.photoUrl!, fit: BoxFit.cover)
+                    else if (profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty)
+                      SvgPicture.network(profile.avatarUrl!, fit: BoxFit.cover)
+                    else
+                      Container(
+                        color: profile.avatarBgColor ?? Colors.grey.shade200,
+                        alignment: Alignment.center,
+                        child: Center(
+                          child: SizedBox(
+                            width: 100,
+                            height: 100,
+                            child: profile.avatarWidget,
+                          ),
+                        ),
+                      ),
+                    Positioned.fill(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                            colors: [
+                              Colors.black.withOpacity(0.55),
+                              Colors.transparent,
+                            ],
+                            stops: const [0.0, 0.6],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -237,12 +327,33 @@ class _MeetzyBoardContentState extends State<MeetzyBoardContent>
                 if (widget.profiles.isNotEmpty) ...[
                   Builder(
                     builder: (context) {
+                      final width = MediaQuery.of(context).size.width;
                       final idx = _currentProfileIndex < widget.profiles.length ? _currentProfileIndex : 0;
                       final currentProfile = widget.profiles[idx];
                       final likeOpacity = (_dragX / 100).clamp(0.0, 1.0);
                       final nopeOpacity = (-_dragX / 100).clamp(0.0, 1.0);
+                      final dragProgress = (_dragX.abs() / (width * 0.28)).clamp(0.0, 1.0);
+                      final tintOpacity = (_dragX.abs() / 180).clamp(0.0, 0.35);
+                      final tintColor = _dragX > 0
+                          ? const Color(0xFF22C55E)
+                          : const Color(0xFFEF4444);
+                      final nextProfile =
+                          idx + 1 < widget.profiles.length ? widget.profiles[idx + 1] : null;
+                      final nextNextProfile =
+                          idx + 2 < widget.profiles.length ? widget.profiles[idx + 2] : null;
 
-                      return GestureDetector(
+                      return Stack(
+                        alignment: Alignment.topCenter,
+                        children: [
+                          if (nextNextProfile != null)
+                            _buildBackgroundCard(nextNextProfile, scale: 0.88, translateY: 18),
+                          if (nextProfile != null)
+                            _buildBackgroundCard(
+                              nextProfile,
+                              scale: 0.92 + 0.08 * dragProgress,
+                              translateY: 14 - 14 * dragProgress,
+                            ),
+                          GestureDetector(
                         onTap: _cardBusy ? null : () => widget.onProfileTap?.call(idx, currentProfile),
                         onHorizontalDragUpdate: _onCardDragUpdate,
                         onHorizontalDragEnd: _onCardDragEnd,
@@ -308,6 +419,18 @@ class _MeetzyBoardContentState extends State<MeetzyBoardContent>
                                             Colors.transparent,
                                           ],
                                           stops: const [0.0, 0.45, 0.85],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+
+                                  // 스와이프 방향 컬러 틴트 (좋아요=초록 / 패스=빨강)
+                                  Positioned.fill(
+                                    child: IgnorePointer(
+                                      child: Opacity(
+                                        opacity: tintOpacity,
+                                        child: DecoratedBox(
+                                          decoration: BoxDecoration(color: tintColor),
                                         ),
                                       ),
                                     ),
@@ -516,6 +639,8 @@ class _MeetzyBoardContentState extends State<MeetzyBoardContent>
                             ),
                           ),
                         ),
+                          ),
+                        ],
                       );
                     }
                   ),
