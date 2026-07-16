@@ -41,15 +41,19 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       if (s == null || s.isEmpty) return '-';
       switch (field) {
         case 'gradeYear':
+          String res = s;
           switch (s.toLowerCase()) {
-            case 'one': return '1';
-            case 'two': return '2';
-            case 'three': return '3';
-            case 'four': return '4';
-            case 'five': return '5';
+            case 'one': res = '1'; break;
+            case 'two': res = '2'; break;
+            case 'three': res = '3'; break;
+            case 'four': res = '4'; break;
+            case 'five': res = '5'; break;
             case 'graduation_deferred': return '졸업유예';
-            default: return s;
           }
+          if (res.isNotEmpty && !res.contains('학년')) {
+            return '$res학년';
+          }
+          return res;
         case 'fashionStyle':
           switch (s.toLowerCase()) {
             case 'hood_casual': return '후드/캐주얼';
@@ -361,11 +365,11 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                           spacing: 8,
                                           runSpacing: 8,
                                           children: [
-                                            _infoTag(_tag(_profile?['department']?.toString()), dark),
                                             _infoTag(_profile?['gender']?.toString() == 'male' ? '남성' : (_profile?['gender']?.toString() == 'female' ? '여성' : ''), dark),
                                             _infoTag(_tag(_profile?['affiliationText']?.toString() ?? _profile?['school']?.toString()), dark),
-                                            _infoTag(_profile?['heightCm'] != null ? '${_profile!['heightCm']}cm' : '', dark),
                                             _infoTag(_toLabel('gradeYear', _profile?['gradeYear']), dark),
+                                            _infoTag(_profile?['heightCm'] != null ? '${_profile!['heightCm']}cm' : '', dark),
+                                            _infoTag(_tag(_profile?['department']?.toString()), dark),
                                             _infoTag(_profile?['mbti']?.toString() ?? '', dark),
                                             _infoTag(_toLabel('smoking', _profile?['isSmoking'] ?? _profile?['smoking']), dark),
                                             _infoTag(_toLabel('drinking', _profile?['isDrinking'] ?? _profile?['drinking']), dark),
@@ -567,6 +571,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
               builder: (context) => CommunityScreen(
                 environmentId: envId,
                 schoolName: schoolName,
+                initialScope: scope,
               ),
             ),
           );

@@ -284,7 +284,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onSurface: onSurface,
                   onSurfaceVariant: onSurfaceVariant,
                   icon: LucideIcons.messageCircle,
-                  title: '고객센터 문의',
+                  title: '문의하기',
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(

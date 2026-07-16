@@ -28,11 +28,10 @@ class RequestCardWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final outerBg =
-        dark ? const Color(0xFF374151).withOpacity(0.35) : Colors.white.withOpacity(0.45);
+    final outerBg = dark ? const Color(0xFF1F2937) : Colors.white;
     final innerBg = dark
-        ? const Color(0xFF4B5563).withOpacity(0.50)
-        : const Color(0xFFF9FAFB);
+        ? const Color(0xFF374151)
+        : const Color(0xFFF3F4F6);
     final onTitle = dark ? Colors.white : const Color(0xFF111827);
     final onSub = dark ? Colors.grey.shade300 : Colors.grey.shade600;
     final onMsg = dark ? Colors.grey.shade200 : const Color(0xFF374151);
@@ -53,128 +52,125 @@ class RequestCardWidget extends StatelessWidget {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(20),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-            child: Container(
-              decoration: BoxDecoration(
-                color: outerBg,
-                border: Border.all(
-                  color: Colors.white.withOpacity(dark ? 0.08 : 0.5),
-                ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: outerBg,
+              border: Border.all(
+                color: dark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
               ),
-              child: Material(
-                type: MaterialType.transparency,
-                child: InkWell(
-                  onTap: onTap,
-                  borderRadius: BorderRadius.circular(20),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: dark ? Colors.white24 : Colors.white70,
-                          width: 2,
-                        ),
-                        boxShadow: const [
-                          BoxShadow(
-                              color: Color(0x1A000000),
-                              blurRadius: 12,
-                              offset: Offset(0, 6)),
-                        ],
-                      ),
-                      child: avatar,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
+            ),
+            child: Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(20),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w800,
-                                      color: onTitle),
-                                ),
+                          Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: dark ? Colors.white24 : Colors.white70,
+                                width: 2,
                               ),
-                              if (badge != null) ...[
-                                const SizedBox(width: 8),
-                                badge!,
+                              boxShadow: const [
+                                BoxShadow(
+                                    color: Color(0x1A000000),
+                                    blurRadius: 12,
+                                    offset: Offset(0, 6)),
                               ],
-                            ],
-                          ),
-                          if (subtitle.isNotEmpty) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              subtitle,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: onSub),
                             ),
-                          ],
+                            child: avatar,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        title,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w800,
+                                            color: onTitle),
+                                      ),
+                                    ),
+                                    if (badge != null) ...[
+                                      const SizedBox(width: 8),
+                                      badge!,
+                                    ],
+                                  ],
+                                ),
+                                if (subtitle.isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    subtitle,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: onSub),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          if (timestamp != null && timestamp!.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 8),
+                              child: Text(
+                                timestamp!,
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: onSub),
+                              ),
+                            ),
                         ],
                       ),
-                    ),
-                    if (timestamp != null && timestamp!.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8),
-                        child: Text(
-                          timestamp!,
-                          style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: onSub),
+                      if (message != null && message!.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: innerBg,
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: dark
+                                ? null
+                                : const [
+                                    BoxShadow(
+                                        color: Color(0x0D000000),
+                                        blurRadius: 8,
+                                        offset: Offset(0, 2)),
+                                  ],
+                          ),
+                          child: Text(
+                            message!,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 13, height: 1.3, color: onMsg),
+                          ),
                         ),
-                      ),
-                  ],
-                ),
-                if (message != null && message!.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: innerBg,
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: dark
-                          ? null
-                          : const [
-                              BoxShadow(
-                                  color: Color(0x0D000000),
-                                  blurRadius: 8,
-                                  offset: Offset(0, 2)),
-                            ],
-                    ),
-                    child: Text(
-                      message!,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 13, height: 1.3, color: onMsg),
-                    ),
+                      ],
+                      const SizedBox(height: 12),
+                      footer,
+                    ],
                   ),
-                ],
-                const SizedBox(height: 12),
-                footer,
-              ],
-            ),
-          ),
-        ),
-      ),
+                ),
+              ),
             ),
           ),
         ),

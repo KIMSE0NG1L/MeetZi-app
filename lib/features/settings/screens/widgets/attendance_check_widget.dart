@@ -210,10 +210,10 @@ class _AttendanceCheckWidgetState extends State<AttendanceCheckWidget>
                 child: const Icon(LucideIcons.calendarCheck, color: Colors.white, size: 18),
               ),
               const SizedBox(width: 10),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  '출석체크',
-                  style: TextStyle(
+                  '${now.month}월 출석체크',
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
                     color: Color(0xFF482139),
@@ -309,31 +309,60 @@ class _AttendanceCheckWidgetState extends State<AttendanceCheckWidget>
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: isChecked
-                ? const Color(0xFFB4005D)
-                : isToday
-                    ? const Color(0xFFFFF0F5)
-                    : Colors.transparent,
+            color: isToday
+                ? const Color(0xFFFFF0F5)
+                : const Color(0xFFF9FAFB),
             borderRadius: BorderRadius.circular(10),
-            border: isToday && !isChecked
+            border: isToday
                 ? Border.all(color: const Color(0xFFFF6FA2), width: 1.5)
-                : null,
+                : Border.all(color: const Color(0xFFF1F3F5), width: 1.0),
           ),
           child: Center(
-            child: isChecked
-                ? const Icon(LucideIcons.check, color: Colors.white, size: 14)
-                : Text(
-                    '$day',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: isToday ? FontWeight.w800 : FontWeight.w500,
-                      color: isPast
-                          ? const Color(0xFFD4C4CC)
-                          : isToday
-                              ? const Color(0xFFB4005D)
-                              : const Color(0xFF7B4D67),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Text(
+                  '$day',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: isToday ? FontWeight.w800 : FontWeight.w500,
+                    color: isPast
+                        ? const Color(0xFFD4C4CC)
+                        : isToday
+                            ? const Color(0xFFB4005D)
+                            : const Color(0xFF7B4D67),
+                  ),
+                ),
+                if (isChecked)
+                  IgnorePointer(
+                    child: Transform.rotate(
+                      angle: -0.18,
+                      child: Container(
+                        width: 33,
+                        height: 33,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(0xFFE53935),
+                            width: 1.8,
+                          ),
+                          color: const Color(0xFFEF5350).withOpacity(0.12),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Text(
+                          '출석',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFFE53935),
+                            height: 1.0,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
+              ],
+            ),
           ),
         );
       }),

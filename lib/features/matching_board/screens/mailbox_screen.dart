@@ -263,16 +263,22 @@ class _MailboxScreenState extends State<MailboxScreen>
     final sentCount = _sentRequests.length;
     final tint = ThemeController.seedColor.value;
 
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
+    final headerContainer = Container(
       decoration: BoxDecoration(
         color: dark
-            ? Color.lerp(const Color(0xFF1F2937), tint, 0.28)!.withOpacity(0.55)
-            : Color.lerp(Colors.white, tint, 0.42)!.withOpacity(0.55),
+            ? Color.lerp(const Color(0xFF1F2937), tint, 0.28)!
+            : Color.lerp(Colors.white, tint, 0.42)!,
+        borderRadius: _isModal
+            ? const BorderRadius.only(
+                topLeft: Radius.circular(32),
+                topRight: Radius.circular(32),
+              )
+            : null,
         border: Border(
-          bottom: BorderSide(color: Colors.white.withOpacity(dark ? 0.08 : 0.4)),
+          bottom: BorderSide(
+            color: dark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
+            width: 1,
+          ),
         ),
       ),
       padding: const EdgeInsets.fromLTRB(20, 14, 12, 16),
@@ -338,9 +344,19 @@ class _MailboxScreenState extends State<MailboxScreen>
           ),
         ],
       ),
-        ),
-      ),
     );
+
+    if (_isModal) {
+      return ClipRRect(
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(32),
+          topRight: Radius.circular(32),
+        ),
+        child: headerContainer,
+      );
+    }
+
+    return headerContainer;
   }
 
   Widget _buildErrorState(BuildContext context) {

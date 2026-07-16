@@ -20,6 +20,7 @@ class MeetzyBoardContent extends StatefulWidget {
     this.onRefresh,
     this.onDeveloperMatchTap,
     this.onSwipeLike,
+    this.onMatchButtonTap,
     this.isLoading = false,
     this.scrollController,
     this.isLoadingMore = false,
@@ -32,6 +33,7 @@ class MeetzyBoardContent extends StatefulWidget {
   /// 오른쪽 스와이프(또는 하트 버튼) 시 실제 매칭 신청을 전송한다.
   /// 성공하면 null, 실패하면 사용자에게 보여줄 에러 메시지를 반환한다.
   final Future<String?> Function(int index, MeetzyBoardProfileItem item)? onSwipeLike;
+  final Future<String?> Function(int index, MeetzyBoardProfileItem item)? onMatchButtonTap;
   final bool isLoading;
   final ScrollController? scrollController;
   final bool isLoadingMore;
@@ -114,7 +116,7 @@ class _MeetzyBoardContentState extends State<MeetzyBoardContent>
     final velocity = details.velocity.pixelsPerSecond.dx;
     final threshold = width * 0.28;
     if (_dragX > threshold || velocity > 900) {
-      await _commitSwipeRight();
+      await _onMatchButtonTap();
     } else if (_dragX < -threshold || velocity < -900) {
       await _commitSwipeLeft();
     } else {
@@ -164,6 +166,40 @@ class _MeetzyBoardContentState extends State<MeetzyBoardContent>
       _dragX = 0;
       _cardBusy = false;
     });
+  }
+
+  Future<void> _onMatchButtonTap() async {
+    if (widget.profiles.isEmpty || _cardBusy) return;
+    if (widget.onMatchButtonTap == null) {
+      await _commitSwipeRight();
+      return;
+    }
+    setState(() => _cardBusy = true);
+    final idx = _currentProfileIndex < widget.profiles.length ? _currentProfileIndex : 0;
+    final item = widget.profiles[idx];
+    final error = await widget.onMatchButtonTap!(idx, item);
+    if (!mounted) return;
+
+    if (error == null) {
+      final width = MediaQuery.of(context).size.width;
+      await _flyTo(width * 1.3);
+      _advanceCard();
+      setState(() {
+        _dragX = 0;
+        _cardBusy = false;
+      });
+    } else {
+      if (error != 'cancelled') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error), backgroundColor: Colors.red.shade600),
+        );
+      }
+      await _springBack();
+      setState(() {
+        _dragX = 0;
+        _cardBusy = false;
+      });
+    }
   }
 
   @override
@@ -400,7 +436,11 @@ class _MeetzyBoardContentState extends State<MeetzyBoardContent>
                                     left: 0,
                                     right: 0,
                                     bottom: 0,
-                                    child: ClipRect(
+                                    child: ClipRRect(
+                                      borderRadius: const BorderRadius.only(
+                                        bottomLeft: Radius.circular(21),
+                                        bottomRight: Radius.circular(21),
+                                      ),
                                       child: BackdropFilter(
                                         filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
                                         child: Container(
@@ -442,7 +482,7 @@ class _MeetzyBoardContentState extends State<MeetzyBoardContent>
                                               ),
                                               Expanded(
                                                 child: InkWell(
-                                                  onTap: _cardBusy ? null : _commitSwipeRight,
+                                                  onTap: _cardBusy ? null : _onMatchButtonTap,
                                                   child: Padding(
                                                     padding: const EdgeInsets.symmetric(vertical: 16),
                                                     child: Row(
@@ -569,7 +609,7 @@ class _MeetzyBoardContentState extends State<MeetzyBoardContent>
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  '[공지] Meetzi 업데이트 및 이용 안내',
+                  'MeetZi 이벤트 및 업데이트',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,

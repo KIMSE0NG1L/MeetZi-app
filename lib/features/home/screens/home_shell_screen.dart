@@ -301,24 +301,18 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
                 clipBehavior: Clip.antiAlias,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(32),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        // 완전 무채색 유리가 아니라 브랜드 색이 아주 옅게 비치도록 살짝 틴트
-                        color: dark
-                            ? Color.lerp(const Color(0xFF1F2937), tint, 0.15)!
-                                .withOpacity(0.62)
-                            : Color.lerp(Colors.white, tint, 0.08)!
-                                .withOpacity(0.68),
-                        borderRadius: BorderRadius.circular(32),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(dark ? 0.10 : 0.55),
-                          width: 1,
-                        ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: dark
+                          ? Color.lerp(const Color(0xFF1F2937), tint, 0.15)!
+                          : Color.lerp(Colors.white, tint, 0.08)!,
+                      borderRadius: BorderRadius.circular(32),
+                      border: Border.all(
+                        color: dark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
+                        width: 1,
                       ),
-                      child: const MailboxScreen(isModal: true),
                     ),
+                    child: const MailboxScreen(isModal: true),
                   ),
                 ),
               ),
@@ -547,7 +541,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
               ],
             ),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: List.generate(5, (i) {
@@ -569,14 +563,14 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
                         },
                         borderRadius: BorderRadius.circular(16),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          padding: const EdgeInsets.symmetric(vertical: 3),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               AnimatedContainer(
                                 duration: const Duration(milliseconds: 200),
-                                width: 40,
-                                height: 40,
+                                width: 34,
+                                height: 34,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   color: active
@@ -595,7 +589,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
                                 ),
                                 child: Icon(icons[i], size: 22, color: color),
                               ),
-                              const SizedBox(height: 4),
+                              const SizedBox(height: 2),
                               Text(
                                 labels[i],
                                 style: TextStyle(

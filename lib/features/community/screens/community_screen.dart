@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/features/community/data/community_repository.dart';
@@ -18,15 +18,17 @@ import 'package:nearo_app/shared/utils/mention_text_span.dart';
 class CommunityScreen extends StatefulWidget {
   final String environmentId;
   final String schoolName;
+  final String? initialScope;
 
   const CommunityScreen({
     super.key,
     required this.environmentId,
     required this.schoolName,
     this.isRootTab = false,
+    this.initialScope,
   });
 
-  /// true硫?猷⑦듃 ??쑝濡??ъ슜(?ㅻ줈媛湲?????곷떒 ?쇱そ ?щ갚).
+  /// true硫?猷⑦듃 ??쑝濡??ъ슜(?ㅻ줈媛€湲??€???곷떒 ?쇱そ ?щ갚).
   final bool isRootTab;
 
   @override
@@ -56,12 +58,18 @@ class _CommunityScreenState extends State<CommunityScreen> {
   bool get _isGlobalCommunity =>
       widget.environmentId == CommunityRepository.globalEnvironmentId;
 
-  String get _communityTitle =>
-      _isGlobalCommunity ? '커뮤니티' : '${widget.schoolName} 커뮤니티';
+  String get _communityTitle {
+    if (_selectedScope == 'my_posts') return '내 글';
+    if (_selectedScope == 'my_comments') return '내 댓글';
+    return _isGlobalCommunity ? '커뮤니티' : '${widget.schoolName} 커뮤니티';
+  }
 
   @override
   void initState() {
     super.initState();
+    if (widget.initialScope != null) {
+      _selectedScope = widget.initialScope!;
+    }
     _loadMyUserId();
     _load();
   }
@@ -517,7 +525,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 ),
               ),
             ),
-          _buildBottomTagBar(dark),
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
@@ -620,27 +627,34 @@ class _CommunityScreenState extends State<CommunityScreen> {
         ],
       ),
     ),  // body Container
-      floatingActionButton: Container(
-        width: 56,
-        height: 56,
+      floatingActionButton: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).padding.bottom > 0
+              ? MediaQuery.of(context).padding.bottom + 64
+              : 80,
+        ),
+        child: Container(
+          width: 56,
+          height: 56,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: accentGradient,
-          boxShadow: [
-            BoxShadow(
-              color: primary.withOpacity(0.4),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: _openWrite,
-            customBorder: const CircleBorder(),
-            child: const Center(
-              child: Icon(LucideIcons.squarePen, color: Colors.white, size: 26),
+            boxShadow: [
+              BoxShadow(
+                color: primary.withOpacity(0.4),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: _openWrite,
+              customBorder: const CircleBorder(),
+              child: const Center(
+                child: Icon(LucideIcons.squarePen, color: Colors.white, size: 26),
+              ),
             ),
           ),
         ),

@@ -467,7 +467,8 @@ class _MessagesScreenState extends State<MessagesScreen>
                                   context: context,
                                   builder: (context) => AlertDialog(
                                     title: const Text('대화방 삭제'),
-                                    content: const Text('이 대화방을 목록에서 제거할까요?'),
+                                    content: const Text(
+                                        '대화방을 삭제하면 상대방과의 매칭이 자동으로 취소됩니다.\n정말로 이 대화방을 삭제하시겠습니까?'),
                                     actions: [
                                       TextButton(
                                         onPressed: () =>

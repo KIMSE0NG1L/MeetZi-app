@@ -7,7 +7,6 @@ import 'package:nearo_app/features/community/widgets/bottom_action_bar_widget.da
 import 'package:nearo_app/features/community/widgets/community_guidelines_widget.dart';
 import 'package:nearo_app/features/community/widgets/content_input_widget.dart';
 import 'package:nearo_app/features/community/widgets/poll_input_widget.dart';
-import 'package:nearo_app/features/community/widgets/post_tag_selector.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 
@@ -45,11 +44,7 @@ class _CommunityPostWriteScreenState extends State<CommunityPostWriteScreen> {
   @override
   void initState() {
     super.initState();
-    final allowed = PostTagSelector.postTags.map((e) => e.key).toSet();
-    final initial = widget.initialTag;
-    if (initial != null && allowed.contains(initial)) {
-      _selectedTag = initial;
-    }
+    _selectedTag = 'free';
   }
 
   @override
@@ -167,12 +162,6 @@ class _CommunityPostWriteScreenState extends State<CommunityPostWriteScreen> {
                     AuthorInfoWidget(schoolName: widget.schoolName),
                     const SizedBox(height: 16),
 
-                    // 주제 태그
-                    PostTagSelector(
-                      selectedTag: _selectedTag,
-                      onTagChanged: (tag) => setState(() => _selectedTag = tag),
-                    ),
-                    const SizedBox(height: 16),
 
                     // 콘텐츠 입력
                     ContentInputWidget(

@@ -1020,11 +1020,66 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
               await _fetchReceivedRequestCount();
             },
             onSwipeLike: (index, _) => _handleSwipeLike(index, filteredProfiles),
+            onMatchButtonTap: (index, item) => _handleMatchButtonTap(index, filteredProfiles),
             isLoading: _loading,
           ),
         );
       },
     );
+  }
+
+  /// 하트 매칭 버튼 터치 시 호출되는 메시지 기반 매칭 핸들러
+  Future<String?> _handleMatchButtonTap(int index, List<Map<String, dynamic>> profiles) async {
+    if (index < 0 || index >= profiles.length) {
+      return '프로필을 찾을 수 없어요.';
+    }
+    if ((_myTickets?.matchingTicket ?? 0) <= 0) {
+      return '매칭권이 부족합니다. 매칭권을 구매한 뒤 요청을 보내 주세요.';
+    }
+    final tappedProfile = profiles[index];
+    final profileId = tappedProfile['id']?.toString();
+    if (profileId == null || profileId.isEmpty) {
+      return '프로필 ID를 찾을 수 없습니다.';
+    }
+
+    // 쪽지(메시지) 입력 바텀시트 호출
+    if (!mounted) return '화면이 아직 준비되지 않았습니다.';
+    final message = await showModalBottomSheet<String?>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) => _TakeNoteMessageSheet(profile: tappedProfile),
+    );
+
+    if (message == null) {
+      // 캔슬 신호 리턴하여 카드 리셋
+      return 'cancelled';
+    }
+
+    try {
+      final ok = await _takeNote(profileId, tappedProfile, message: message);
+      if (ok) {
+        // 성공 시 축하 오버레이 띄우기
+        if (mounted) {
+          await showDialog<void>(
+            context: context,
+            barrierDismissible: false,
+            barrierColor: Colors.black54,
+            builder: (dialogCtx) => _MatchCelebrationOverlay(
+              profile: tappedProfile,
+              buildAvatar: _buildBoardAvatar,
+            ),
+          );
+        }
+        await _fetchMySummary();
+        await _fetchReceivedRequestCount();
+        return null; // 성공
+      } else {
+        return '매칭 요청 전송에 실패했습니다.';
+      }
+    } catch (e) {
+      return e.toString().replaceFirst('Exception: ', '');
+    }
   }
 
   /// 홈 카드 오른쪽 스와이프(또는 하트 버튼) → 즉시 매칭 신청 전송.
@@ -1555,17 +1610,19 @@ class _TakeNoteMessageSheetState extends State<_TakeNoteMessageSheet> {
                   const SizedBox(height: 12),
                   // Warning/Success box (ad)
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: _isValid
+                        ? const EdgeInsets.all(12)
+                        : const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
                     decoration: BoxDecoration(
                       color: _isValid
                           ? (dark ? const Color(0xFF064E3B).withValues(alpha: 0.3) : const Color(0xFFD1FAE5))
-                          : (dark ? const Color(0xFF78350F).withValues(alpha: 0.3) : const Color(0xFFFEF3C7)),
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: _isValid
-                            ? (dark ? const Color(0xFF047857) : const Color(0xFFA7F3D0))
-                            : (dark ? const Color(0xFFB45309) : const Color(0xFFFDE68A)),
-                      ),
+                      border: _isValid
+                          ? Border.all(
+                              color: dark ? const Color(0xFF047857) : const Color(0xFFA7F3D0),
+                            )
+                          : null,
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1575,7 +1632,7 @@ class _TakeNoteMessageSheetState extends State<_TakeNoteMessageSheet> {
                           size: 20,
                           color: _isValid
                               ? (dark ? const Color(0xFF34D399) : const Color(0xFF059669))
-                              : (dark ? const Color(0xFFFBBF24) : const Color(0xFFD97706)),
+                              : const Color(0xFFEF4444),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
@@ -1587,7 +1644,7 @@ class _TakeNoteMessageSheetState extends State<_TakeNoteMessageSheet> {
                               fontSize: 14,
                               color: _isValid
                                   ? (dark ? const Color(0xFF6EE7B7) : const Color(0xFF047857))
-                                  : (dark ? const Color(0xFFFCD34D) : const Color(0xFFB45309)),
+                                  : const Color(0xFFEF4444),
                               fontWeight: FontWeight.w500,
                             ),
                           ),

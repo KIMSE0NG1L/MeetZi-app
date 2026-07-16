@@ -12,8 +12,8 @@ class NoticeListScreen extends StatefulWidget {
 
 class _NoticeListScreenState extends State<NoticeListScreen>
     with SingleTickerProviderStateMixin {
-  String _selectedFilter = '전체';
-  final List<String> _filters = ['전체', '공지', '업데이트'];
+  String _selectedFilter = '공지';
+  final List<String> _filters = ['공지', '업데이트'];
 
   final Map<String, String> _typeMap = {
     '공지': 'notice',
