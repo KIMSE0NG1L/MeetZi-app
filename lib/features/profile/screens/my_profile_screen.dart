@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:nearo_app/app/app_routes.dart';
+import 'package:nearo_app/core/ads/banner_ad_widget.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/dicebear_avatar.dart';
@@ -487,6 +488,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                               ),
                             ),
                             ),
+                            const SizedBox(height: 20),
+                            const BannerAdWidget(),
                           ],
                         ),
                       ),

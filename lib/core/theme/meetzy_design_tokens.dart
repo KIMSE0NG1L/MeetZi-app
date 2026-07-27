@@ -97,6 +97,10 @@ class MeetzyDesignTokens {
   static const double bottomNavLabelSize = 10;  // text-[10px]
   static const double bottomNavGap = 4;         // gap-1
 
+  /// 5개 탭 화면(HomeShellScreen)의 플로팅 글래스모피즘 하단바에 콘텐츠(배너 광고, 안내 문구 등)가
+  /// 가려지지 않도록 각 탭 최하단에 적용하는 여백. my_profile_screen.dart에서 쓰던 값(100)으로 통일.
+  static const double bottomNavClearance = 100;
+
   // ─── Typography (last theme.css + Tailwind) ───
   static const double text2xl = 24;
   static const double textBase = 16;

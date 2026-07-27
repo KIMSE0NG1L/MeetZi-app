@@ -8,6 +8,7 @@ import 'package:nearo_app/app/app.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/core/ads/ad_service.dart';
 import 'package:nearo_app/core/ads/banner_ad_widget.dart';
+import 'package:nearo_app/core/theme/meetzy_design_tokens.dart';
 import 'package:nearo_app/features/matching_board/profile_detail_sheet.dart';
 import 'package:nearo_app/features/messages/data/chat_repository.dart';
 import 'package:nearo_app/features/messages/data/partner_profile_repository.dart';
@@ -648,8 +649,9 @@ class _MessagesScreenState extends State<MessagesScreen>
                       ),
                     ),
                   ),
-          // 배너 광고 (하단 고정)
+          // 배너 광고 (하단 고정) — 플로팅 글래스모피즘 하단바에 가려지지 않도록 여백 확보
           const BannerAdWidget(),
+          const SizedBox(height: MeetzyDesignTokens.bottomNavClearance),
         ],
       ),
     );

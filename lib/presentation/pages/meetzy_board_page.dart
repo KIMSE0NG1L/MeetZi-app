@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:nearo_app/core/ads/banner_ad_widget.dart';
 import 'package:nearo_app/core/theme/meetzy_design_tokens.dart';
 import 'package:nearo_app/core/theme/university_theme.dart';
 import 'package:nearo_app/core/theme/app_text_styles.dart';
@@ -11,6 +12,7 @@ import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/presentation/widgets/meetzy_profile_card.dart';
 import 'package:nearo_app/presentation/widgets/meetzy_stats_bar.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:nearo_app/features/settings/screens/attendance_check_screen.dart';
 import 'package:nearo_app/features/settings/screens/notice_list_screen.dart';
 
 /// 설명 주석
@@ -309,9 +311,16 @@ class _MeetzyBoardContentState extends State<MeetzyBoardContent>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildNoticeBanner(context),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(child: _buildNoticeBanner(context)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _buildAttendanceBanner(context)),
+                  ],
+                ),
                 const SizedBox(height: 16),
-                
+
                 // 추천 프로필 Title
                 Text(
                   '추천 프로필',
@@ -663,6 +672,8 @@ class _MeetzyBoardContentState extends State<MeetzyBoardContent>
                     ),
                   ),
 
+                const SizedBox(height: 12),
+                const BannerAdWidget(),
                 const SizedBox(height: MeetzyDesignTokens.gridBottomSpace),
               ],
             ),
@@ -747,6 +758,76 @@ class _MeetzyBoardContentState extends State<MeetzyBoardContent>
                 LucideIcons.chevronRight,
                 size: 14,
                 color: isDark ? Colors.grey.shade400 : const Color(0xFFA855F7),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 출석체크 배너 — 홈 화면 진입 즉시 보이도록 이벤트/업데이트 배너와 같은 줄에 배치
+  Widget _buildAttendanceBanner(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const AttendanceCheckScreen()),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          decoration: BoxDecoration(
+            gradient: isDark
+                ? null
+                : const LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [Color(0xFFFFF0F5), Color(0xFFFFF4F7)],
+                  ),
+            color: isDark ? const Color(0xFF1F2937) : null,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isDark ? const Color(0xFF374151) : const Color(0xFFFFD6E7),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(5),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFFB4005D), Color(0xFFFF6FA2)],
+                  ),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  LucideIcons.calendarCheck,
+                  size: 11,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '출석체크 +1',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white : const Color(0xFFB4005D),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Icon(
+                LucideIcons.chevronRight,
+                size: 14,
+                color: isDark ? Colors.grey.shade400 : const Color(0xFFFF6FA2),
               ),
             ],
           ),

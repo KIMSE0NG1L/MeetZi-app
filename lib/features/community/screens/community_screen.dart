@@ -9,6 +9,8 @@ import 'package:nearo_app/features/matching_board/data/matching_board_repository
 import 'package:nearo_app/features/matching_board/screens/matching_board_screen.dart';
 import 'package:nearo_app/features/matching_board/utils/board_note_sheet_launcher.dart';
 import 'package:nearo_app/features/matching_board/widgets/match_card_avatar.dart';
+import 'package:nearo_app/core/ads/banner_ad_widget.dart';
+import 'package:nearo_app/core/theme/meetzy_design_tokens.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 import 'package:nearo_app/shared/utils/post_time_format.dart';
@@ -546,7 +548,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
                     : RefreshIndicator(
                         onRefresh: _load,
                         child: ListView(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 92),
+                          padding: const EdgeInsets.fromLTRB(
+                            16, 8, 16, MeetzyDesignTokens.bottomNavClearance,
+                          ),
                           children: [
                             if (bestPosts.isNotEmpty) ...[
                               Row(
@@ -620,6 +624,11 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                         ),
                                 ),
                               ),
+                            // 하단 탭(홈 셸)에 떠 있는 플로팅 네비게이션 바 위에서만 노출
+                            if (widget.isRootTab) ...[
+                              const SizedBox(height: 12),
+                              const BannerAdWidget(),
+                            ],
                           ],
                         ),
                       ),

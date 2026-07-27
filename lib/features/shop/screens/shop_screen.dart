@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/core/ads/ad_service.dart';
+import 'package:nearo_app/core/ads/banner_ad_widget.dart';
 import 'package:nearo_app/core/payment/matching_ticket_service.dart';
+import 'package:nearo_app/core/theme/meetzy_design_tokens.dart';
 import 'package:nearo_app/core/theme/university_theme.dart';
 import 'package:nearo_app/features/settings/data/event_repository.dart';
 import 'package:nearo_app/shared/api/api_client.dart';
@@ -287,7 +289,9 @@ class _ShopScreenState extends State<ShopScreen> {
             // ── 매칭권 상품 카드 ──
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.fromLTRB(
+                  20, 0, 20, MeetzyDesignTokens.bottomNavClearance,
+                ),
                 child: Column(
                   children: [
                     // ── 광고 보고 무료로 받기 ──
@@ -617,6 +621,9 @@ class _ShopScreenState extends State<ShopScreen> {
                         ],
                       ),
                     ),
+
+                    const SizedBox(height: 16),
+                    const BannerAdWidget(),
                   ],
                 ),
               ),
