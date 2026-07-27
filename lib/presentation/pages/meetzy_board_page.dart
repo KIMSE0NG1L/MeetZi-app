@@ -312,7 +312,6 @@ class _MeetzyBoardContentState extends State<MeetzyBoardContent>
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Expanded(child: _buildNoticeBanner(context)),
                     const SizedBox(width: 8),
