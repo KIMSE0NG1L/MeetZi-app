@@ -56,10 +56,10 @@
 - **POST** `/matching-board/take-note-requests/:requestId/accept`
 - 동작: 요청 상태를 수락으로 변경, 매칭 생성 (채팅 가능 등). 매칭권은 이미 차감된 상태 유지.
 
-### 6. 가져가기 요청 거절 (매칭권 환불)
+### 6. 가져가기 요청 거절 (환불 없음)
 
 - **POST** `/matching-board/take-note-requests/:requestId/reject`
-- 동작: 요청 상태를 거절로 변경, **요청자에게 매칭권 1장 환불** (`matching_ticket_count` + 1).
+- 동작: 요청 상태를 거절로 변경. **매칭권은 환불되지 않음** (신청 시 이미 차감된 상태 유지 — 확정된 정책).
 
 ### 등록권 사용 (게시판 등록 → 매칭권 1 지급)
 
@@ -81,11 +81,28 @@
 | 가져가기 버튼 | 매칭권 1장 | `POST /matching-board/take-note` → 요청 생성 + 상대 알림 (수락 시에만 매칭) |
 | 알림에서 가져가기 요청 탭 | - | `GET /take-note-requests/:id` 후 상세 화면 (받기/거절) |
 | 받기 | - | `POST .../accept` → 매칭 성사 |
-| 거절 | - | `POST .../reject` → 요청자 매칭권 환불 |
+| 거절 | - | `POST .../reject` → 환불 없음 (매칭권 차감 상태 유지) |
 
 - `GET /users/me/tickets` 에 `registerTicket` 포함. 없으면 앱은 0으로 표시하고, 등록 시 "등록권이 부족해요" 메시지를 냅니다.
+- 구독(월 구독 무제한, `Subscription.status === 'active'`)이 활성 상태인 유저는 `take-note` 요청 시 매칭권 확인/차감 자체를 건너뜁니다.
 
 ---
+
+## 매칭권 획득 경로
+
+기존 출석체크(+1/일)·추천인(+3, 양방향)·개별 소모품 결제 외에 아래 두 경로가 추가됨:
+
+### 리워드 광고 시청 (하루 5회 제한)
+
+- **POST** `/ad-reward/claim` — 리워드 광고 시청 완료 시 매칭권 1장 지급. 하루 5회 초과 시 403.
+- **GET** `/ad-reward/status` — `{ remainingToday, limit: 5 }` 오늘 남은 횟수 조회.
+- 부정 방지는 클라이언트 콜백(AdMob `onUserEarnedReward`) 신뢰 + 서버 측 일일 횟수 제한만 적용 (서버 측 영수증 검증(SSV) 없음).
+
+### 월 구독 → 매칭권 무제한
+
+- RevenueCat 구독 상품(Package ID `monthly_unlimited`)을 구매하면 기존 `Subscription` 모델의 웹훅 처리(INITIAL_PURCHASE/RENEWAL)를 그대로 재사용해 `status = active`로 전환됨.
+- `status === 'active'`인 동안에는 매칭권 잔고와 무관하게 `take-note` 요청이 항상 허용되고, 매칭권도 차감되지 않음 (소모성 매칭권 잔고는 그대로 유지되어 구독 해지 후에도 남아있는 매칭권을 계속 사용 가능).
+- 개별 매칭권 구매(`single_ticket`)와는 별개 상품이라 공존 가능.
 
 ## 게시판 카드(걸어놓는 프로필) 관리 DB·API
 

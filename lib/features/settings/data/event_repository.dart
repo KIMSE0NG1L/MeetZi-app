@@ -46,4 +46,20 @@ class EventRepository {
     );
     return res.data?['hasUsedReferralCode'] == true;
   }
+
+  /// 리워드 광고 시청 완료 → 매칭권 1장 지급 요청 (하루 5회 제한)
+  Future<Map<String, dynamic>> claimAdReward() async {
+    final res = await _client.dio.post<Map<String, dynamic>>(
+      ApiEndpoints.adRewardClaim,
+    );
+    return res.data ?? {};
+  }
+
+  /// 오늘 남은 리워드 광고 시청 가능 횟수 조회
+  Future<Map<String, dynamic>> getAdRewardStatus() async {
+    final res = await _client.dio.get<Map<String, dynamic>>(
+      ApiEndpoints.adRewardStatus,
+    );
+    return res.data ?? {};
+  }
 }

@@ -94,4 +94,8 @@ class ApiEndpoints {
   static const String eventReferralMyCode = '/events/referral/my-code';
   static const String eventReferralApply = '/events/referral/apply';
   static const String eventReferralStatus = '/events/referral/status';
+
+  // Ad Reward (리워드 광고 시청 → 매칭권 지급)
+  static const String adRewardClaim = '/ad-reward/claim';
+  static const String adRewardStatus = '/ad-reward/status';
 }
