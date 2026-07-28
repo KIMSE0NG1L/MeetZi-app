@@ -21,4 +21,5 @@ class AppRoutes {
   static const String avatarSetup = '/profile/avatar-setup';
   static const String customerSupport = '/settings/customer-support';
   static const String privacyConsentGate = '/privacy-consent-gate';
+  static const String paywall = '/subscription/paywall';
 }

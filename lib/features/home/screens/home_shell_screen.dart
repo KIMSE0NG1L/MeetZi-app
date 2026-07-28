@@ -26,7 +26,7 @@ import 'package:nearo_app/features/auth/data/environment_status_repository.dart'
 import 'package:nearo_app/presentation/widgets/meetzy_coach_mark.dart';
 import 'package:nearo_app/features/matching/data/matching_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:nearo_app/core/payment/matching_ticket_service.dart';
+import 'package:nearo_app/core/payment/revenue_cat_service.dart';
 import 'package:nearo_app/features/shop/screens/shop_screen.dart';
 
 /// 설명 주석
@@ -109,7 +109,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> with RouteAware {
       final userId = (profile['user'] as Map?)?['id']?.toString() ??
           profile['id']?.toString();
       if (userId != null && userId.isNotEmpty) {
-        await MatchingTicketService.initialize(userId);
+        await RevenueCatService.initialize(userId);
       }
     } catch (e) {
       debugPrint('[HomeShell] RevenueCat init failed: $e');

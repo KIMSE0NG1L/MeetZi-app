@@ -33,6 +33,9 @@ import 'package:nearo_app/presentation/pages/meetzy_university_select_page.dart'
 import 'package:nearo_app/presentation/pages/meetzy_email_verification_page.dart';
 import 'package:nearo_app/shared/utils/privacy_consent_storage.dart';
 import 'package:nearo_app/core/ads/ad_service.dart';
+import 'package:nearo_app/core/payment/revenue_cat_service.dart';
+import 'package:nearo_app/features/subscription/controllers/subscription_controller.dart';
+import 'package:nearo_app/features/subscription/screens/paywall_screen.dart';
 
 final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
 
@@ -107,6 +110,7 @@ class _NearoAppState extends State<NearoApp> {
         AuthRepository(client: _apiClient, tokenStorage: _tokenStorage);
 
     _authService.init();
+    _initRevenueCat();
     _resolveInitialRoute();
     _initDeepLinks();
 
@@ -114,6 +118,11 @@ class _NearoAppState extends State<NearoApp> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       requestTrackingAuthorization();
     });
+  }
+
+  Future<void> _initRevenueCat() async {
+    await RevenueCatService.initialize();
+    await SubscriptionController.instance.checkEntitlement();
   }
 
   /// 설명 주석
@@ -482,6 +491,7 @@ class _NearoAppState extends State<NearoApp> {
             AppRoutes.customerSupport: (_) => const CustomerSupportScreen(),
             AppRoutes.privacyConsentGate: (_) =>
                 const PrivacyConsentGateScreen(),
+            AppRoutes.paywall: (_) => const PaywallScreen(),
           },
           navigatorObservers: [routeObserver],
         );

@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/core/ads/ad_service.dart';
 import 'package:nearo_app/core/ads/banner_ad_widget.dart';
-import 'package:nearo_app/core/payment/matching_ticket_service.dart';
+import 'package:nearo_app/core/payment/revenue_cat_service.dart';
 import 'package:nearo_app/core/theme/meetzy_design_tokens.dart';
 import 'package:nearo_app/core/theme/university_theme.dart';
+import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/features/settings/data/event_repository.dart';
+import 'package:nearo_app/features/subscription/controllers/subscription_controller.dart';
 import 'package:nearo_app/shared/api/api_client.dart';
 
 class ShopScreen extends StatefulWidget {
@@ -23,7 +25,7 @@ class ShopScreen extends StatefulWidget {
 }
 
 class _ShopScreenState extends State<ShopScreen> {
-  late final MatchingTicketService _ticketService;
+  late final RevenueCatService _ticketService;
   final _eventRepository = EventRepository();
   final _rewardedAd = RewardedAdService();
   bool _purchasing = false;
@@ -37,7 +39,7 @@ class _ShopScreenState extends State<ShopScreen> {
   @override
   void initState() {
     super.initState();
-    _ticketService = MatchingTicketService(ApiClient());
+    _ticketService = RevenueCatService(ApiClient());
     _rewardedAd.load();
     _loadExtras();
   }
@@ -118,7 +120,11 @@ class _ShopScreenState extends State<ShopScreen> {
     }
     setState(() => _claimingAdReward = true);
 
-    // 최대 5초 대기하며 광고 로드 확인 (messages_screen.dart의 리워드 광고 패턴과 동일)
+    if (!_rewardedAd.isLoaded) {
+      _rewardedAd.load();
+    }
+
+    // 최대 5초 대기하며 광고 로드 확인
     const timeout = Duration(seconds: 5);
     const interval = Duration(milliseconds: 200);
     var waited = Duration.zero;
@@ -167,32 +173,10 @@ class _ShopScreenState extends State<ShopScreen> {
   }
 
   Future<void> _onSubscribe() async {
-    if (_subscribing) return;
-    setState(() => _subscribing = true);
-    try {
-      final customerInfo = await _ticketService.purchaseUnlimitedSubscription();
-      if (!mounted) return;
-      if (customerInfo == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('구독이 취소되었습니다.')),
-        );
-        return;
-      }
-      final active = await _ticketService.isSubscriptionActive();
-      if (!mounted) return;
+    final result = await Navigator.of(context).pushNamed(AppRoutes.paywall);
+    if (result == true && mounted) {
+      final active = await SubscriptionController.instance.checkEntitlement();
       setState(() => _subscriptionActive = active);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(active ? '구독이 시작되었어요! 이제 매칭권 걱정 없이 신청해 보세요 🎉' : '구독 처리 중이에요. 잠시 후 다시 확인해 주세요.'),
-          backgroundColor: active ? const Color(0xFF10B981) : null,
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      final msg = e is Exception ? e.toString().replaceFirst('Exception: ', '') : '구독에 실패했어요. 잠시 후 다시 시도해 주세요.';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-    } finally {
-      if (mounted) setState(() => _subscribing = false);
     }
   }
 
@@ -295,76 +279,85 @@ class _ShopScreenState extends State<ShopScreen> {
                 child: Column(
                   children: [
                     // ── 광고 보고 무료로 받기 ──
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: dark ? Colors.white.withValues(alpha: 0.06) : Colors.white,
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: (_claimingAdReward || (_adRewardRemaining ?? 0) <= 0)
+                            ? null
+                            : _onWatchAd,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: dark ? Colors.white12 : const Color(0xFFE5E7EB),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: dark ? Colors.white10 : const Color(0xFFFFF1F2),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: const Icon(LucideIcons.circlePlay, color: Color(0xFFF43F5E), size: 24),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '광고 보고 무료로 받기',
-                                  style: TextStyle(
-                                    color: dark ? Colors.white : const Color(0xFF111827),
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '오늘 남은 횟수: ${_adRewardRemaining ?? 5}/5',
-                                  style: TextStyle(
-                                    color: dark ? Colors.grey.shade400 : const Color(0xFF6B7280),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: dark ? Colors.white.withValues(alpha: 0.06) : Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: dark ? Colors.white12 : const Color(0xFFE5E7EB),
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          ElevatedButton(
-                            onPressed: (_claimingAdReward || (_adRewardRemaining ?? 0) <= 0)
-                                ? null
-                                : _onWatchAd,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFF43F5E),
-                              foregroundColor: Colors.white,
-                              disabledBackgroundColor: Colors.grey.shade300,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: dark ? Colors.white10 : const Color(0xFFFFF1F2),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: const Icon(LucideIcons.circlePlay, color: Color(0xFFF43F5E), size: 24),
                               ),
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                            ),
-                            child: _claimingAdReward
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                                  )
-                                : const Text('시청', style: TextStyle(fontWeight: FontWeight.w800)),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '광고 보고 무료로 받기',
+                                      style: TextStyle(
+                                        color: dark ? Colors.white : const Color(0xFF111827),
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '오늘 남은 횟수: ${_adRewardRemaining ?? 5}/5',
+                                      style: TextStyle(
+                                        color: dark ? Colors.grey.shade400 : const Color(0xFF6B7280),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              ElevatedButton(
+                                onPressed: (_claimingAdReward || (_adRewardRemaining ?? 0) <= 0)
+                                    ? null
+                                    : _onWatchAd,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFF43F5E),
+                                  foregroundColor: Colors.white,
+                                  disabledBackgroundColor: Colors.grey.shade300,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 0,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                ),
+                                child: _claimingAdReward
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                      )
+                                    : const Text('시청', style: TextStyle(fontWeight: FontWeight.w800)),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
 

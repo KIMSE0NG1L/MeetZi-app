@@ -6,7 +6,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/app/app.dart';
 import 'package:nearo_app/app/app_routes.dart';
-import 'package:nearo_app/core/ads/ad_service.dart';
 import 'package:nearo_app/core/ads/banner_ad_widget.dart';
 import 'package:nearo_app/core/theme/meetzy_design_tokens.dart';
 import 'package:nearo_app/features/matching_board/profile_detail_sheet.dart';
@@ -34,14 +33,12 @@ class _MessagesScreenState extends State<MessagesScreen>
   List<Map<String, dynamic>> _rooms = [];
   final Set<String> _blockedRoomIds = {};
   Timer? _refreshTimer;
-  final _rewardedAd = RewardedAdService();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadRooms();
-    _rewardedAd.load();
     _refreshTimer = Timer.periodic(
       const Duration(seconds: 6),
       (_) => _loadRooms(showLoader: false),
@@ -75,7 +72,6 @@ class _MessagesScreenState extends State<MessagesScreen>
   @override
   void dispose() {
     _refreshTimer?.cancel();
-    _rewardedAd.dispose();
     WidgetsBinding.instance.removeObserver(this);
     if (_routeObserverSubscribed) {
       routeObserver.unsubscribe(this);
@@ -321,8 +317,8 @@ class _MessagesScreenState extends State<MessagesScreen>
     return Icon(LucideIcons.user, size: 48, color: Colors.grey.shade600);
   }
 
-  /// 보상형 광고 로드 대기(최대 5초) 후 표시, 완료 시 채팅방 진입
-  Future<void> _showRewardedThenNavigate(
+  /// 채팅방 진입 (광고 없이 바로 이동)
+  void _navigateToChat(
     BuildContext ctx, {
     required String roomId,
     required String partner,
@@ -330,52 +326,30 @@ class _MessagesScreenState extends State<MessagesScreen>
     required String? photoKey,
     required String? avatarSeed,
     required String? avatarOptionsRaw,
-  }) async {
-    void goToChat() {
-      if (!ctx.mounted) return;
-      Navigator.of(ctx).pushNamed(
-        AppRoutes.chatRoom,
-        arguments: {
-          'roomId': roomId,
-          'partnerNickname': partner,
-          'isActive': isActive,
-          'partnerPhotoStorageKey': photoKey,
-          'partnerAvatarSeed': avatarSeed,
-          'partnerAvatarOptions': avatarOptionsRaw,
-        },
-      ).then((result) {
-        if (result is Map && result['blocked'] == true) {
-          final blockedRoomId = result['roomId']?.toString();
-          if (blockedRoomId != null && mounted) {
-            setState(() {
-              _blockedRoomIds.add(blockedRoomId);
-              _rooms.removeWhere((r) => r['roomId']?.toString() == blockedRoomId);
-            });
-          }
+  }) {
+    if (!ctx.mounted) return;
+    Navigator.of(ctx).pushNamed(
+      AppRoutes.chatRoom,
+      arguments: {
+        'roomId': roomId,
+        'partnerNickname': partner,
+        'isActive': isActive,
+        'partnerPhotoStorageKey': photoKey,
+        'partnerAvatarSeed': avatarSeed,
+        'partnerAvatarOptions': avatarOptionsRaw,
+      },
+    ).then((result) {
+      if (result is Map && result['blocked'] == true) {
+        final blockedRoomId = result['roomId']?.toString();
+        if (blockedRoomId != null && mounted) {
+          setState(() {
+            _blockedRoomIds.add(blockedRoomId);
+            _rooms.removeWhere((r) => r['roomId']?.toString() == blockedRoomId);
+          });
         }
-        _loadRooms(showLoader: false);
-      });
-    }
-
-    // 최대 5초 대기하며 광고 로드 확인
-    const timeout = Duration(seconds: 5);
-    const interval = Duration(milliseconds: 200);
-    var waited = Duration.zero;
-    while (!_rewardedAd.isLoaded && waited < timeout) {
-      await Future.delayed(interval);
-      waited += interval;
-    }
-
-    if (!_rewardedAd.isLoaded) {
-      debugPrint('[AdMob] Rewarded not loaded after ${timeout.inSeconds}s, going direct');
-      goToChat();
-      return;
-    }
-
-    await _rewardedAd.show(
-      onRewarded: (_) {},
-      onDismissed: goToChat,
-    );
+      }
+      _loadRooms(showLoader: false);
+    });
   }
 
   @override
@@ -504,8 +478,8 @@ class _MessagesScreenState extends State<MessagesScreen>
                                 Colors.black.withOpacity(dark ? 0.18 : 0.08),
                             child: InkWell(
                               borderRadius: BorderRadius.circular(16),
-                              onTap: () async {
-                                await _showRewardedThenNavigate(
+                              onTap: () {
+                                _navigateToChat(
                                   context,
                                   roomId: roomId,
                                   partner: partner,
