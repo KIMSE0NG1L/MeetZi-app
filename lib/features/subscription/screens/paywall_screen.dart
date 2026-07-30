@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:nearo_app/core/payment/revenue_cat_service.dart';
 import 'package:nearo_app/core/theme/university_theme.dart';
 import 'package:nearo_app/features/subscription/controllers/subscription_controller.dart';
+
+const _kPrivacyPolicyUrl = 'https://www.notion.so/32a97b83a0ac80f4b7a2ebac146f3113';
+const _kTermsOfUseUrl = 'https://www.notion.so/32a97b83a0ac80d098ccd09e715df3d2';
 
 /// MeetZi 프리미엄 월 구독 결제 화면 (Paywall)
 class PaywallScreen extends StatefulWidget {
@@ -117,6 +121,13 @@ class _PaywallScreenState extends State<PaywallScreen> {
       );
     } finally {
       if (mounted) setState(() => _restoring = false);
+    }
+  }
+
+  Future<void> _openLink(String urlString) async {
+    final url = Uri.parse(urlString);
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.inAppBrowserView);
     }
   }
 
@@ -336,6 +347,44 @@ class _PaywallScreenState extends State<PaywallScreen> {
                                 decoration: TextDecoration.underline,
                               ),
                             ),
+                    ),
+                    const SizedBox(height: 4),
+
+                    // 이용약관 / 개인정보처리방침 링크
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        TextButton(
+                          onPressed: () => _openLink(_kTermsOfUseUrl),
+                          style: TextButton.styleFrom(
+                            foregroundColor: dark ? Colors.grey.shade500 : const Color(0xFF94A3B8),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Text(
+                            '이용약관',
+                            style: TextStyle(fontSize: 12, decoration: TextDecoration.underline),
+                          ),
+                        ),
+                        Text(
+                          '·',
+                          style: TextStyle(color: dark ? Colors.grey.shade600 : const Color(0xFFCBD5E1)),
+                        ),
+                        TextButton(
+                          onPressed: () => _openLink(_kPrivacyPolicyUrl),
+                          style: TextButton.styleFrom(
+                            foregroundColor: dark ? Colors.grey.shade500 : const Color(0xFF94A3B8),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Text(
+                            '개인정보 처리방침',
+                            style: TextStyle(fontSize: 12, decoration: TextDecoration.underline),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
