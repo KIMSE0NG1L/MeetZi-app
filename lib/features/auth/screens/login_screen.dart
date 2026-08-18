@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/app/app_routes.dart';
 import 'package:nearo_app/features/auth/data/apple_auth_service.dart';
 import 'package:nearo_app/features/auth/data/auth_repository.dart';
+import 'package:nearo_app/features/auth/data/google_auth_service.dart';
 import 'package:nearo_app/features/settings/screens/open_source_licenses_screen.dart';
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/utils/app_config.dart';
@@ -470,6 +471,72 @@ class _LoginScreenState extends State<LoginScreen> {
                           },
                         ),
                         const SizedBox(height: 12),
+                        // ── Google 로그인 버튼 ──
+                        TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 550),
+                          builder: (context, value, child) {
+                            return Opacity(
+                              opacity: value.clamp(0.0, 1.0),
+                              child: Transform.translate(
+                                offset: Offset(0, 20 * (1 - value)),
+                                child: Material(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(24),
+                                  elevation: 2,
+                                  shadowColor: Colors.black.withValues(alpha: 0.15),
+                                  child: InkWell(
+                                    onTap: _isGoogleLoginLoading ? null : _handleGoogleLogin,
+                                    borderRadius: BorderRadius.circular(24),
+                                    child: Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.symmetric(vertical: 20),
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(24),
+                                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                                      ),
+                                      child: _isGoogleLoginLoading
+                                          ? const SizedBox(
+                                              width: 20,
+                                              height: 20,
+                                              child: CircularProgressIndicator(strokeWidth: 2),
+                                            )
+                                          : Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                Image.asset(
+                                                  'assets/images/google_logo.png',
+                                                  width: 20,
+                                                  height: 20,
+                                                  errorBuilder: (_, __, ___) => const Text(
+                                                    'G',
+                                                    style: TextStyle(
+                                                      fontSize: 18,
+                                                      fontWeight: FontWeight.w900,
+                                                      color: Color(0xFF4285F4),
+                                                    ),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                const Text(
+                                                  'Google로 계속하기',
+                                                  style: TextStyle(
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Color(0xFF1F2937),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 12),
                         // ── Apple 로그인 버튼 (iOS 전용) ──
                         if (Platform.isIOS)
                           TweenAnimationBuilder<double>(
@@ -643,6 +710,42 @@ class _LoginScreenState extends State<LoginScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('카카오 로그인 연결에 실패했습니다.')),
       );
+    }
+  }
+
+  bool _isGoogleLoginLoading = false;
+
+  Future<void> _handleGoogleLogin() async {
+    if (_isGoogleLoginLoading) return;
+    setState(() => _isGoogleLoginLoading = true);
+    try {
+      final googleAuthService = GoogleAuthService();
+      final success = await googleAuthService.signInWithGoogle();
+      if (!mounted) return;
+      if (success) {
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          AppRoutes.onboarding,
+          (route) => false,
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Google 로그인에 실패했습니다. 다시 시도해 주세요.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      debugPrint('[GoogleLogin] Unexpected error in handler: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Google 로그인 중 오류가 발생했습니다.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isGoogleLoginLoading = false);
     }
   }
 
