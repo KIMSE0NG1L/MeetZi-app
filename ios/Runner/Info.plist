@@ -5,9 +5,8 @@
     <key>GADApplicationIdentifier</key>
     <string>ca-app-pub-4896108937305290~6919591163</string>
 
-    <!-- TODO: Google Cloud Console에서 발급받은 iOS OAuth 클라이언트 ID로 교체 -->
     <key>GIDClientID</key>
-    <string>YOUR_IOS_CLIENT_ID.apps.googleusercontent.com</string>
+    <string>142580069628-34p25k2gd2ph9jl777r05v7kpimqp83v.apps.googleusercontent.com</string>
 
     <key>NSUserTrackingUsageDescription</key>
      <string>사용자의 관심사에 맞춘 최적화된 매칭 및 맞춤형 광고를 제공하기 위해 데이터 추적 권한이 필요합니다.</string>
@@ -235,9 +234,7 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<!-- TODO: 위 GIDClientID를 거꾸로 뒤집은 REVERSED_CLIENT_ID로 교체
-				     예: 1234-abc.apps.googleusercontent.com → com.googleusercontent.apps.1234-abc -->
-				<string>com.googleusercontent.apps.YOUR_IOS_CLIENT_ID</string>
+				<string>com.googleusercontent.apps.142580069628-34p25k2gd2ph9jl777r05v7kpimqp83v</string>
 			</array>
 		</dict>
 	</array>
