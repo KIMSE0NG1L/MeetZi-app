@@ -10,6 +10,7 @@ import 'package:nearo_app/features/settings/screens/open_source_licenses_screen.
 import 'package:nearo_app/shared/theme/nearo_theme.dart';
 import 'package:nearo_app/shared/utils/app_config.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -584,11 +585,16 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleKakaoLogin() async {
-    final uri = Uri.parse('${AppConfig.baseUrl}/auth/kakao');
+    // iOS: SFSafariViewController(inAppBrowserView)는 서버가 nearo:// 커스텀 스킴으로
+    // 리다이렉트해도 앱으로 핸드오프하지 못하는 경우가 있어 로그인 후 앱으로 복귀하지 못함.
+    // ASWebAuthenticationSession(Apple Guideline 4가 요구하는 인앱 브라우저 요건은 동일하게 충족)을
+    // 사용해 콜백을 확실하게 앱으로 받는다.
+    if (Platform.isIOS) {
+      await _handleKakaoLoginIOS();
+      return;
+    }
 
-    // Apple Guideline 4: 항상 인앱 브라우저(SFSafariViewController)를 사용하여
-    // 사용자가 앱 내에서 로그인할 수 있도록 함.
-    // SFSafariViewController는 URL과 SSL 인증서를 표시하여 보안성을 보장.
+    final uri = Uri.parse('${AppConfig.baseUrl}/auth/kakao');
     final launched = await launchUrl(
       uri,
       mode: LaunchMode.inAppBrowserView,
@@ -604,6 +610,39 @@ class _LoginScreenState extends State<LoginScreen> {
           const SnackBar(content: Text('카카오 로그인 연결에 실패했습니다.')),
         );
       }
+    }
+  }
+
+  Future<void> _handleKakaoLoginIOS() async {
+    try {
+      final result = await FlutterWebAuth2.authenticate(
+        url: '${AppConfig.baseUrl}/auth/kakao',
+        callbackUrlScheme: 'nearo',
+      );
+      final uri = Uri.parse(result);
+      final token = uri.queryParameters['token'];
+      final refreshToken = uri.queryParameters['refresh_token'];
+      final supabaseToken = uri.queryParameters['supabase_token'];
+      if (token == null || token.isEmpty || refreshToken == null || refreshToken.isEmpty) {
+        throw Exception('카카오 콜백에 토큰이 없습니다.');
+      }
+      await _authRepository.saveTokens(
+        accessToken: token,
+        refreshToken: refreshToken,
+        supabaseAccessToken:
+            (supabaseToken != null && supabaseToken.isNotEmpty) ? supabaseToken : null,
+      );
+      if (!mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        AppRoutes.onboarding,
+        (route) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      debugPrint('[KakaoLogin] iOS auth session failed: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('카카오 로그인 연결에 실패했습니다.')),
+      );
     }
   }
 
