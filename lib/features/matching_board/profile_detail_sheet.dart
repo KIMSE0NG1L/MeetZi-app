@@ -186,6 +186,8 @@ MeetzyProfileDetailData profileMapToDetailData(Map<String, dynamic> profile) {
     datePreference: toLabel('preferredDateType', pluck(['preferredDateType', 'preferredDate'])),
     activeTime: toLabel('activityTime', pluck(['activityTime', 'activeTime'])),
     tags: listTags,
+    userId: str(pluck(['userId', 'id', 'targetUserId'])),
+    matchId: str(pluck(['matchId', 'match_id'])),
   );
 }
 

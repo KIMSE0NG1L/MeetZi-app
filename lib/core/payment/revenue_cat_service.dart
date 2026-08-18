@@ -37,6 +37,13 @@ class RevenueCatService {
   // ──────────────────────────────────────────────
   static Future<void> initialize([String? appUserId]) async {
     try {
+      if (_isInitialized) {
+        if (appUserId != null && appUserId.isNotEmpty) {
+          await Purchases.logIn(appUserId);
+          debugPrint('[RevenueCatService] RevenueCat logged in for user: $appUserId');
+        }
+        return;
+      }
       final config = PurchasesConfiguration(apiKey);
       if (appUserId != null && appUserId.isNotEmpty) {
         config.appUserID = appUserId;
@@ -149,9 +156,9 @@ class RevenueCatService {
   /// - 에러: Exception 발생
   Future<CustomerInfo?> purchaseMonthlyPackage(Package package) async {
     try {
-      final customerInfo = await Purchases.purchasePackage(package);
+      final purchaseResult = await Purchases.purchasePackage(package);
       debugPrint('[RevenueCatService] Monthly purchase complete');
-      return customerInfo;
+      return purchaseResult.customerInfo;
     } on PlatformException catch (e) {
       final errorCode = PurchasesErrorHelper.getErrorCode(e);
       debugPrint('[RevenueCatService] Monthly purchase error: $errorCode, message: ${e.message}');
@@ -183,9 +190,9 @@ class RevenueCatService {
       }
       targetPackage ??= current.availablePackages.first;
 
-      final customerInfo = await Purchases.purchasePackage(targetPackage);
+      final purchaseResult = await Purchases.purchasePackage(targetPackage);
       debugPrint('[RevenueCatService] Single ticket purchase complete');
-      return customerInfo;
+      return purchaseResult.customerInfo;
     } on PlatformException catch (e) {
       final errorCode = PurchasesErrorHelper.getErrorCode(e);
       if (errorCode == PurchasesErrorCode.purchaseCancelledError) {

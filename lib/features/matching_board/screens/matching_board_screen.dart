@@ -20,6 +20,7 @@ import 'package:nearo_app/core/theme/meetzy_design_tokens.dart';
 import 'package:nearo_app/shared/utils/photo_url.dart';
 import 'package:nearo_app/presentation/pages/meetzy_board_page.dart';
 import 'package:nearo_app/presentation/widgets/meetzy_profile_detail_modal.dart';
+import 'package:nearo_app/features/subscription/controllers/subscription_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// 설명 주석
@@ -1033,8 +1034,9 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     if (index < 0 || index >= profiles.length) {
       return '프로필을 찾을 수 없어요.';
     }
-    if ((_myTickets?.matchingTicket ?? 0) <= 0) {
-      return '매칭권이 부족합니다. 매칭권을 구매한 뒤 요청을 보내 주세요.';
+    final hasUnlimited = SubscriptionController.instance.isPremium;
+    if (!hasUnlimited && (_myTickets?.matchingTicket ?? 0) <= 0) {
+      return '매칭권이 부족합니다. 매칭권을 구매하거나 광고를 시청한 뒤 요청을 보내 주세요.';
     }
     final tappedProfile = profiles[index];
     final profileId = tappedProfile['id']?.toString();
@@ -1088,8 +1090,9 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
     if (index < 0 || index >= profiles.length) {
       return '프로필을 찾을 수 없어요.';
     }
-    if ((_myTickets?.matchingTicket ?? 0) <= 0) {
-      return '매칭권이 부족합니다. 매칭권을 구매한 뒤 요청을 보내 주세요.';
+    final hasUnlimited = SubscriptionController.instance.isPremium;
+    if (!hasUnlimited && (_myTickets?.matchingTicket ?? 0) <= 0) {
+      return '매칭권이 부족합니다. 매칭권을 구매하거나 광고를 시청한 뒤 요청을 보내 주세요.';
     }
     final profileId = profiles[index]['id']?.toString();
     if (profileId == null || profileId.isEmpty) {
@@ -1223,11 +1226,12 @@ class _MatchingBoardScreenBodyState extends State<_MatchingBoardScreenBody> {
   }
 
   Future<bool> _takeNote(String profileId, Map<String, dynamic> profile, {String? message}) async {
+    final hasUnlimited = SubscriptionController.instance.isPremium;
     final matchingTicket = _myTickets?.matchingTicket ?? 0;
-    if (matchingTicket <= 0) {
+    if (!hasUnlimited && matchingTicket <= 0) {
       if (!mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('매칭권이 부족합니다. 매칭권을 구매한 뒤 요청을 보내 주세요.')),
+        const SnackBar(content: Text('매칭권이 부족합니다. 매칭권을 구매하거나 광고를 시청한 뒤 요청을 보내 주세요.')),
       );
       return false;
     }
@@ -2001,11 +2005,12 @@ class _BoardNoteSheetContentState extends State<_BoardNoteSheetContent> {
   Future<void> _take() async {
     if (_taking) return;
 
-    if (widget.myMatchingTicket <= 0) {
+    final hasUnlimited = SubscriptionController.instance.isPremium;
+    if (!hasUnlimited && widget.myMatchingTicket <= 0) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('매칭권이 부족합니다. 매칭권을 구매한 뒤 요청을 보내 주세요.'),
+          content: const Text('매칭권이 부족합니다. 매칭권을 구매하거나 광고를 시청한 뒤 요청을 보내 주세요.'),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.all(16),

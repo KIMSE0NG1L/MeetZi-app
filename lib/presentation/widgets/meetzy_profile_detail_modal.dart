@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nearo_app/core/theme/university_theme.dart';
+import 'package:nearo_app/features/messages/data/report_repository.dart';
+import 'package:nearo_app/features/users/data/block_repository.dart';
 import 'package:nearo_app/shared/theme/theme_controller.dart';
 
 /// ad ProfileDetailModal 디자인 — 그라데이션 헤더, 기본정보 태그 팔, 한줄소개/취미/이상형 박스, #키워드 태그, 닫기/매칭하기.
@@ -14,10 +16,10 @@ class MeetzyProfileDetailModal extends StatelessWidget {
     this.darkMode = false,
     this.avatarWidget,
     this.hideMatchButton = false,
-  this.photoUrlForEnlarge,
-  this.avatarUrlForEnlarge,
-  this.hideBottomBar = false,
-  this.topCornerRadius,
+    this.photoUrlForEnlarge,
+    this.avatarUrlForEnlarge,
+    this.hideBottomBar = false,
+    this.topCornerRadius,
   });
 
   final MeetzyProfileDetailData profile;
@@ -79,14 +81,14 @@ class MeetzyProfileDetailModal extends StatelessWidget {
                         borderRadius: BorderRadius.circular(16),
                         child: hasPhoto
                             ? Image.network(
-                                photoUrl!,
+                                photoUrl,
                                 fit: BoxFit.contain,
                                 errorBuilder: (_, __, ___) =>
                                     const Icon(LucideIcons.user, size: 120, color: Colors.white54),
                               )
                             : hasAvatar
                                 ? SvgPicture.network(
-                                    avatarUrl!,
+                                    avatarUrl,
                                     fit: BoxFit.contain,
                                     placeholderBuilder: (_) =>
                                         const Icon(LucideIcons.user, size: 120, color: Colors.white54),
@@ -146,6 +148,186 @@ class MeetzyProfileDetailModal extends StatelessWidget {
           decorationColor: Colors.transparent,
         ),
       ),
+    );
+  }
+
+  void _openReportSheet(BuildContext context) {
+    final reasons = [
+      {'value': 'spam', 'label': '스팸/도배'},
+      {'value': 'harassment', 'label': '괴롭힘/혐오'},
+      {'value': 'impersonation', 'label': '사칭/허위 정보'},
+      {'value': 'sexual', 'label': '성적 불쾌감/음란물'},
+      {'value': 'scam', 'label': '사기/금전 요구'},
+      {'value': 'other', 'label': '기타'},
+    ];
+
+    String? selectedReason;
+    final detailController = TextEditingController();
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final dark = Theme.of(context).brightness == Brightness.dark;
+        return StatefulBuilder(
+          builder: (modalCtx, setModalState) {
+            return Container(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                20,
+                20,
+                MediaQuery.of(modalCtx).viewInsets.bottom + 24,
+              ),
+              decoration: BoxDecoration(
+                color: dark ? const Color(0xFF1F2937) : Colors.white,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(LucideIcons.flag, color: Color(0xFFEF4444), size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${profile.nickname}님 신고하기',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: dark ? Colors.white : const Color(0xFF111827),
+                          ),
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          icon: const Icon(LucideIcons.x, size: 20),
+                          onPressed: () => Navigator.of(ctx).pop(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '신고 사유를 선택해 주세요. 검토 후 신속히 조치됩니다.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ...reasons.map((r) => RadioListTile<String>(
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(
+                            r['label']!,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: dark ? Colors.white : const Color(0xFF1F2937),
+                            ),
+                          ),
+                          value: r['value']!,
+                          groupValue: selectedReason,
+                          onChanged: (v) => setModalState(() => selectedReason = v),
+                        )),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: detailController,
+                      decoration: InputDecoration(
+                        hintText: '상세 내용을 입력해 주세요 (선택)',
+                        hintStyle: TextStyle(
+                          fontSize: 13,
+                          color: dark ? Colors.grey.shade500 : Colors.grey.shade400,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: const EdgeInsets.all(12),
+                      ),
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFEF4444),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: selectedReason == null
+                            ? null
+                            : () async {
+                                try {
+                                  final matchId = profile.matchId;
+                                  if (matchId != null && matchId.isNotEmpty) {
+                                    await ReportRepository().report(
+                                      matchId: matchId,
+                                      reason: selectedReason!,
+                                      detail: detailController.text.trim().isEmpty
+                                          ? null
+                                          : detailController.text.trim(),
+                                    );
+                                  }
+                                  if (!ctx.mounted) return;
+                                  Navigator.of(ctx).pop();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('신고가 정상적으로 접수되었습니다.'),
+                                      backgroundColor: Color(0xFF10B981),
+                                    ),
+                                  );
+
+                                  final targetUserId = profile.userId;
+                                  if (targetUserId != null && targetUserId.isNotEmpty && context.mounted) {
+                                    final wantBlock = await showDialog<bool>(
+                                      context: context,
+                                      builder: (dialogCtx) => AlertDialog(
+                                        title: const Text('사용자 차단'),
+                                        content: Text('${profile.nickname}님을 차단하시겠습니까? 차단 시 서로의 프로필 및 매칭이 제한됩니다.'),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.of(dialogCtx).pop(false),
+                                            child: const Text('아니오'),
+                                          ),
+                                          TextButton(
+                                            onPressed: () => Navigator.of(dialogCtx).pop(true),
+                                            style: TextButton.styleFrom(foregroundColor: Colors.red),
+                                            child: const Text('차단하기'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                    if (wantBlock == true) {
+                                      await BlockRepository().blockUser(targetUserId);
+                                      if (context.mounted) {
+                                        onClose();
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('${profile.nickname}님을 차단했습니다.')),
+                                        );
+                                      }
+                                    }
+                                  }
+                                } catch (e) {
+                                  if (!ctx.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('신고 접수 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')),
+                                  );
+                                }
+                              },
+                        child: const Text('신고 접수하기', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -252,6 +434,22 @@ class MeetzyProfileDetailModal extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 16,
+                left: 16,
+                child: Material(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  shape: const CircleBorder(),
+                  child: InkWell(
+                    onTap: () => _openReportSheet(context),
+                    customBorder: const CircleBorder(),
+                    child: const Padding(
+                      padding: EdgeInsets.all(8),
+                      child: Icon(LucideIcons.flag, color: Colors.white, size: 20),
                     ),
                   ),
                 ),
@@ -545,6 +743,8 @@ class MeetzyProfileDetailData {
     this.datePreference = '',
     this.activeTime = '',
     this.tags = const [],
+    this.userId,
+    this.matchId,
   });
 
   final String nickname;
@@ -564,4 +764,6 @@ class MeetzyProfileDetailData {
   final String datePreference;
   final String activeTime;
   final List<String> tags;
+  final String? userId;
+  final String? matchId;
 }
