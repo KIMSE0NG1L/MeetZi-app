@@ -89,6 +89,13 @@ flutter_launcher_icons:
 # The following section is specific to Flutter packages.
 flutter:
 
+  # flutter_web_auth_2, sign_in_with_apple, package_info_plus,
+  # flutter_image_compress_common don't support Swift Package Manager yet,
+  # which breaks their -Swift.h header generation when SPM is mixed in
+  # alongside CocoaPods. Force CocoaPods-only until they add SPM support.
+  config:
+    enable-swift-package-manager: false
+
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
