@@ -505,19 +505,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                           : Row(
                                               mainAxisAlignment: MainAxisAlignment.center,
                                               children: [
-                                                Image.asset(
-                                                  'assets/images/google_logo.png',
-                                                  width: 20,
-                                                  height: 20,
-                                                  errorBuilder: (_, __, ___) => const Text(
-                                                    'G',
-                                                    style: TextStyle(
-                                                      fontSize: 18,
-                                                      fontWeight: FontWeight.w900,
-                                                      color: Color(0xFF4285F4),
-                                                    ),
-                                                  ),
-                                                ),
+                                                const Text('G', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF4285F4))),
                                                 const SizedBox(width: 8),
                                                 const Text(
                                                   'Google로 계속하기',
